@@ -4,8 +4,19 @@ import { createClient } from '@supabase/supabase-js'
 const rawUrl  = import.meta.env.VITE_SUPABASE_URL  as string | undefined
 const rawKey  = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
-// Sanitize URL to remove trailing slashes and /rest/v1 suffixes which break OAuth routing
-const supabaseUrl = rawUrl ? rawUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '') : undefined
+function cleanSupabaseUrl(urlStr: string | undefined): string | undefined {
+  if (!urlStr) return undefined
+  const trimmed = urlStr.trim()
+  if (!trimmed) return undefined
+  try {
+    const parsed = new URL(trimmed)
+    return parsed.origin
+  } catch {
+    return trimmed.replace(/\/rest\/v1\/?.*$/, '').replace(/\/+$/, '')
+  }
+}
+
+const supabaseUrl = cleanSupabaseUrl(rawUrl)
 const supabaseKey = rawKey ? rawKey.trim() : undefined
 
 // ─── Configuration guard ──────────────────────────────────────────────────────
