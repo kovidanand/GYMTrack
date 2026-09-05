@@ -2,9 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { Activity, Clock, Flame, BarChart2, Trophy, Plus, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { StatCard, SectionHeader, PageHeader, Avatar } from '@/components/shared'
-import { WorkoutCard, SessionCard, DayActivity } from '@/components/workout/WorkoutComponents'
-import { workouts, recentSessions } from '@/data/workouts'
-import { weeklyActivity, personalRecords, overallStats } from '@/data/progress'
+import { useProgress } from '@/hooks/useProgress'
+import { useWorkouts } from '@/hooks/useWorkouts'
 import { formatDuration, formatRelativeDate } from '@/lib/utils'
 
 function getGreeting(): string {
@@ -15,24 +14,31 @@ function getGreeting(): string {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
+  
+  const { workouts } = useWorkouts()
+  const { stats, history, personalRecords, loading } = useProgress()
 
-  const todaysWorkout = workouts.find(w => w.id === 'wo-004') // Upper Body Strength
-  const latestSession = recentSessions[0]
+  const todaysWorkout = workouts[0] // Just pick the first available for now or ideally the next in plan
+  const latestSession = history[0]
   const topPRs = personalRecords.slice(0, 2)
 
+  const firstName = profile?.first_name || user?.email?.split('@')[0] || 'Athlete'
+
+  if (loading) return <div className="p-8 text-center animate-pulse">Loading dashboard...</div>
+
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className="animate-fade-in space-y-8 pb-24">
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            {user && <Avatar name={user.name} size="md" className="lg:hidden" />}
+            {profile && <Avatar name={firstName} size="md" className="lg:hidden" />}
             <div>
               <p className="text-surface-500 text-sm">{getGreeting()} 👋</p>
               <h1 className="text-2xl font-bold text-surface-900 tracking-tight">
-                {user?.name.split(' ')[0] ?? 'Athlete'}
+                {firstName}
               </h1>
             </div>
           </div>
@@ -58,22 +64,22 @@ export default function Dashboard() {
             <div className="absolute bottom-0 right-12 w-24 h-24 rounded-full bg-white/5 translate-y-8" aria-hidden="true" />
 
             <div className="relative">
-              <p className="text-brand-200 text-xs font-medium uppercase tracking-wider mb-1">Today's Workout</p>
+              <p className="text-brand-200 text-xs font-medium uppercase tracking-wider mb-1">Up Next</p>
               <h2 className="text-2xl font-bold mb-1">{todaysWorkout.name}</h2>
               <div className="flex items-center gap-3 mb-5">
                 <span className="flex items-center gap-1.5 text-brand-200 text-sm">
                   <Activity size={14} aria-hidden="true" />
-                  {todaysWorkout.exercises.length} exercises
+                  {todaysWorkout.workout_exercises?.length || 0} exercises
                 </span>
                 <span className="text-brand-300">·</span>
                 <span className="flex items-center gap-1.5 text-brand-200 text-sm">
                   <Clock size={14} aria-hidden="true" />
-                  ~{formatDuration(todaysWorkout.estimatedDuration)}
+                  ~{formatDuration(todaysWorkout.estimated_duration || 0)}
                 </span>
               </div>
               <button
                 className="bg-white text-brand-700 font-semibold text-sm px-6 py-2.5 rounded-lg hover:bg-brand-50 transition-colors active:scale-[0.98]"
-                onClick={() => navigate('/workouts')}
+                onClick={() => navigate(`/workouts/${todaysWorkout.id}/run`)}
                 id="dashboard-today-workout-start"
               >
                 Start Workout
@@ -83,69 +89,55 @@ export default function Dashboard() {
         </section>
       )}
 
+      {/* ── AI Coach Entry ── */}
+      <section aria-label="AI Coach">
+        <div className="bg-surface-50 border border-surface-200 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 cursor-pointer hover:border-brand-300 transition-colors group" onClick={() => navigate('/ai-coach')}>
+          <div className="w-12 h-12 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2a2 2 0 0 1 2-2z"></path><path d="M19 9a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2z"></path><path d="M5 9a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2z"></path><path d="M16 15h.01"></path><path d="M8 15h.01"></path><path d="M9 20h6"></path><path d="M15 15v5"></path><path d="M9 15v5"></path><rect x="7" y="7" width="10" height="8" rx="2"></rect></svg>
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <h3 className="text-lg font-bold text-surface-900">Ask GYMTrack AI</h3>
+            <p className="text-sm text-surface-500 mt-1">Get personalized workout recommendations, progress analysis, and insights based on your training data.</p>
+          </div>
+          <button className="btn-secondary whitespace-nowrap group-hover:bg-brand-50 group-hover:text-brand-700 group-hover:border-brand-200">
+            Open AI Coach
+          </button>
+        </div>
+      </section>
+
       {/* ── Quick Stats ── */}
       <section aria-label="Training statistics">
         <SectionHeader title="Your Stats" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Total Workouts"
-            value={overallStats.totalWorkouts}
+            value={stats?.totalWorkouts || 0}
             icon={<Activity size={18} />}
             trend="up"
-            trendValue="+8 this month"
+            trendValue={`${stats?.workoutsThisMonth || 0} this month`}
           />
           <StatCard
             label="Training Time"
-            value={Math.round(overallStats.totalTrainingTime / 60)}
+            value={Math.round((stats?.totalTrainingTime || 0) / 3600)}
             unit="hours"
             icon={<Clock size={18} />}
             trend="up"
-            trendValue="+3.5h this week"
           />
           <StatCard
             label="Current Streak"
-            value={overallStats.currentStreak}
+            value={stats?.currentStreak || 0}
             unit="days"
             icon={<Flame size={18} />}
             trend="up"
-            trendValue="Best: 18 days"
+            trendValue={`Best: ${stats?.longestStreak || 0} days`}
           />
           <StatCard
-            label="Weekly Volume"
-            value={(overallStats.weeklyVolume / 1000).toFixed(1)}
+            label="Total Volume"
+            value={((stats?.totalVolume || 0) / 1000).toFixed(1)}
             unit="k kg"
             icon={<BarChart2 size={18} />}
             trend="up"
-            trendValue="+12% vs last week"
           />
-        </div>
-      </section>
-
-      {/* ── Weekly Activity ── */}
-      <section aria-label="Weekly activity">
-        <SectionHeader title="This Week" />
-        <div className="card p-5">
-          <div className="flex items-center justify-between gap-2">
-            {weeklyActivity.map((day, i) => (
-              <DayActivity
-                key={day.day}
-                day={day.day}
-                trained={day.trained}
-                duration={day.duration}
-                isToday={i === 0}
-              />
-            ))}
-          </div>
-          <div className="mt-4 pt-4 border-t border-surface-100 flex items-center justify-between text-sm">
-            <span className="text-surface-600">
-              <span className="font-semibold text-surface-900">{weeklyActivity.filter(d => d.trained).length}</span> of 7 days trained
-            </span>
-            <span className="text-surface-600">
-              Total: <span className="font-semibold text-surface-900">
-                {formatDuration(weeklyActivity.reduce((acc, d) => acc + (d.duration ?? 0), 0))}
-              </span>
-            </span>
-          </div>
         </div>
       </section>
 
@@ -156,15 +148,44 @@ export default function Dashboard() {
             title="Recent Session"
             action={
               <button
-                onClick={() => navigate('/workouts')}
+                onClick={() => navigate('/history')}
                 className="btn-ghost text-xs py-1.5 px-3"
               >
-                View all
+                View history
                 <ChevronRight size={12} />
               </button>
             }
           />
-          {latestSession && <SessionCard session={latestSession} />}
+          {latestSession ? (
+             <article className="card p-4 cursor-pointer hover:border-brand-300 transition-colors" onClick={() => navigate(`/history/${latestSession.id}`)}>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="font-semibold text-surface-900 text-sm">{latestSession.workout_name}</h3>
+                  <p className="text-xs text-surface-500">{formatRelativeDate(latestSession.started_at)}</p>
+                </div>
+                <span className="badge bg-emerald-50 text-emerald-700 border-0 text-xs capitalize">{latestSession.status}</span>
+              </div>
+        
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <p className="text-base font-bold text-surface-900">{formatDuration(latestSession.duration_seconds || 0)}</p>
+                  <p className="text-[10px] text-surface-500 uppercase tracking-wide">Duration</p>
+                </div>
+                <div className="text-center border-x border-surface-100">
+                  <p className="text-base font-bold text-surface-900">{latestSession.completed_sets || '—'}</p>
+                  <p className="text-[10px] text-surface-500 uppercase tracking-wide">Sets</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-bold text-surface-900">{((latestSession.total_volume || 0) / 1000).toFixed(1)}k</p>
+                  <p className="text-[10px] text-surface-500 uppercase tracking-wide">Volume (kg)</p>
+                </div>
+              </div>
+            </article>
+          ) : (
+            <div className="card p-6 text-center text-surface-500">
+              No recent sessions.
+            </div>
+          )}
         </section>
 
         {/* ── Personal Records ── */}
@@ -181,27 +202,33 @@ export default function Dashboard() {
               </button>
             }
           />
-          <div className="space-y-3">
-            {topPRs.map(pr => (
-              <div key={pr.id} className="card p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                  <Trophy size={18} className="text-amber-500" aria-hidden="true" />
+          {topPRs.length > 0 ? (
+            <div className="space-y-3">
+              {topPRs.map(pr => (
+                <div key={pr.id} className="card p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <Trophy size={18} className="text-amber-500" aria-hidden="true" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-surface-900">{pr.exerciseName}</p>
+                    <p className="text-xs text-surface-500">{formatRelativeDate(pr.achievedAt)}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xl font-bold text-brand-600">{pr.value}</p>
+                    <p className="text-xs text-surface-500">{pr.unit}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-surface-900">{pr.exerciseName}</p>
-                  <p className="text-xs text-surface-500">{formatRelativeDate(pr.achievedAt)}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xl font-bold text-brand-600">{pr.value}</p>
-                  <p className="text-xs text-surface-500">{pr.unit}</p>
-                </div>
+              ))}
+              <div className="card p-4 flex items-center justify-between text-sm text-surface-500 hover:bg-surface-50 cursor-pointer transition-colors" onClick={() => navigate('/progress')}>
+                <span>View all {personalRecords.length} records</span>
+                <ChevronRight size={16} />
               </div>
-            ))}
-            <div className="card p-4 flex items-center justify-between text-sm text-surface-500 hover:bg-surface-50 cursor-pointer transition-colors" onClick={() => navigate('/progress')}>
-              <span>View all {personalRecords.length} records</span>
-              <ChevronRight size={16} />
             </div>
-          </div>
+          ) : (
+            <div className="card p-6 text-center text-surface-500">
+              No personal records yet. Log some workouts!
+            </div>
+          )}
         </section>
       </div>
 
@@ -213,7 +240,7 @@ export default function Dashboard() {
             { label: 'Browse Exercises', icon: '📚', to: '/exercises' },
             { label: 'View Progress',    icon: '📈', to: '/progress' },
             { label: 'My Workouts',      icon: '💪', to: '/workouts' },
-            { label: 'Edit Profile',     icon: '👤', to: '/profile' },
+            { label: 'Workout History',  icon: '🗓️', to: '/history' },
           ].map(action => (
             <button
               key={action.label}

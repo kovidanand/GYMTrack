@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { SlidersHorizontal, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { SlidersHorizontal, X, Heart } from 'lucide-react'
 import { PageHeader, SearchInput, EmptyState } from '@/components/shared'
-import { ExerciseCard, ExerciseDetail, FilterChips } from '@/components/exercise/ExerciseComponents'
-import { useExerciseFilter } from '@/hooks/useExerciseFilter'
-import type { Exercise } from '@/types'
+import { ExerciseCard, FilterChips } from '@/components/exercise/ExerciseComponents'
+import { ExerciseSkeleton } from '@/components/exercise/ExerciseSkeleton'
+import { useExercises, type SortOption } from '@/hooks/useExercises'
+import { cn } from '@/lib/utils'
 
 const muscleOptions = [
   { value: 'chest',      label: 'Chest' },
@@ -39,47 +41,78 @@ const categoryOptions = [
   { value: 'stretching', label: 'Stretching' },
 ]
 
-export default function Exercises() {
-  const {
-    filters, filtered,
-    setSearch, setMuscleGroup, setEquipment, setDifficulty, setCategory,
-    resetFilters, activeFilterCount,
-  } = useExerciseFilter()
+const sortOptions = [
+  { value: 'recommended',    label: 'Recommended' },
+  { value: 'name_asc',       label: 'Name (A-Z)' },
+  { value: 'name_desc',      label: 'Name (Z-A)' },
+  { value: 'beginner_first', label: 'Beginner First' },
+  { value: 'advanced_first', label: 'Advanced First' },
+]
 
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
+export default function Exercises() {
+  const navigate = useNavigate()
+  
+  const {
+    exercises, loading, error, favorites,
+    search, muscleGroup, equipment, difficulty, category, sortBy, favoritesOnly,
+    setSearch, setMuscleGroup, setEquipment, setDifficulty, setCategory, setSortBy, setFavoritesOnly,
+    resetFilters, activeFilterCount, toggleFavorite
+  } = useExercises()
+
   const [showFilters, setShowFilters] = useState(false)
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="animate-fade-in space-y-6 pb-12">
       <PageHeader
         title="Exercise Library"
-        description={`${filtered.length} exercises — search, filter, and learn.`}
+        description="Explore exercises, learn proper form, and build better workouts."
       />
 
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-200 text-sm">
+          {error}
+        </div>
+      )}
+
       {/* ── Search + Filter Toggle ── */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <SearchInput
           id="exercise-search"
-          value={filters.search}
+          value={search}
           onChange={setSearch}
-          placeholder="Search exercises..."
+          placeholder="Search exercises by name..."
           className="flex-1"
         />
-        <button
-          className={`btn-secondary gap-2 flex-shrink-0 ${activeFilterCount > 0 ? 'border-brand-400 text-brand-600' : ''}`}
-          onClick={() => setShowFilters(!showFilters)}
-          aria-expanded={showFilters}
-          aria-label={`Filter exercises${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
-          id="exercise-filter-toggle"
-        >
-          <SlidersHorizontal size={16} aria-hidden="true" />
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="w-5 h-5 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+        
+        <div className="flex gap-2 w-full sm:w-auto">
+          {/* Sort Dropdown (Simple select for now) */}
+          <select 
+            className="input-base py-2 pl-3 pr-8 w-full sm:w-40 text-sm bg-white"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            aria-label="Sort exercises"
+          >
+            {sortOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+
+          <button
+            className={`btn-secondary gap-2 flex-1 sm:flex-none ${activeFilterCount > 0 ? 'border-brand-400 text-brand-600 bg-brand-50 hover:bg-brand-100' : ''}`}
+            onClick={() => setShowFilters(!showFilters)}
+            aria-expanded={showFilters}
+            aria-label={`Filter exercises${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
+            id="exercise-filter-toggle"
+          >
+            <SlidersHorizontal size={16} aria-hidden="true" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* ── Filter Panel ── */}
@@ -105,77 +138,97 @@ export default function Exercises() {
               </button>
             </div>
           </div>
+          
+          {/* Favorites Toggle */}
+          <div className="flex items-center gap-3 py-2 border-b border-surface-100">
+            <button
+              onClick={() => setFavoritesOnly(!favoritesOnly)}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border",
+                favoritesOnly 
+                  ? "bg-brand-50 border-brand-200 text-brand-700" 
+                  : "bg-white border-surface-200 text-surface-600 hover:bg-surface-50"
+              )}
+            >
+              <Heart size={16} className={favoritesOnly ? "fill-brand-500 text-brand-500" : ""} />
+              Your Favorites
+            </button>
+          </div>
 
           <FilterChips
             id="filter-muscle"
             label="Muscle Group"
             options={muscleOptions}
-            value={filters.muscleGroup}
-            onChange={v => setMuscleGroup(v as typeof filters.muscleGroup)}
+            value={muscleGroup}
+            onChange={v => setMuscleGroup(v as typeof muscleGroup)}
           />
           <FilterChips
             id="filter-equipment"
             label="Equipment"
             options={equipmentOptions}
-            value={filters.equipment}
-            onChange={v => setEquipment(v as typeof filters.equipment)}
+            value={equipment}
+            onChange={v => setEquipment(v as typeof equipment)}
           />
           <div className="grid sm:grid-cols-2 gap-5">
             <FilterChips
               id="filter-difficulty"
               label="Difficulty"
               options={difficultyOptions}
-              value={filters.difficulty}
-              onChange={v => setDifficulty(v as typeof filters.difficulty)}
+              value={difficulty}
+              onChange={v => setDifficulty(v as typeof difficulty)}
             />
             <FilterChips
               id="filter-category"
               label="Exercise Type"
               options={categoryOptions}
-              value={filters.category}
-              onChange={v => setCategory(v as typeof filters.category)}
+              value={category}
+              onChange={v => setCategory(v as typeof category)}
             />
           </div>
         </div>
       )}
 
       {/* ── Results ── */}
-      {filtered.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {[...Array(10)].map((_, i) => (
+            <ExerciseSkeleton key={i} />
+          ))}
+        </div>
+      ) : exercises.length > 0 ? (
         <>
-          {(filters.search || activeFilterCount > 0) && (
-            <p className="text-sm text-surface-500">
-              Showing <span className="font-semibold text-surface-700">{filtered.length}</span> exercise{filtered.length !== 1 ? 's' : ''}
-              {activeFilterCount > 0 && ' (filtered)'}
-            </p>
-          )}
+          <p className="text-sm text-surface-500">
+            Showing <span className="font-semibold text-surface-700">{exercises.length}</span> exercise{exercises.length !== 1 ? 's' : ''}
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {filtered.map(exercise => (
+            {exercises.map(exercise => (
               <ExerciseCard
                 key={exercise.id}
                 exercise={exercise}
-                onClick={setSelectedExercise}
+                isFavorite={favorites.has(exercise.id)}
+                onToggleFavorite={(id, e) => {
+                  e.stopPropagation()
+                  toggleFavorite(id)
+                }}
+                onClick={(ex) => navigate(`/exercises/${ex.slug}`)}
               />
             ))}
           </div>
         </>
       ) : (
         <EmptyState
-          icon={<span className="text-5xl">🔍</span>}
-          title="No exercises found"
-          description="Try adjusting your search or filters to find what you're looking for."
+          icon={<span className="text-5xl">{favoritesOnly ? '💔' : '🔍'}</span>}
+          title={favoritesOnly ? "No favorite exercises yet" : "No exercises found"}
+          description={
+            favoritesOnly 
+              ? "You haven't saved any exercises to your favorites matching these filters." 
+              : "Try adjusting your search or filters to find what you're looking for."
+          }
           action={
             <button className="btn-secondary" onClick={resetFilters} id="exercise-empty-reset">
               Reset filters
             </button>
           }
-        />
-      )}
-
-      {/* ── Exercise Detail Modal ── */}
-      {selectedExercise && (
-        <ExerciseDetail
-          exercise={selectedExercise}
-          onClose={() => setSelectedExercise(null)}
         />
       )}
     </div>

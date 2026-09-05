@@ -38,17 +38,29 @@ export interface Exercise {
   name: string
   slug: string
   description: string
-  category: ExerciseCategory
-  muscleGroup: MuscleGroup
-  secondaryMuscles: MuscleGroup[]
-  equipment: EquipmentType[]
-  difficulty: DifficultyLevel
   instructions: string[]
   tips: string[]
-  commonMistakes: string[]
-  imageUrl?: string
-  videoUrl?: string
-  tags: string[]
+  common_mistakes: string[]
+  primary_muscle: string
+  secondary_muscles: string[]
+  muscle_group: MuscleGroup
+  equipment: EquipmentType[]
+  difficulty: DifficultyLevel
+  exercise_type: ExerciseCategory
+  movement_pattern: string
+  image_url?: string | null
+  video_url?: string | null
+  is_compound: boolean
+  is_unilateral: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface UserFavoriteExercise {
+  id: string
+  user_id: string
+  exercise_id: string
+  created_at: string
 }
 
 export type MuscleGroup =
@@ -83,66 +95,146 @@ export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
 
 export type ExerciseCategory = 'strength' | 'cardio' | 'mobility' | 'stretching'
 
-// ─── Workouts ─────────────────────────────────────────────────────────────────
+// ─── Workouts & Plans (Supabase Schema) ───────────────────────────────────────
+
+export interface WorkoutPlan {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  goal: string | null
+  difficulty: string | null
+  days_per_week: number | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
 export interface Workout {
   id: string
+  plan_id?: string | null
+  user_id?: string
   name: string
-  description?: string
-  exercises: WorkoutExercise[]
-  estimatedDuration: number // minutes
-  createdAt: string
+  description?: string | null
+  day_number?: number | null
+  notes?: string | null
+  estimated_duration?: number | null
+  created_at?: string
+  updated_at?: string
+  
+  // Joined relation (populated on fetch)
+  workout_exercises?: WorkoutExercise[]
+  
+  // Legacy fields for Phase 1/2 Mock Dashboard compatibility
+  exercises?: any[]
+  estimatedDuration?: number
   lastCompleted?: string
-  tags: string[]
-  isTemplate: boolean
+  tags?: string[]
+  createdAt?: string
+  isTemplate?: boolean
 }
 
 export interface WorkoutExercise {
   id: string
-  exerciseId: string
+  workout_id: string
+  exercise_id: string
+  exercise_order: number
+  sets: number
+  reps: string
+  weight: number | null
+  rest_seconds: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+  
+  // Joined relation (populated on fetch)
   exercise?: Exercise
-  sets: SetConfig[]
-  order: number
-  notes?: string
+  workout_set_logs?: WorkoutSetLog[]
 }
 
-export interface SetConfig {
+export interface WorkoutSetLog {
   id: string
-  targetReps?: number
-  targetWeight?: number  // kg
-  targetDuration?: number // seconds
-  restTime: number // seconds
+  user_id: string
+  workout_exercise_id: string
+  set_number: number
+  weight: number | null
+  reps: number | null
+  completed: boolean
+  completed_at: string | null
+  created_at: string
+  updated_at: string
 }
 
-// ─── Workout Sessions ─────────────────────────────────────────────────────────
+// ─── Workout History & Sessions (Phase 5 Supabase Schema) ─────────────────────
 
 export interface WorkoutSession {
   id: string
-  workoutId: string
-  workoutName: string
-  startedAt: string
-  completedAt?: string
-  duration: number // minutes
-  exercises: SessionExercise[]
-  totalVolume: number // kg
-  notes?: string
+  user_id: string
+  workout_id: string | null
+  workout_name: string
+  started_at: string
+  completed_at: string | null
+  duration_seconds: number | null
+  total_exercises: number
+  total_sets: number
+  completed_sets: number
+  total_volume: number
+  calories_burned: number | null
+  status: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+  
+  // Joined relation
+  workout_session_sets?: WorkoutSessionSet[]
 }
 
-export interface SessionExercise {
+export interface WorkoutSessionSet {
   id: string
+  session_id: string
+  workout_exercise_id: string | null
+  exercise_id: string
+  exercise_name: string
+  set_number: number
+  weight: number | null
+  reps: number | null
+  completed: boolean
+  is_personal_record: boolean
+  created_at: string
+  updated_at: string
+  
+  // Joined relation
+  exercise?: Exercise
+}
+
+// ─── Analytics & Progress (Phase 5) ───────────────────────────────────────────
+
+export interface ProgressStats {
+  totalWorkouts: number
+  workoutsThisWeek: number
+  workoutsThisMonth: number
+  totalTrainingTime: number // seconds
+  totalVolume: number // kg
+  currentStreak: number // days
+  longestStreak: number // days
+  exercisesPerformed: number
+  personalRecordsCount: number
+}
+
+export interface ChartDataPoint {
+  date: string
+  value: number
+  label?: string
+}
+
+export interface PersonalRecord {
+  id: string // this will be the set_id
   exerciseId: string
   exerciseName: string
-  sets: WorkoutSet[]
-}
-
-export interface WorkoutSet {
-  id: string
-  setNumber: number
-  reps?: number
-  weight?: number  // kg
-  duration?: number // seconds
-  completed: boolean
-  isPersonalRecord: boolean
+  value: number
+  unit: string
+  achievedAt: string
+  previousValue?: number
 }
 
 // ─── Progress ─────────────────────────────────────────────────────────────────
@@ -202,3 +294,45 @@ export interface FilterState {
   category: ExerciseCategory | 'all'
   search: string
 }
+
+// ─── AI Coach ───────────────────────────────────────────────────────────────
+
+export interface AIConversation {
+  id: string
+  user_id: string
+  title: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AIWorkoutExercise {
+  exercise_name: string
+  sets: number
+  reps: string
+  rest_seconds: number
+  notes?: string
+}
+
+export interface AIWorkoutProposal {
+  name: string
+  description: string
+  exercises: AIWorkoutExercise[]
+}
+
+export interface AIMessage {
+  id: string
+  conversation_id: string
+  role: 'user' | 'assistant'
+  content: string
+  structured_data: AIWorkoutProposal | null
+  created_at: string
+}
+
+export interface CoachContext {
+  profile?: any
+  progress?: any
+  recentWorkouts?: any[]
+  personalRecords?: any[]
+  activePlan?: any
+}
+

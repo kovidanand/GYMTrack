@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Dumbbell, BookOpen, TrendingUp, User, LogOut, Plus } from 'lucide-react'
+import { LayoutDashboard, Dumbbell, BookOpen, TrendingUp, User, LogOut, Plus, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { GYMTrackLogo, Avatar } from '@/components/shared'
@@ -9,17 +9,20 @@ const navItems = [
   { to: '/workouts', label: 'Workouts', icon: Dumbbell },
   { to: '/exercises', label: 'Exercise Library', icon: BookOpen },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
+  { to: '/ai-coach', label: 'AI Coach', icon: Sparkles },
   { to: '/profile', label: 'Profile', icon: User },
 ]
 
 export function Sidebar() {
-  const { user, logout } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    if (signOut) await signOut()
     navigate('/')
   }
+
+  const fullName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : (user?.email?.split('@')[0] || 'Athlete')
 
   return (
     <aside className="hidden lg:flex flex-col w-60 xl:w-64 min-h-screen bg-white border-r border-surface-200 fixed top-0 left-0 z-30">
@@ -65,9 +68,9 @@ export function Sidebar() {
       {user && (
         <div className="border-t border-surface-100 p-4">
           <div className="flex items-center gap-3">
-            <Avatar name={user.name} size="sm" />
+            <Avatar name={fullName} size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-surface-900 truncate">{user.name}</p>
+              <p className="text-sm font-medium text-surface-900 truncate">{fullName}</p>
               <p className="text-xs text-surface-500 truncate">{user.email}</p>
             </div>
             <button
@@ -90,8 +93,8 @@ export function Sidebar() {
 const mobileNavItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/workouts', label: 'Workouts', icon: Dumbbell },
-  { to: '/exercises', label: 'Exercises', icon: BookOpen },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
+  { to: '/ai-coach', label: 'AI Coach', icon: Sparkles },
   { to: '/profile', label: 'Profile', icon: User },
 ]
 

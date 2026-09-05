@@ -1,0 +1,278 @@
+import { supabase } from '@/lib/supabase'
+import type { WorkoutSession, WorkoutSessionSet, ProgressStats, ChartDataPoint, PersonalRecord } from '@/types'
+
+// ─── Core Session Saving ──────────────────────────────────────────────────────
+
+export async function saveWorkoutSession(sessionData: Partial<WorkoutSession>, setsData: Partial<WorkoutSessionSet>[]): Promise<{ data: WorkoutSession | null; error: string | null }> {
+  // 1. Insert session
+  const { data: session, error: sessionError } = await supabase
+    .from('workout_sessions')
+    .insert(sessionData)
+    .select()
+    .single()
+
+  if (sessionError || !session) {
+    console.error('[GYMTrack] saveWorkoutSession error:', sessionError?.message)
+    return { data: null, error: 'Failed to save workout session.' }
+  }
+
+  // 2. Insert all sets linked to this session
+  if (setsData.length > 0) {
+    const setsToInsert = setsData.map(s => ({
+      ...s,
+      session_id: session.id
+    }))
+    
+    // Evaluate PRs logic (simple implementation for now)
+    // We would ideally query previous bests, but for performance in this phase,
+    // we'll let a separate function calculate PRs asynchronously or later.
+
+    const { error: setsError } = await supabase
+      .from('workout_session_sets')
+      .insert(setsToInsert)
+
+    if (setsError) {
+      console.error('[GYMTrack] saveWorkoutSession sets error:', setsError.message)
+      // Note: In a real prod env, we'd want a transaction here. Since Supabase REST doesn't natively do multi-table transactions easily from client, we just log it.
+    }
+  }
+
+  return { data: session, error: null }
+}
+
+// ─── Fetching History ─────────────────────────────────────────────────────────
+
+export async function getWorkoutHistory(userId: string): Promise<{ data: WorkoutSession[] | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('workout_sessions')
+    .select(`
+      *,
+      workout_session_sets (*)
+    `)
+    .eq('user_id', userId)
+    .order('started_at', { ascending: false })
+
+  if (error) {
+    console.error('[GYMTrack] getWorkoutHistory error:', error.message)
+    return { data: null, error: 'Failed to fetch history.' }
+  }
+  return { data, error: null }
+}
+
+export async function getWorkoutSessionById(sessionId: string): Promise<{ data: WorkoutSession | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('workout_sessions')
+    .select(`
+      *,
+      workout_session_sets (
+        *,
+        exercise:exercises (*)
+      )
+    `)
+    .eq('id', sessionId)
+    .single()
+
+  if (error) {
+    console.error('[GYMTrack] getWorkoutSessionById error:', error.message)
+    return { data: null, error: 'Failed to fetch session.' }
+  }
+  
+  if (data && data.workout_session_sets) {
+    data.workout_session_sets.sort((a: WorkoutSessionSet, b: WorkoutSessionSet) => a.set_number - b.set_number)
+  }
+  
+  return { data, error: null }
+}
+
+// ─── Analytics Aggregation ────────────────────────────────────────────────────
+
+export async function getProgressStats(userId: string): Promise<{ data: ProgressStats | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('workout_sessions')
+    .select('started_at, duration_seconds, total_volume, completed_sets, total_exercises')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+    .order('started_at', { ascending: false })
+
+  if (error) {
+    console.error('[GYMTrack] getProgressStats error:', error.message)
+    return { data: null, error: 'Failed to fetch stats.' }
+  }
+
+  const now = new Date()
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+  const stats: ProgressStats = {
+    totalWorkouts: data.length,
+    workoutsThisWeek: 0,
+    workoutsThisMonth: 0,
+    totalTrainingTime: 0,
+    totalVolume: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    exercisesPerformed: 0,
+    personalRecordsCount: 0
+  }
+
+  // Calculate streaks
+  let currentStreak = 0
+  let maxStreak = 0
+  let previousDate: string | null = null
+
+  // We need unique days sorted descending
+  const uniqueDays = [...new Set(data.map(d => d.started_at.split('T')[0]))]
+
+  uniqueDays.forEach((dayStr, i) => {
+    const day = new Date(dayStr)
+    day.setHours(0,0,0,0)
+
+    if (i === 0) {
+      // Check if the most recent workout was today or yesterday
+      const today = new Date()
+      today.setHours(0,0,0,0)
+      const diff = (today.getTime() - day.getTime()) / (1000 * 3600 * 24)
+      
+      if (diff <= 1) {
+        currentStreak = 1
+      }
+    } else if (previousDate) {
+      const prevDay = new Date(previousDate)
+      prevDay.setHours(0,0,0,0)
+      const diff = (prevDay.getTime() - day.getTime()) / (1000 * 3600 * 24)
+      
+      if (diff === 1) {
+        if (currentStreak > 0) currentStreak++
+      } else {
+        if (currentStreak > maxStreak) maxStreak = currentStreak
+        currentStreak = 0
+      }
+    }
+    previousDate = dayStr
+  })
+  
+  if (currentStreak > maxStreak) maxStreak = currentStreak
+  if (data.length === 1 && currentStreak === 0) {
+     // fallback if they only have 1 workout ever and it was today
+     const d = new Date(data[0].started_at)
+     const today = new Date()
+     if (d.toDateString() === today.toDateString()) {
+       currentStreak = 1
+       maxStreak = 1
+     }
+  }
+
+  stats.currentStreak = currentStreak
+  stats.longestStreak = maxStreak
+
+  // Accumulate totals
+  data.forEach(session => {
+    const sessionDate = new Date(session.started_at)
+    
+    if (sessionDate >= oneWeekAgo) stats.workoutsThisWeek++
+    if (sessionDate >= oneMonthAgo) stats.workoutsThisMonth++
+    
+    stats.totalTrainingTime += session.duration_seconds || 0
+    stats.totalVolume += session.total_volume || 0
+    stats.exercisesPerformed += session.total_exercises || 0
+  })
+
+  // To get PRs, we need a separate query on the sets table
+  const { count: prCount } = await supabase
+    .from('workout_session_sets')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_personal_record', true)
+    
+  stats.personalRecordsCount = prCount || 0
+
+  return { data: stats, error: null }
+}
+
+export async function getVolumeChartData(userId: string, days: number = 30): Promise<ChartDataPoint[]> {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  
+  const { data } = await supabase
+    .from('workout_sessions')
+    .select('started_at, total_volume')
+    .eq('user_id', userId)
+    .gte('started_at', cutoff)
+    .order('started_at', { ascending: true })
+
+  if (!data) return []
+
+  // Group by day
+  const grouped: Record<string, number> = {}
+  data.forEach(session => {
+    const dateStr = new Date(session.started_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    grouped[dateStr] = (grouped[dateStr] || 0) + (session.total_volume || 0)
+  })
+
+  return Object.entries(grouped).map(([date, volume]) => ({
+    date,
+    value: volume
+  }))
+}
+
+export async function getExerciseProgress(userId: string, exerciseId: string): Promise<ChartDataPoint[]> {
+  const { data } = await supabase
+    .from('workout_session_sets')
+    .select('weight, created_at')
+    .eq('exercise_id', exerciseId)
+    // we need to join to sessions to filter by user, but workout_session_sets doesn't have user_id directly.
+    // However, our RLS policy ensures users can only select their own sets.
+    .order('created_at', { ascending: true })
+
+  if (!data) return []
+
+  // Get max weight per day
+  const grouped: Record<string, number> = {}
+  data.forEach(set => {
+    if (!set.weight) return
+    const dateStr = new Date(set.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    if (!grouped[dateStr] || set.weight > grouped[dateStr]) {
+      grouped[dateStr] = set.weight
+    }
+  })
+
+  return Object.entries(grouped).map(([date, weight]) => ({
+    date,
+    value: weight
+  }))
+}
+
+export async function getPersonalRecords(userId: string): Promise<{ data: PersonalRecord[] | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('workout_session_sets')
+    .select(`
+      id,
+      exercise_id,
+      exercise_name,
+      weight,
+      created_at
+    `)
+    // Normally we'd filter `is_personal_record`, but for robustness let's just calculate the max per exercise here
+    // In a huge DB we'd use a SQL View for this.
+    .order('created_at', { ascending: false })
+
+  if (error || !data) return { data: null, error: error?.message || 'Failed to load PRs' }
+
+  const prsMap = new Map<string, PersonalRecord>()
+  
+  data.forEach(set => {
+    if (!set.weight) return
+    
+    const existing = prsMap.get(set.exercise_id)
+    if (!existing || set.weight > existing.value) {
+      prsMap.set(set.exercise_id, {
+        id: set.id,
+        exerciseId: set.exercise_id,
+        exerciseName: set.exercise_name,
+        value: set.weight,
+        unit: 'kg',
+        achievedAt: set.created_at
+      })
+    }
+  })
+
+  return { data: Array.from(prsMap.values()), error: null }
+}

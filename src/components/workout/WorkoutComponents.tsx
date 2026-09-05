@@ -21,7 +21,7 @@ interface WorkoutCardProps {
 }
 
 export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
-  const primaryTag = workout.tags[0]
+  const primaryTag = workout.tags?.[0]
   const tagClass = primaryTag ? (workoutTagColors[primaryTag] ?? 'bg-surface-100 text-surface-600') : 'bg-surface-100 text-surface-600'
 
   return (
@@ -52,11 +52,11 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
       <div className="flex items-center gap-4 text-xs text-surface-500">
         <span className="flex items-center gap-1">
           <Dumbbell size={12} aria-hidden="true" />
-          {workout.exercises.length} exercises
+          {workout.exercises?.length || 0} exercises
         </span>
         <span className="flex items-center gap-1">
           <Clock size={12} aria-hidden="true" />
-          ~{formatDuration(workout.estimatedDuration)}
+          ~{formatDuration(workout.estimatedDuration || 0)}
         </span>
         {workout.lastCompleted && (
           <span className="flex items-center gap-1">
@@ -81,12 +81,12 @@ export function SessionCard({ session, compact }: SessionCardProps) {
     return (
       <div className="flex items-center justify-between py-3 border-b border-surface-100 last:border-0">
         <div>
-          <p className="text-sm font-medium text-surface-900">{session.workoutName}</p>
-          <p className="text-xs text-surface-500">{formatRelativeDate(session.startedAt)}</p>
+          <p className="text-sm font-medium text-surface-900">{session.workout_name}</p>
+          <p className="text-xs text-surface-500">{formatRelativeDate(session.started_at)}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-semibold text-surface-900">{formatDuration(session.duration)}</p>
-          <p className="text-xs text-surface-500">{(session.totalVolume / 1000).toFixed(1)}k kg</p>
+          <p className="text-sm font-semibold text-surface-900">{formatDuration(session.duration_seconds || 0)}</p>
+          <p className="text-xs text-surface-500">{((session.total_volume || 0) / 1000).toFixed(1)}k kg</p>
         </div>
       </div>
     )
@@ -96,23 +96,23 @@ export function SessionCard({ session, compact }: SessionCardProps) {
     <article className="card p-4">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <h3 className="font-semibold text-surface-900 text-sm">{session.workoutName}</h3>
-          <p className="text-xs text-surface-500">{formatRelativeDate(session.startedAt)}</p>
+          <h3 className="font-semibold text-surface-900 text-sm">{session.workout_name}</h3>
+          <p className="text-xs text-surface-500">{formatRelativeDate(session.started_at)}</p>
         </div>
         <span className="badge bg-emerald-50 text-emerald-700 border-0 text-xs">Completed</span>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div className="text-center">
-          <p className="text-base font-bold text-surface-900">{formatDuration(session.duration)}</p>
+          <p className="text-base font-bold text-surface-900">{formatDuration(session.duration_seconds || 0)}</p>
           <p className="text-[10px] text-surface-500 uppercase tracking-wide">Duration</p>
         </div>
         <div className="text-center border-x border-surface-100">
-          <p className="text-base font-bold text-surface-900">{session.exercises.length || '—'}</p>
+          <p className="text-base font-bold text-surface-900">{session.total_exercises || '—'}</p>
           <p className="text-[10px] text-surface-500 uppercase tracking-wide">Exercises</p>
         </div>
         <div className="text-center">
-          <p className="text-base font-bold text-surface-900">{(session.totalVolume / 1000).toFixed(1)}k</p>
+          <p className="text-base font-bold text-surface-900">{((session.total_volume || 0) / 1000).toFixed(1)}k</p>
           <p className="text-[10px] text-surface-500 uppercase tracking-wide">Volume (kg)</p>
         </div>
       </div>

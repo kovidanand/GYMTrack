@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { User, Mail, Target, Dumbbell, Calendar, Ruler, Weight, Trophy, Bell, Moon, Globe } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { User, Target, Dumbbell, Calendar, Ruler, Weight, Trophy, Loader2 } from 'lucide-react'
 import { PageHeader, SectionHeader, Avatar, Badge } from '@/components/shared'
 import { personalRecords } from '@/data/progress'
-import { mockUser } from '@/data/users'
 import { capitalise } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
+import type { FitnessGoal, ExperienceLevel } from '@/types/supabase'
 
 const fitnessGoalLabel: Record<string, string> = {
   build_muscle:       'Build Muscle',
@@ -15,55 +16,131 @@ const fitnessGoalLabel: Record<string, string> = {
 }
 
 export default function Profile() {
-  const user = mockUser
-  const [units, setUnits]             = useState<'metric' | 'imperial'>('metric')
-  const [darkMode, setDarkMode]       = useState(false)
-  const [notifications, setNotifications] = useState(true)
-  const [reminders, setReminders]     = useState(true)
-  const [showSaveToast, setShowSaveToast] = useState(false)
+  const { user, profile, updateUserProfile } = useAuth()
 
-  const handleSave = () => {
-    setShowSaveToast(true)
-    setTimeout(() => setShowSaveToast(false), 3000)
+  // Local state for editing
+  const [isEditing, setIsEditing] = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+  const [showToast, setShowToast] = useState(false)
+
+  // Form fields
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName]   = useState('')
+  const [height, setHeight]       = useState<string>('')
+  const [weight, setWeight]       = useState<string>('')
+  const [age, setAge]             = useState<string>('')
+  const [goal, setGoal]           = useState<FitnessGoal | ''>('')
+  const [experience, setExperience] = useState<ExperienceLevel | ''>('')
+  const [frequency, setFrequency] = useState<string>('')
+
+  // Initialize form when profile loads or editing stops
+  useEffect(() => {
+    if (profile && !isEditing) {
+      setFirstName(profile.first_name)
+      setLastName(profile.last_name)
+      setHeight(profile.height ? String(profile.height) : '')
+      setWeight(profile.weight ? String(profile.weight) : '')
+      setAge(profile.age ? String(profile.age) : '')
+      setGoal(profile.fitness_goal || '')
+      setExperience(profile.experience_level || '')
+      setFrequency(profile.training_frequency ? String(profile.training_frequency) : '')
+    }
+  }, [profile, isEditing])
+
+  const handleSave = async () => {
+    setError(null)
+    setSaving(true)
+
+    const { error: saveErr } = await updateUserProfile({
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      height: height ? parseFloat(height) : null,
+      weight: weight ? parseFloat(weight) : null,
+      age: age ? parseInt(age, 10) : null,
+      fitness_goal: (goal as FitnessGoal) || null,
+      experience_level: (experience as ExperienceLevel) || null,
+      training_frequency: frequency ? parseInt(frequency, 10) : null,
+    })
+
+    setSaving(false)
+
+    if (saveErr) {
+      setError(saveErr)
+    } else {
+      setIsEditing(false)
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 3000)
+    }
   }
 
+  if (!profile || !user) return null
+
+  const fullName = `${profile.first_name} ${profile.last_name}`.trim()
+
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className="animate-fade-in space-y-8 pb-12">
       <PageHeader title="Profile" description="Manage your account and fitness preferences." />
 
-      {/* Toast */}
-      {showSaveToast && (
+      {showToast && (
         <div
           role="status"
           aria-live="polite"
           className="fixed top-20 right-4 z-50 bg-surface-900 text-white text-sm px-4 py-3 rounded-xl shadow-lg animate-slide-up"
         >
-          ✅ Settings saved (Phase 1 — not persisted)
+          ✅ Profile updated successfully
         </div>
       )}
 
-      {/* ── Profile Card ── */}
-      <section aria-label="Profile information">
+      {error && (
+        <div role="alert" className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-200 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* ── Profile Header ── */}
+      <section aria-label="Profile header">
         <div className="card p-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-            <Avatar name={user.name} size="xl" />
-            <div className="flex-1 text-center sm:text-left">
-              <h2 className="text-xl font-bold text-surface-900">{user.name}</h2>
-              <p className="text-surface-500 text-sm">{user.email}</p>
-              <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
-                <Badge variant="brand">{fitnessGoalLabel[user.fitnessGoal]}</Badge>
-                <Badge variant="outline">{capitalise(user.experienceLevel)}</Badge>
-                <Badge variant="outline">{user.trainingFrequency} days/week</Badge>
+            <Avatar name={fullName} size="xl" />
+            
+            {isEditing ? (
+              <div className="flex-1 w-full space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-surface-500 mb-1">First Name</label>
+                    <input type="text" className="input-base" value={firstName} onChange={e => setFirstName(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-surface-500 mb-1">Last Name</label>
+                    <input type="text" className="input-base" value={lastName} onChange={e => setLastName(e.target.value)} />
+                  </div>
+                </div>
               </div>
+            ) : (
+              <div className="flex-1 text-center sm:text-left">
+                <h2 className="text-xl font-bold text-surface-900">{fullName}</h2>
+                <p className="text-surface-500 text-sm">{user.email}</p>
+                <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
+                  {profile.fitness_goal && <Badge variant="brand">{fitnessGoalLabel[profile.fitness_goal]}</Badge>}
+                  {profile.experience_level && <Badge variant="outline">{capitalise(profile.experience_level)}</Badge>}
+                  {profile.training_frequency && <Badge variant="outline">{profile.training_frequency} days/week</Badge>}
+                </div>
+              </div>
+            )}
+
+            <div className="flex-shrink-0 flex gap-2">
+              {isEditing ? (
+                <>
+                  <button className="btn-secondary text-sm" onClick={() => setIsEditing(false)} disabled={saving}>Cancel</button>
+                  <button className="btn-primary text-sm" onClick={handleSave} disabled={saving}>
+                    {saving ? <Loader2 size={16} className="animate-spin" /> : 'Save'}
+                  </button>
+                </>
+              ) : (
+                <button className="btn-secondary text-sm" onClick={() => setIsEditing(true)}>Edit Profile</button>
+              )}
             </div>
-            <button
-              className="btn-secondary text-sm flex-shrink-0"
-              onClick={handleSave}
-              id="profile-edit-btn"
-              aria-label="Edit profile (Phase 2)"
-            >
-              Edit Profile
-            </button>
           </div>
         </div>
       </section>
@@ -73,21 +150,52 @@ export default function Profile() {
         <section aria-label="Body information">
           <SectionHeader title="Body Information" />
           <div className="card p-5 space-y-4">
-            {[
-              { icon: <Ruler size={16} />,   label: 'Height', value: `${user.bodyStats.height} cm` },
-              { icon: <Weight size={16} />,  label: 'Weight', value: `${user.bodyStats.weight} kg` },
-              { icon: <Calendar size={16} />, label: 'Age',   value: `${user.bodyStats.age} years` },
-            ].map(item => (
-              <div key={item.label} className="flex items-center gap-4">
-                <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                  {item.icon}
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-surface-500">{item.label}</p>
-                  <p className="text-sm font-semibold text-surface-900">{item.value}</p>
-                </div>
+            
+            {/* Height */}
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                <Ruler size={16} />
               </div>
-            ))}
+              <div className="flex-1">
+                <p className="text-xs text-surface-500">Height (cm)</p>
+                {isEditing ? (
+                  <input type="number" className="input-base mt-1" value={height} onChange={e => setHeight(e.target.value)} />
+                ) : (
+                  <p className="text-sm font-semibold text-surface-900">{profile.height ? `${profile.height} cm` : '—'}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Weight */}
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                <Weight size={16} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-surface-500">Weight (kg)</p>
+                {isEditing ? (
+                  <input type="number" className="input-base mt-1" value={weight} onChange={e => setWeight(e.target.value)} />
+                ) : (
+                  <p className="text-sm font-semibold text-surface-900">{profile.weight ? `${profile.weight} kg` : '—'}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Age */}
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                <Calendar size={16} />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-surface-500">Age</p>
+                {isEditing ? (
+                  <input type="number" className="input-base mt-1" value={age} onChange={e => setAge(e.target.value)} />
+                ) : (
+                  <p className="text-sm font-semibold text-surface-900">{profile.age ? `${profile.age} years` : '—'}</p>
+                )}
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -95,28 +203,91 @@ export default function Profile() {
         <section aria-label="Fitness information">
           <SectionHeader title="Fitness Information" />
           <div className="card p-5 space-y-4">
-            {[
-              { icon: <Target size={16} />,    label: 'Primary Goal',        value: fitnessGoalLabel[user.fitnessGoal] },
-              { icon: <User size={16} />,      label: 'Experience Level',    value: capitalise(user.experienceLevel) },
-              { icon: <Dumbbell size={16} />,  label: 'Preferred Equipment', value: user.preferredEquipment.map(capitalise).join(', ') },
-              { icon: <Calendar size={16} />,  label: 'Training Frequency',  value: `${user.trainingFrequency} days per week` },
-              { icon: <Mail size={16} />,      label: 'Member Since',        value: new Date(user.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) },
-            ].map(item => (
-              <div key={item.label} className="flex items-center gap-4">
-                <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                  {item.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-surface-500">{item.label}</p>
-                  <p className="text-sm font-semibold text-surface-900 truncate">{item.value}</p>
-                </div>
+            
+            {/* Goal */}
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                <Target size={16} />
               </div>
-            ))}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-surface-500">Primary Goal</p>
+                {isEditing ? (
+                  <select className="input-base mt-1" value={goal} onChange={e => setGoal(e.target.value as FitnessGoal)}>
+                    <option value="">Select a goal</option>
+                    {Object.entries(fitnessGoalLabel).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-sm font-semibold text-surface-900 truncate">
+                    {profile.fitness_goal ? fitnessGoalLabel[profile.fitness_goal] : '—'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Experience */}
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                <User size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-surface-500">Experience Level</p>
+                {isEditing ? (
+                  <select className="input-base mt-1" value={experience} onChange={e => setExperience(e.target.value as ExperienceLevel)}>
+                    <option value="">Select level</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                ) : (
+                  <p className="text-sm font-semibold text-surface-900 truncate">
+                    {profile.experience_level ? capitalise(profile.experience_level) : '—'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Frequency */}
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                <Calendar size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-surface-500">Training Frequency</p>
+                {isEditing ? (
+                  <select className="input-base mt-1" value={frequency} onChange={e => setFrequency(e.target.value)}>
+                    <option value="">Select days/week</option>
+                    {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                      <option key={n} value={n}>{n} days/week</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-sm font-semibold text-surface-900 truncate">
+                    {profile.training_frequency ? `${profile.training_frequency} days per week` : '—'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Equipment (View only for now, complex multi-select UI omitted for brevity) */}
+            <div className="flex items-center gap-4">
+              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                <Dumbbell size={16} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-surface-500">Preferred Equipment</p>
+                <p className="text-sm font-semibold text-surface-900 truncate">
+                  {profile.preferred_equipment?.length ? profile.preferred_equipment.map(capitalise).join(', ') : '—'}
+                </p>
+              </div>
+            </div>
+
           </div>
         </section>
       </div>
 
-      {/* ── Personal Records ── */}
+      {/* ── Personal Records (Mock data retained) ── */}
       <section aria-label="Personal records">
         <SectionHeader title="Personal Records" />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -131,137 +302,6 @@ export default function Profile() {
         </div>
       </section>
 
-      {/* ── Settings ── */}
-      <section aria-label="App settings">
-        <SectionHeader title="Settings" />
-        <div className="card p-5 space-y-0 divide-y divide-surface-100">
-
-          {/* Units */}
-          <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center">
-                <Globe size={16} className="text-surface-500" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-surface-900">Units</p>
-                <p className="text-xs text-surface-500">Weight and measurement units</p>
-              </div>
-            </div>
-            <div className="flex rounded-lg border border-surface-200 overflow-hidden" role="group" aria-label="Unit selection">
-              {(['metric', 'imperial'] as const).map(u => (
-                <button
-                  key={u}
-                  id={`settings-units-${u}`}
-                  onClick={() => setUnits(u)}
-                  aria-pressed={units === u}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                    units === u
-                      ? 'bg-brand-500 text-white'
-                      : 'bg-white text-surface-600 hover:bg-surface-50'
-                  }`}
-                >
-                  {u === 'metric' ? 'kg / cm' : 'lb / in'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Dark Mode */}
-          <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center">
-                <Moon size={16} className="text-surface-500" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-surface-900">Dark Mode</p>
-                <p className="text-xs text-surface-500">Coming in Phase 2</p>
-              </div>
-            </div>
-            <ToggleSwitch
-              id="settings-dark-mode"
-              checked={darkMode}
-              onChange={setDarkMode}
-              label="Dark mode"
-            />
-          </div>
-
-          {/* Notifications */}
-          <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center">
-                <Bell size={16} className="text-surface-500" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-surface-900">Notifications</p>
-                <p className="text-xs text-surface-500">Progress updates and achievements</p>
-              </div>
-            </div>
-            <ToggleSwitch
-              id="settings-notifications"
-              checked={notifications}
-              onChange={setNotifications}
-              label="Notifications"
-            />
-          </div>
-
-          {/* Workout Reminders */}
-          <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center">
-                <Calendar size={16} className="text-surface-500" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-surface-900">Workout Reminders</p>
-                <p className="text-xs text-surface-500">Daily reminders to stay on track</p>
-              </div>
-            </div>
-            <ToggleSwitch
-              id="settings-reminders"
-              checked={reminders}
-              onChange={setReminders}
-              label="Workout reminders"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Save button */}
-      <div className="flex justify-end">
-        <button className="btn-primary" onClick={handleSave} id="profile-save-btn">
-          Save Changes
-        </button>
-      </div>
     </div>
-  )
-}
-
-// ─── Toggle Switch ─────────────────────────────────────────────────────────────
-
-interface ToggleSwitchProps {
-  id: string
-  checked: boolean
-  onChange: (v: boolean) => void
-  label: string
-}
-
-function ToggleSwitch({ id, checked, onChange, label }: ToggleSwitchProps) {
-  return (
-    <button
-      id={id}
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-        checked ? 'bg-brand-500' : 'bg-surface-200'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
-          checked ? 'translate-x-5' : 'translate-x-0'
-        }`}
-        aria-hidden="true"
-      />
-    </button>
   )
 }
