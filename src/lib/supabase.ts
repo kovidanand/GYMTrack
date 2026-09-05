@@ -1,8 +1,12 @@
 /// <reference types="vite/client" />
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL  as string | undefined
-const supabaseKey  = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const rawUrl  = import.meta.env.VITE_SUPABASE_URL  as string | undefined
+const rawKey  = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+
+// Sanitize URL to remove trailing slashes and /rest/v1 suffixes which break OAuth routing
+const supabaseUrl = rawUrl ? rawUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '') : undefined
+const supabaseKey = rawKey ? rawKey.trim() : undefined
 
 // ─── Configuration guard ──────────────────────────────────────────────────────
 // Provide a clear developer-facing message if env vars are missing,
