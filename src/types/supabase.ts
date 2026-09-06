@@ -1,6 +1,4 @@
-// ─── Supabase Database Types (Phase 2) ────────────────────────────────────────
-// Manually maintained for Phase 2. In Phase 3+ these should be auto-generated
-// via `supabase gen types typescript --project-id <id> > src/types/supabase.ts`
+// ─── Supabase Database Types ──────────────────────────────────────────────────
 
 export type FitnessGoal =
   | 'build_muscle'
@@ -18,13 +16,22 @@ export interface Profile {
   last_name: string
   avatar_url: string | null
   fitness_goal: FitnessGoal | null
+  secondary_goal: FitnessGoal | null
   experience_level: ExperienceLevel | null
   training_frequency: number | null // days per week
+  session_duration: number | null   // minutes
   height: number | null             // cm
   weight: number | null             // kg
   age: number | null
+  sex: string | null                // 'male' | 'female' | 'other' | null
   preferred_equipment: string[]
+  training_location: string | null  // 'full_gym' | 'home_gym' | 'outdoors'
+  preferred_split: string | null    // 'upper_lower' | 'push_pull_legs' | 'full_body' | 'bro_split'
+  preferred_exercises: string[]
+  disliked_exercises: string[]
+  health_limitations: string | null
   onboarding_complete: boolean
+  onboarding_step: number | null
   created_at: string
   updated_at: string
 }

@@ -105,7 +105,9 @@ export interface WorkoutPlan {
   goal: string | null
   difficulty: string | null
   days_per_week: number | null
+  duration_weeks: number | null
   is_active: boolean
+  ai_generated: boolean
   created_at: string
   updated_at: string
 }
@@ -119,19 +121,12 @@ export interface Workout {
   day_number?: number | null
   notes?: string | null
   estimated_duration?: number | null
+  target_muscle_groups?: string[] | null
   created_at?: string
   updated_at?: string
-  
+
   // Joined relation (populated on fetch)
   workout_exercises?: WorkoutExercise[]
-  
-  // Legacy fields for Phase 1/2 Mock Dashboard compatibility
-  exercises?: any[]
-  estimatedDuration?: number
-  lastCompleted?: string
-  tags?: string[]
-  createdAt?: string
-  isTemplate?: boolean
 }
 
 export interface WorkoutExercise {
@@ -146,7 +141,7 @@ export interface WorkoutExercise {
   notes: string | null
   created_at: string
   updated_at: string
-  
+
   // Joined relation (populated on fetch)
   exercise?: Exercise
   workout_set_logs?: WorkoutSetLog[]
@@ -165,7 +160,7 @@ export interface WorkoutSetLog {
   updated_at: string
 }
 
-// ─── Workout History & Sessions (Phase 5 Supabase Schema) ─────────────────────
+// ─── Workout History & Sessions ───────────────────────────────────────────────
 
 export interface WorkoutSession {
   id: string
@@ -184,7 +179,7 @@ export interface WorkoutSession {
   notes: string | null
   created_at: string
   updated_at: string
-  
+
   // Joined relation
   workout_session_sets?: WorkoutSessionSet[]
 }
@@ -202,12 +197,12 @@ export interface WorkoutSessionSet {
   is_personal_record: boolean
   created_at: string
   updated_at: string
-  
+
   // Joined relation
   exercise?: Exercise
 }
 
-// ─── Analytics & Progress (Phase 5) ───────────────────────────────────────────
+// ─── Analytics & Progress ─────────────────────────────────────────────────────
 
 export interface ProgressStats {
   totalWorkouts: number
@@ -228,26 +223,6 @@ export interface ChartDataPoint {
 }
 
 export interface PersonalRecord {
-  id: string // this will be the set_id
-  exerciseId: string
-  exerciseName: string
-  value: number
-  unit: string
-  achievedAt: string
-  previousValue?: number
-}
-
-// ─── Progress ─────────────────────────────────────────────────────────────────
-
-export interface ProgressEntry {
-  date: string
-  value: number
-  unit: string
-  exerciseId?: string
-  exerciseName?: string
-}
-
-export interface PersonalRecord {
   id: string
   exerciseId: string
   exerciseName: string
@@ -255,6 +230,14 @@ export interface PersonalRecord {
   unit: string
   achievedAt: string
   previousValue?: number
+}
+
+export interface ProgressEntry {
+  date: string
+  value: number
+  unit: string
+  exerciseId?: string
+  exerciseName?: string
 }
 
 export interface WeeklyActivity {
@@ -277,12 +260,6 @@ export interface ProgressMetric {
   unit?: string
   change?: number    // percentage
   trend: 'up' | 'down' | 'neutral'
-}
-
-export interface ChartDataPoint {
-  date: string
-  value: number
-  label?: string
 }
 
 // ─── UI State ─────────────────────────────────────────────────────────────────
@@ -336,3 +313,84 @@ export interface CoachContext {
   activePlan?: any
 }
 
+// ─── AI Action Proposals ──────────────────────────────────────────────────────
+
+export type AIActionType =
+  | 'create_workout'
+  | 'adjust_weight'
+  | 'create_plan'
+  | 'replace_exercise'
+  | 'add_recovery_day'
+
+export interface AIActionProposal {
+  type: AIActionType
+  title: string
+  description: string
+  data: Record<string, any>
+  applied?: boolean
+}
+
+// ─── AI Plan Generation ───────────────────────────────────────────────────────
+
+export interface AIPlanExercise {
+  exercise_name: string
+  sets: number
+  rep_range: string
+  rest_seconds: number
+  notes?: string
+  substitutions?: string[]
+}
+
+export interface AIPlanWorkout {
+  name: string
+  day_number: number
+  description: string
+  target_muscle_groups: string[]
+  exercises: AIPlanExercise[]
+  estimated_duration: number
+}
+
+export interface AIPlanGeneration {
+  plan_name: string
+  goal: string
+  duration_weeks: number
+  days_per_week: number
+  session_duration: number
+  difficulty: string
+  progression_strategy: string
+  workouts: AIPlanWorkout[]
+  notes: string
+}
+
+// ─── Onboarding State ─────────────────────────────────────────────────────────
+
+export interface OnboardingState {
+  step: number
+  fitness_goal: FitnessGoal | null
+  secondary_goal: FitnessGoal | null
+  experience_level: ExperienceLevel | null
+  training_frequency: number | null
+  session_duration: number | null
+  preferred_equipment: string[]
+  training_location: string | null
+  preferred_split: string | null
+  preferred_exercises: string[]
+  disliked_exercises: string[]
+  health_limitations: string | null
+  height: number | null
+  weight: number | null
+  age: number | null
+  sex: string | null
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+export type ToastType = 'success' | 'error' | 'info' | 'warning'
+
+export interface ToastMessage {
+  id: string
+  type: ToastType
+  title: string
+  description?: string
+  duration?: number
+}
