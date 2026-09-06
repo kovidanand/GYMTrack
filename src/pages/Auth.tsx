@@ -1,6 +1,6 @@
-import { useState, FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react'
+import { useState, FormEvent, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { GYMTrackLogo } from '@/components/shared'
 import { useAuth } from '@/context/AuthContext'
 import {
@@ -9,6 +9,8 @@ import {
   validateConfirmPassword,
   validateName,
 } from '@/lib/authErrors'
+import { OtpVerification } from '@/components/auth/OtpVerification'
+import { getPostAuthRedirect } from '@/lib/authRedirect'
 
 // ─── Shared field components ──────────────────────────────────────────────────
 
@@ -31,9 +33,11 @@ function Field({ id, label, type = 'text', value, onChange, error, placeholder, 
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-surface-700 mb-1.5">
-        {label} {required && <span className="text-brand-500">*</span>}
-      </label>
+      {label && (
+        <label htmlFor={id} className="block text-sm font-medium text-surface-700 mb-1.5">
+          {label} {required && <span className="text-brand-500">*</span>}
+        </label>
+      )}
       <div className="relative">
         <input
           id={id}
@@ -68,19 +72,20 @@ function Field({ id, label, type = 'text', value, onChange, error, placeholder, 
   )
 }
 
-function ErrorBanner({ message }: { message: string }) {
+export function ErrorBanner({ message }: { message: string }) {
   return (
     <div role="alert" className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
       <AlertCircle size={16} className="flex-shrink-0 mt-0.5" aria-hidden="true" />
-      {message}
+      <span>{message}</span>
     </div>
   )
 }
 
-function SuccessBanner({ message }: { message: string }) {
+export function SuccessBanner({ message }: { message: string }) {
   return (
     <div role="status" className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-lg px-4 py-3">
-      ✓ {message}
+      <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5 text-emerald-600" aria-hidden="true" />
+      <span>{message}</span>
     </div>
   )
 }
@@ -127,7 +132,7 @@ function GoogleAuthButton({ disabled }: { disabled: boolean }) {
           <div className="w-full border-t border-surface-200"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-3 bg-white text-surface-500">OR</span>
+          <span className="px-3 bg-white text-surface-500 text-xs font-medium uppercase tracking-wider">or email</span>
         </div>
       </div>
     </div>
@@ -137,14 +142,26 @@ function GoogleAuthButton({ disabled }: { disabled: boolean }) {
 // ─── Login Page ───────────────────────────────────────────────────────────────
 
 export function Login() {
-  const { signIn, profile, loading } = useAuth()
+  const { signIn, isAuthenticated, profile, initialized } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
-  const [email, setEmail]       = useState('')
+  const [flow, setFlow] = useState<'form' | 'verification'>('form')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [errors, setErrors]     = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [globalError, setGlobalError] = useState<string | null>(null)
-  const [submitting, setSubmitting]   = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  // If already authenticated and initialized, redirect to appropriate page
+  useEffect(() => {
+    if (initialized && isAuthenticated) {
+      const state = location.state as { from?: { pathname?: string } } | null
+      const from = state?.from?.pathname
+      const dest = from && from !== '/login' && from !== '/signup' ? from : getPostAuthRedirect(profile)
+      navigate(dest, { replace: true })
+    }
+  }, [initialized, isAuthenticated, profile, navigate, location])
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -162,23 +179,27 @@ export function Login() {
     if (!validate()) return
 
     setSubmitting(true)
-    const { error } = await signIn(email, password)
+    const { error, needsEmailVerification } = await signIn(email, password)
     setSubmitting(false)
+
+    if (needsEmailVerification) {
+      setFlow('verification')
+      return
+    }
 
     if (error) {
       setGlobalError(error)
       return
     }
 
-    // Navigate based on onboarding status (profile is loaded by AuthContext)
-    // Give AuthContext a moment to load the profile after sign in
-    navigate(profile?.onboarding_complete === false ? '/onboarding' : '/dashboard')
+    const state = location.state as { from?: { pathname?: string } } | null
+    const from = state?.from?.pathname
+    const dest = from && from !== '/login' && from !== '/signup' ? from : getPostAuthRedirect(profile)
+    navigate(dest, { replace: true })
   }
 
-  if (loading) return null
-
   return (
-    <div className="min-h-screen bg-surface-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-surface-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -187,70 +208,81 @@ export function Login() {
           <p className="text-surface-500 text-sm">Welcome back. Sign in to continue.</p>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="card p-6 space-y-4">
-          {globalError && <ErrorBanner message={globalError} />}
-
-          <GoogleAuthButton disabled={submitting} />
-
-          <Field
-            id="login-email"
-            label="Email"
-            type="email"
-            value={email}
-            onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: '' })) }}
-            error={errors.email}
-            placeholder="you@example.com"
-            autoComplete="email"
-            required
+        {flow === 'verification' ? (
+          <OtpVerification
+            email={email}
+            onBackToSignIn={() => setFlow('form')}
+            onSuccess={() => {
+              const dest = getPostAuthRedirect(profile)
+              navigate(dest, { replace: true })
+            }}
           />
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} noValidate className="card p-6 space-y-4">
+              {globalError && <ErrorBanner message={globalError} />}
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="login-password" className="block text-sm font-medium text-surface-700">
-                Password <span className="text-brand-500">*</span>
-              </label>
-              <Link to="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700 hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-            <div className="relative">
+              <GoogleAuthButton disabled={submitting} />
+
               <Field
-                id="login-password"
-                label=""
-                type="password"
-                value={password}
-                onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })) }}
-                error={errors.password}
-                placeholder="••••••••"
-                autoComplete="current-password"
+                id="login-email"
+                label="Email"
+                type="email"
+                value={email}
+                onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: '' })) }}
+                error={errors.email}
+                placeholder="you@example.com"
+                autoComplete="email"
                 required
               />
-            </div>
-          </div>
 
-          <button
-            type="submit"
-            id="login-submit"
-            disabled={submitting}
-            className="btn-primary w-full justify-center mt-2"
-          >
-            {submitting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-                Signing in…
-              </>
-            ) : (
-              'Sign in'
-            )}
-          </button>
-        </form>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="login-password" className="block text-sm font-medium text-surface-700">
+                    Password <span className="text-brand-500">*</span>
+                  </label>
+                  <Link to="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700 hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <Field
+                  id="login-password"
+                  label=""
+                  type="password"
+                  value={password}
+                  onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })) }}
+                  error={errors.password}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
 
-        <p className="text-center text-sm text-surface-500 mt-5">
-          Don't have an account?{' '}
-          <Link to="/signup" className="text-brand-600 font-semibold hover:underline">
-            Get started
-          </Link>
-        </p>
+              <button
+                type="submit"
+                id="login-submit"
+                disabled={submitting}
+                className="btn-primary w-full justify-center mt-2"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin mr-2" aria-hidden="true" />
+                    Signing in…
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </form>
+
+            <p className="text-center text-sm text-surface-500 mt-5">
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-brand-600 font-semibold hover:underline">
+                Get started
+              </Link>
+            </p>
+          </>
+        )}
       </div>
     </div>
   )
@@ -259,9 +291,10 @@ export function Login() {
 // ─── Signup Page ──────────────────────────────────────────────────────────────
 
 export function Signup() {
-  const { signUp } = useAuth()
-  const navigate   = useNavigate()
+  const { signUp, isAuthenticated, profile, initialized } = useAuth()
+  const navigate = useNavigate()
 
+  const [flow, setFlow]             = useState<'form' | 'verification'>('form')
   const [firstName, setFirstName]   = useState('')
   const [lastName, setLastName]     = useState('')
   const [email, setEmail]           = useState('')
@@ -270,6 +303,14 @@ export function Signup() {
   const [errors, setErrors]         = useState<Record<string, string>>({})
   const [globalError, setGlobalError] = useState<string | null>(null)
   const [submitting, setSubmitting]   = useState(false)
+
+  // If already authenticated and initialized, redirect
+  useEffect(() => {
+    if (initialized && isAuthenticated) {
+      const dest = getPostAuthRedirect(profile)
+      navigate(dest, { replace: true })
+    }
+  }, [initialized, isAuthenticated, profile, navigate])
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -293,7 +334,7 @@ export function Signup() {
     if (!validate()) return
 
     setSubmitting(true)
-    const { error } = await signUp(email, password, firstName, lastName)
+    const { error, needsEmailVerification } = await signUp(email, password, firstName, lastName)
     setSubmitting(false)
 
     if (error) {
@@ -301,8 +342,13 @@ export function Signup() {
       return
     }
 
-    // New user → go to onboarding
-    navigate('/onboarding')
+    if (needsEmailVerification) {
+      setFlow('verification')
+      return
+    }
+
+    // Directly authenticated
+    navigate('/onboarding', { replace: true })
   }
 
   return (
@@ -316,101 +362,110 @@ export function Signup() {
           <p className="text-surface-500 text-sm">Start training smarter today.</p>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="card p-6 space-y-4">
-          {globalError && <ErrorBanner message={globalError} />}
-
-          <GoogleAuthButton disabled={submitting} />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              id="signup-first-name"
-              label="First name"
-              value={firstName}
-              onChange={v => { setFirstName(v); setErrors(e => ({ ...e, firstName: '' })) }}
-              error={errors.firstName}
-              placeholder="Kovid"
-              autoComplete="given-name"
-              required
-            />
-            <Field
-              id="signup-last-name"
-              label="Last name"
-              value={lastName}
-              onChange={v => { setLastName(v); setErrors(e => ({ ...e, lastName: '' })) }}
-              error={errors.lastName}
-              placeholder="Anand"
-              autoComplete="family-name"
-              required
-            />
-          </div>
-
-          <Field
-            id="signup-email"
-            label="Email"
-            type="email"
-            value={email}
-            onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: '' })) }}
-            error={errors.email}
-            placeholder="you@example.com"
-            autoComplete="email"
-            required
+        {flow === 'verification' ? (
+          <OtpVerification
+            email={email}
+            onBackToSignIn={() => setFlow('form')}
+            onSuccess={() => {
+              navigate('/onboarding', { replace: true })
+            }}
           />
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} noValidate className="card p-6 space-y-4">
+              {globalError && <ErrorBanner message={globalError} />}
 
-          <Field
-            id="signup-password"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })) }}
-            error={errors.password}
-            placeholder="At least 6 characters"
-            autoComplete="new-password"
-            required
-          />
+              <GoogleAuthButton disabled={submitting} />
 
-          <Field
-            id="signup-confirm"
-            label="Confirm password"
-            type="password"
-            value={confirm}
-            onChange={v => { setConfirm(v); setErrors(e => ({ ...e, confirm: '' })) }}
-            error={errors.confirm}
-            placeholder="Re-enter your password"
-            autoComplete="new-password"
-            required
-          />
+              <div className="grid grid-cols-2 gap-3">
+                <Field
+                  id="signup-first-name"
+                  label="First name"
+                  value={firstName}
+                  onChange={v => { setFirstName(v); setErrors(e => ({ ...e, firstName: '' })) }}
+                  error={errors.firstName}
+                  placeholder="Kovid"
+                  autoComplete="given-name"
+                  required
+                />
+                <Field
+                  id="signup-last-name"
+                  label="Last name"
+                  value={lastName}
+                  onChange={v => { setLastName(v); setErrors(e => ({ ...e, lastName: '' })) }}
+                  error={errors.lastName}
+                  placeholder="Anand"
+                  autoComplete="family-name"
+                  required
+                />
+              </div>
 
-          <button
-            type="submit"
-            id="signup-submit"
-            disabled={submitting}
-            className="btn-primary w-full justify-center mt-2"
-          >
-            {submitting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-                Creating account…
-              </>
-            ) : (
-              'Create account'
-            )}
-          </button>
+              <Field
+                id="signup-email"
+                label="Email"
+                type="email"
+                value={email}
+                onChange={v => { setEmail(v); setErrors(e => ({ ...e, email: '' })) }}
+                error={errors.email}
+                placeholder="you@example.com"
+                autoComplete="email"
+                required
+              />
 
-          <p className="text-xs text-surface-400 text-center">
-            By creating an account you agree to our terms.
-          </p>
-        </form>
+              <Field
+                id="signup-password"
+                label="Password"
+                type="password"
+                value={password}
+                onChange={v => { setPassword(v); setErrors(e => ({ ...e, password: '' })) }}
+                error={errors.password}
+                placeholder="At least 6 characters"
+                autoComplete="new-password"
+                required
+              />
 
-        <p className="text-center text-sm text-surface-500 mt-5">
-          Already have an account?{' '}
-          <Link to="/login" className="text-brand-600 font-semibold hover:underline">
-            Sign in
-          </Link>
-        </p>
+              <Field
+                id="signup-confirm"
+                label="Confirm password"
+                type="password"
+                value={confirm}
+                onChange={v => { setConfirm(v); setErrors(e => ({ ...e, confirm: '' })) }}
+                error={errors.confirm}
+                placeholder="Re-enter your password"
+                autoComplete="new-password"
+                required
+              />
+
+              <button
+                type="submit"
+                id="signup-submit"
+                disabled={submitting}
+                className="btn-primary w-full justify-center mt-2"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin mr-2" aria-hidden="true" />
+                    Creating account…
+                  </>
+                ) : (
+                  'Create account'
+                )}
+              </button>
+
+              <p className="text-xs text-surface-400 text-center">
+                By creating an account you agree to our terms of service.
+              </p>
+            </form>
+
+            <p className="text-center text-sm text-surface-500 mt-5">
+              Already have an account?{' '}
+              <Link to="/login" className="text-brand-600 font-semibold hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </>
+        )}
       </div>
     </div>
   )
 }
-
-// ─── Re-export for convenience ────────────────────────────────────────────────
-export { SuccessBanner, ErrorBanner }

@@ -31,6 +31,10 @@ export async function createProfile(profile: ProfileInsert): Promise<Profile | n
     .single()
 
   if (error) {
+    // If profile already exists (e.g. concurrent race condition), fetch and return it
+    if (error.code === '23505') {
+      return getProfile(profile.id)
+    }
     console.error('[GYMTrack] createProfile error:', error.message)
     return null
   }

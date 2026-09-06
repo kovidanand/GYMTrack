@@ -1,6 +1,31 @@
-import type { Workout, WorkoutSession } from '@/types'
+export interface MockWorkoutExerciseSet {
+  id: string
+  targetReps?: number
+  targetWeight?: number
+  targetDuration?: number
+  restTime: number
+}
 
-export const workouts: Workout[] = [
+export interface MockWorkoutExercise {
+  id: string
+  exerciseId: string
+  order: number
+  sets: MockWorkoutExerciseSet[]
+}
+
+export interface MockWorkout {
+  id: string
+  name: string
+  description: string
+  estimated_duration: number
+  lastCompleted?: string
+  created_at: string
+  isTemplate: boolean
+  tags: string[]
+  exercises: MockWorkoutExercise[]
+}
+
+export const workouts: MockWorkout[] = [
   {
     id: 'wo-001',
     name: 'Push Day',
@@ -202,6 +227,6 @@ export const workouts: Workout[] = [
   },
 ]
 
-export function getWorkoutById(id: string): Workout | undefined {
+export function getWorkoutById(id: string): MockWorkout | undefined {
   return workouts.find(w => w.id === id)
 }

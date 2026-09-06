@@ -5,6 +5,8 @@ import { ProtectedRoute } from '@/components/routing/ProtectedRoute'
 import Landing from '@/pages/Landing'
 import { Login, Signup } from '@/pages/Auth'
 import ForgotPassword from '@/pages/ForgotPassword'
+import ResetPassword from '@/pages/ResetPassword'
+import AuthCallback from '@/pages/AuthCallback'
 import Onboarding from '@/pages/Onboarding'
 import Dashboard from '@/pages/Dashboard'
 import Workouts from '@/pages/Workouts'
@@ -31,15 +33,17 @@ export default function App() {
           <Route path="/login"           element={<Login />} />
           <Route path="/signup"          element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password"  element={<ResetPassword />} />
+          <Route path="/auth/callback"   element={<AuthCallback />} />
 
-          {/* Protected standalone routes (No sidebar) */}
-          <Route element={<ProtectedRoute />}>
+          {/* Protected standalone routes (No sidebar, onboarding permitted) */}
+          <Route element={<ProtectedRoute requireOnboarding={false} />}>
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/workouts/:id/run" element={<WorkoutRunner />} />
           </Route>
 
-          {/* Protected app routes — wrapped in AppLayout (sidebar + mobile nav) */}
-          <Route element={<ProtectedRoute />}>
+          {/* Protected app routes — require completed onboarding */}
+          <Route element={<ProtectedRoute requireOnboarding={true} />}>
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/workouts"  element={<Workouts />} />

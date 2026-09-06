@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Mail } from 'lucide-react'
 import { GYMTrackLogo } from '@/components/shared'
 import { useAuth } from '@/context/AuthContext'
 import { validateEmail } from '@/lib/authErrors'
@@ -51,7 +51,9 @@ export default function ForgotPassword() {
         <div className="card p-6 space-y-4">
           {success ? (
             <div className="text-center py-4 space-y-3">
-              <div className="text-4xl">📧</div>
+              <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+                <Mail size={24} aria-hidden="true" />
+              </div>
               <h2 className="font-semibold text-surface-900">Check your inbox</h2>
               <p className="text-sm text-surface-500">
                 If an account exists for <span className="font-medium text-surface-700">{email}</span>,

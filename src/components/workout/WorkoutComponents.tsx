@@ -1,4 +1,4 @@
-import { Clock, Dumbbell, Calendar, BarChart2 } from 'lucide-react'
+import { Clock, Dumbbell, BarChart2 } from 'lucide-react'
 import { cn, formatDuration, formatRelativeDate } from '@/lib/utils'
 import type { Workout, WorkoutSession } from '@/types'
 
@@ -21,8 +21,9 @@ interface WorkoutCardProps {
 }
 
 export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
-  const primaryTag = workout.tags?.[0]
+  const primaryTag = workout.target_muscle_groups?.[0]
   const tagClass = primaryTag ? (workoutTagColors[primaryTag] ?? 'bg-surface-100 text-surface-600') : 'bg-surface-100 text-surface-600'
+  const exerciseCount = workout.workout_exercises?.length || 0
 
   return (
     <article
@@ -52,18 +53,14 @@ export function WorkoutCard({ workout, onClick }: WorkoutCardProps) {
       <div className="flex items-center gap-4 text-xs text-surface-500">
         <span className="flex items-center gap-1">
           <Dumbbell size={12} aria-hidden="true" />
-          {workout.exercises?.length || 0} exercises
+          {exerciseCount} {exerciseCount === 1 ? 'exercise' : 'exercises'}
         </span>
-        <span className="flex items-center gap-1">
-          <Clock size={12} aria-hidden="true" />
-          ~{formatDuration(workout.estimatedDuration || 0)}
-        </span>
-        {workout.lastCompleted && (
+        {workout.estimated_duration ? (
           <span className="flex items-center gap-1">
-            <Calendar size={12} aria-hidden="true" />
-            {formatRelativeDate(workout.lastCompleted)}
+            <Clock size={12} aria-hidden="true" />
+            ~{formatDuration(workout.estimated_duration)}
           </span>
-        )}
+        ) : null}
       </div>
     </article>
   )
