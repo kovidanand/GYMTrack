@@ -33,9 +33,13 @@ create trigger set_workout_sessions_updated_at
 
 -- RLS
 alter table public.workout_sessions enable row level security;
+drop policy if exists "workout_sessions: select own" on public.workout_sessions;
 create policy "workout_sessions: select own" on public.workout_sessions for select using (auth.uid() = user_id);
+drop policy if exists "workout_sessions: insert own" on public.workout_sessions;
 create policy "workout_sessions: insert own" on public.workout_sessions for insert with check (auth.uid() = user_id);
+drop policy if exists "workout_sessions: update own" on public.workout_sessions;
 create policy "workout_sessions: update own" on public.workout_sessions for update using (auth.uid() = user_id);
+drop policy if exists "workout_sessions: delete own" on public.workout_sessions;
 create policy "workout_sessions: delete own" on public.workout_sessions for delete using (auth.uid() = user_id);
 
 
@@ -67,18 +71,22 @@ create trigger set_workout_session_sets_updated_at
 -- RLS
 alter table public.workout_session_sets enable row level security;
 -- Access is controlled via the parent session table
+drop policy if exists "workout_session_sets: select own" on public.workout_session_sets;
 create policy "workout_session_sets: select own" 
   on public.workout_session_sets for select 
   using (exists (select 1 from public.workout_sessions s where s.id = session_id and s.user_id = auth.uid()));
 
+drop policy if exists "workout_session_sets: insert own" on public.workout_session_sets;
 create policy "workout_session_sets: insert own" 
   on public.workout_session_sets for insert 
   with check (exists (select 1 from public.workout_sessions s where s.id = session_id and s.user_id = auth.uid()));
 
+drop policy if exists "workout_session_sets: update own" on public.workout_session_sets;
 create policy "workout_session_sets: update own" 
   on public.workout_session_sets for update 
   using (exists (select 1 from public.workout_sessions s where s.id = session_id and s.user_id = auth.uid()));
 
+drop policy if exists "workout_session_sets: delete own" on public.workout_session_sets;
 create policy "workout_session_sets: delete own" 
   on public.workout_session_sets for delete 
   using (exists (select 1 from public.workout_sessions s where s.id = session_id and s.user_id = auth.uid()));

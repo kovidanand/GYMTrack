@@ -31,9 +31,13 @@ create trigger set_workout_plans_updated_at
 
 -- RLS
 alter table public.workout_plans enable row level security;
+drop policy if exists "workout_plans: select own" on public.workout_plans;
 create policy "workout_plans: select own" on public.workout_plans for select using (auth.uid() = user_id);
+drop policy if exists "workout_plans: insert own" on public.workout_plans;
 create policy "workout_plans: insert own" on public.workout_plans for insert with check (auth.uid() = user_id);
+drop policy if exists "workout_plans: update own" on public.workout_plans;
 create policy "workout_plans: update own" on public.workout_plans for update using (auth.uid() = user_id);
+drop policy if exists "workout_plans: delete own" on public.workout_plans;
 create policy "workout_plans: delete own" on public.workout_plans for delete using (auth.uid() = user_id);
 
 
@@ -62,9 +66,13 @@ create trigger set_workouts_updated_at
 
 -- RLS
 alter table public.workouts enable row level security;
+drop policy if exists "workouts: select own" on public.workouts;
 create policy "workouts: select own" on public.workouts for select using (auth.uid() = user_id);
+drop policy if exists "workouts: insert own" on public.workouts;
 create policy "workouts: insert own" on public.workouts for insert with check (auth.uid() = user_id);
+drop policy if exists "workouts: update own" on public.workouts;
 create policy "workouts: update own" on public.workouts for update using (auth.uid() = user_id);
+drop policy if exists "workouts: delete own" on public.workouts;
 create policy "workouts: delete own" on public.workouts for delete using (auth.uid() = user_id);
 
 
@@ -95,18 +103,22 @@ create trigger set_workout_exercises_updated_at
 -- RLS
 alter table public.workout_exercises enable row level security;
 -- Since workout_exercises don't have user_id directly, we check through workouts table
+drop policy if exists "workout_exercises: select own" on public.workout_exercises;
 create policy "workout_exercises: select own" 
   on public.workout_exercises for select 
   using (exists (select 1 from public.workouts w where w.id = workout_id and w.user_id = auth.uid()));
 
+drop policy if exists "workout_exercises: insert own" on public.workout_exercises;
 create policy "workout_exercises: insert own" 
   on public.workout_exercises for insert 
   with check (exists (select 1 from public.workouts w where w.id = workout_id and w.user_id = auth.uid()));
 
+drop policy if exists "workout_exercises: update own" on public.workout_exercises;
 create policy "workout_exercises: update own" 
   on public.workout_exercises for update 
   using (exists (select 1 from public.workouts w where w.id = workout_id and w.user_id = auth.uid()));
 
+drop policy if exists "workout_exercises: delete own" on public.workout_exercises;
 create policy "workout_exercises: delete own" 
   on public.workout_exercises for delete 
   using (exists (select 1 from public.workouts w where w.id = workout_id and w.user_id = auth.uid()));
@@ -137,9 +149,13 @@ create trigger set_workout_set_logs_updated_at
 
 -- RLS
 alter table public.workout_set_logs enable row level security;
+drop policy if exists "workout_set_logs: select own" on public.workout_set_logs;
 create policy "workout_set_logs: select own" on public.workout_set_logs for select using (auth.uid() = user_id);
+drop policy if exists "workout_set_logs: insert own" on public.workout_set_logs;
 create policy "workout_set_logs: insert own" on public.workout_set_logs for insert with check (auth.uid() = user_id);
+drop policy if exists "workout_set_logs: update own" on public.workout_set_logs;
 create policy "workout_set_logs: update own" on public.workout_set_logs for update using (auth.uid() = user_id);
+drop policy if exists "workout_set_logs: delete own" on public.workout_set_logs;
 create policy "workout_set_logs: delete own" on public.workout_set_logs for delete using (auth.uid() = user_id);
 
 -- Grants

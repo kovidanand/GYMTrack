@@ -44,6 +44,7 @@ create trigger set_exercises_updated_at
 alter table public.exercises enable row level security;
 
 -- Authenticated users can read exercises
+drop policy if exists "exercises: select all" on public.exercises;
 create policy "exercises: select all"
   on public.exercises for select
   to authenticated
@@ -64,14 +65,17 @@ create index if not exists user_favorite_exercises_user_id_idx on public.user_fa
 -- RLS
 alter table public.user_favorite_exercises enable row level security;
 
+drop policy if exists "favorites: select own" on public.user_favorite_exercises;
 create policy "favorites: select own"
   on public.user_favorite_exercises for select
   using (auth.uid() = user_id);
 
+drop policy if exists "favorites: insert own" on public.user_favorite_exercises;
 create policy "favorites: insert own"
   on public.user_favorite_exercises for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "favorites: delete own" on public.user_favorite_exercises;
 create policy "favorites: delete own"
   on public.user_favorite_exercises for delete
   using (auth.uid() = user_id);
@@ -423,4 +427,5 @@ INSERT INTO public.exercises (
  '{"Lie on your back holding a kettlebell in one hand straight up.", "Bend the knee on the same side.", "Roll onto your opposite elbow, then hand.", "Bridge your hips up.", "Sweep the straight leg underneath you into a lunge.", "Stand up.", "Reverse the steps to return to the floor."}', 
  '{"Keep your eyes on the kettlebell at all times.", "Take your time; this is not a speed drill."}', 
  '{"Rushing the movement.", "Taking eyes off the weight.", "Poor shoulder stability."}', 
- 'Full Body', '{"Core", "Shoulders", "Mobility"}', 'full_body', '{"kettlebell", "dumbbell"}', 'advanced', 'functional', 'complex', true, true);
+ 'Full Body', '{"Core", "Shoulders", "Mobility"}', 'full_body', '{"kettlebell", "dumbbell"}', 'advanced', 'functional', 'complex', true, true)
+ON CONFLICT (slug) DO NOTHING;

@@ -22,9 +22,13 @@ create trigger set_ai_conversations_updated_at
 
 -- RLS
 alter table public.ai_conversations enable row level security;
+drop policy if exists "ai_conversations: select own" on public.ai_conversations;
 create policy "ai_conversations: select own" on public.ai_conversations for select using (auth.uid() = user_id);
+drop policy if exists "ai_conversations: insert own" on public.ai_conversations;
 create policy "ai_conversations: insert own" on public.ai_conversations for insert with check (auth.uid() = user_id);
+drop policy if exists "ai_conversations: update own" on public.ai_conversations;
 create policy "ai_conversations: update own" on public.ai_conversations for update using (auth.uid() = user_id);
+drop policy if exists "ai_conversations: delete own" on public.ai_conversations;
 create policy "ai_conversations: delete own" on public.ai_conversations for delete using (auth.uid() = user_id);
 
 -- ─── 2. ai_messages table ────────────────────────────────────────────────────
@@ -44,6 +48,7 @@ create index if not exists ai_messages_created_at_idx on public.ai_messages(crea
 alter table public.ai_messages enable row level security;
 
 -- Policy relies on the parent conversation's user_id
+drop policy if exists "ai_messages: select own" on public.ai_messages;
 create policy "ai_messages: select own" on public.ai_messages for select 
 using (
   exists (
@@ -53,6 +58,7 @@ using (
   )
 );
 
+drop policy if exists "ai_messages: insert own" on public.ai_messages;
 create policy "ai_messages: insert own" on public.ai_messages for insert 
 with check (
   exists (
@@ -62,6 +68,7 @@ with check (
   )
 );
 
+drop policy if exists "ai_messages: delete own" on public.ai_messages;
 create policy "ai_messages: delete own" on public.ai_messages for delete 
 using (
   exists (
