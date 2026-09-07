@@ -17,10 +17,13 @@ export default function Dashboard() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   
-  const { workouts } = useWorkouts()
+  const { workouts, activePlan, createStarterRoutine } = useWorkouts()
   const { stats, history, personalRecords, loading } = useProgress()
 
-  const todaysWorkout = workouts[0] // Just pick the first available for now or ideally the next in plan
+  const planWorkouts = activePlan
+    ? workouts.filter(w => w.plan_id === activePlan.id).sort((a, b) => (a.day_number || 0) - (b.day_number || 0))
+    : []
+  const todaysWorkout = planWorkouts.length > 0 ? planWorkouts[0] : workouts[0]
   const latestSession = history[0]
   const topPRs = personalRecords.slice(0, 2)
 
@@ -55,8 +58,8 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* ── Today's Workout Card ── */}
-      {todaysWorkout && (
+      {/* ── Today's Workout Card or Starter Prompt ── */}
+      {todaysWorkout ? (
         <section aria-label="Today's workout">
           <div className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-6 text-white shadow-glow relative overflow-hidden">
             {/* Background decoration */}
@@ -64,7 +67,9 @@ export default function Dashboard() {
             <div className="absolute bottom-0 right-12 w-24 h-24 rounded-full bg-white/5 translate-y-8" aria-hidden="true" />
 
             <div className="relative">
-              <p className="text-brand-200 text-xs font-medium uppercase tracking-wider mb-1">Up Next</p>
+              <p className="text-brand-200 text-xs font-medium uppercase tracking-wider mb-1">
+                {activePlan ? `Up Next · ${activePlan.name}` : 'Up Next'}
+              </p>
               <h2 className="text-2xl font-bold mb-1">{todaysWorkout.name}</h2>
               <div className="flex items-center gap-3 mb-5">
                 <span className="flex items-center gap-1.5 text-brand-200 text-sm">
@@ -84,6 +89,34 @@ export default function Dashboard() {
               >
                 Start Workout
               </button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section aria-label="Get started with training">
+          <div className="bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl p-6 text-white shadow-glow relative overflow-hidden">
+            <div className="relative">
+              <p className="text-brand-200 text-xs font-medium uppercase tracking-wider mb-1">Get Started</p>
+              <h2 className="text-2xl font-bold mb-2">Ready to crush your goals?</h2>
+              <p className="text-brand-100 text-sm max-w-md mb-5">
+                Generate a proven 3-day Push-Pull-Legs routine tailored to your fitness journey, or create your own custom workout.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  className="bg-white text-brand-700 font-semibold text-sm px-6 py-2.5 rounded-lg hover:bg-brand-50 transition-colors active:scale-[0.98]"
+                  onClick={async () => {
+                    await createStarterRoutine()
+                  }}
+                >
+                  Generate 3-Day Routine
+                </button>
+                <button
+                  className="bg-brand-700/60 hover:bg-brand-700/80 text-white font-semibold text-sm px-6 py-2.5 rounded-lg transition-colors border border-white/20"
+                  onClick={() => navigate('/workouts/new')}
+                >
+                  Create Custom Workout
+                </button>
+              </div>
             </div>
           </div>
         </section>

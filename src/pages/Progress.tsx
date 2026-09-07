@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Activity, Clock, Flame, BarChart2, Trophy, ChevronDown, Calendar as CalendarIcon } from 'lucide-react'
+import { Activity, Clock, Flame, BarChart2, Trophy } from 'lucide-react'
 import { PageHeader, StatCard, SectionHeader } from '@/components/shared'
 import { useProgress } from '@/hooks/useProgress'
 import { formatRelativeDate } from '@/lib/utils'
@@ -14,8 +13,7 @@ import {
 } from 'recharts'
 
 export default function Progress() {
-  const { stats, volumeChart, personalRecords, loading, error } = useProgress()
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d')
+  const { stats, volumeChart, personalRecords, timeRange, setTimeRange, loading, error } = useProgress()
 
   if (loading) return <div className="p-8 text-center animate-pulse">Loading progress...</div>
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>

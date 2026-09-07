@@ -3,6 +3,15 @@ import { getWorkoutHistory, getProgressStats, getVolumeChartData, getPersonalRec
 import { useAuth } from '@/context/AuthContext'
 import type { WorkoutSession, ProgressStats, ChartDataPoint, PersonalRecord } from '@/types'
 
+export type TimeRange = '7d' | '30d' | '90d' | '1y'
+
+const RANGE_DAYS: Record<TimeRange, number> = {
+  '7d': 7,
+  '30d': 30,
+  '90d': 90,
+  '1y': 365,
+}
+
 export function useProgress() {
   const { user } = useAuth()
   
@@ -10,6 +19,7 @@ export function useProgress() {
   const [stats, setStats] = useState<ProgressStats | null>(null)
   const [volumeChart, setVolumeChart] = useState<ChartDataPoint[]>([])
   const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([])
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d')
   
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,7 +32,7 @@ export function useProgress() {
     const [historyRes, statsRes, volumeRes, prsRes] = await Promise.all([
       getWorkoutHistory(user.id),
       getProgressStats(user.id),
-      getVolumeChartData(user.id, 30),
+      getVolumeChartData(user.id, RANGE_DAYS[timeRange]),
       getPersonalRecords(user.id)
     ])
 
@@ -36,7 +46,7 @@ export function useProgress() {
     }
     
     setLoading(false)
-  }, [user])
+  }, [user, timeRange])
 
   useEffect(() => {
     fetchData()
@@ -47,6 +57,8 @@ export function useProgress() {
     stats,
     volumeChart,
     personalRecords,
+    timeRange,
+    setTimeRange,
     loading,
     error,
     refresh: fetchData,

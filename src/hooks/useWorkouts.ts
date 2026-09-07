@@ -5,7 +5,8 @@ import {
   getWorkouts,
   deleteWorkout,
   deleteWorkoutPlan,
-  setActivePlan
+  setActivePlan,
+  createStarterRoutine
 } from '@/lib/workouts'
 import { useAuth } from '@/context/AuthContext'
 import type { WorkoutPlan, Workout } from '@/types'
@@ -76,6 +77,19 @@ export function useWorkouts() {
     return success
   }
 
+  const handleCreateStarterRoutine = async () => {
+    if (!user) return false
+    setLoading(true)
+    const { data, error: err } = await createStarterRoutine(user.id)
+    if (data) {
+      await fetchData()
+      return true
+    }
+    setError(err || 'Failed to generate starter routine')
+    setLoading(false)
+    return false
+  }
+
   return {
     plans,
     activePlan,
@@ -85,6 +99,7 @@ export function useWorkouts() {
     refresh: fetchData,
     deleteWorkout: handleDeleteWorkout,
     deletePlan: handleDeletePlan,
-    setActivePlan: handleSetActivePlan
+    setActivePlan: handleSetActivePlan,
+    createStarterRoutine: handleCreateStarterRoutine
   }
 }

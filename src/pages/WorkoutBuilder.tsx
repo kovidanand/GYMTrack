@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Save, Plus, GripVertical, Trash2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { getWorkoutById, createWorkout, updateWorkout, addWorkoutExercise, updateWorkoutExercise, deleteWorkoutExercise } from '@/lib/workouts'
+import { getWorkoutById, createWorkout, updateWorkout, addWorkoutExercise, updateWorkoutExercise, deleteWorkoutExercise, getWorkoutPlans } from '@/lib/workouts'
 import { ExerciseSelector } from '@/components/exercise/ExerciseSelector'
 import { PageHeader } from '@/components/shared'
-import type { Workout, WorkoutExercise, Exercise } from '@/types'
+import type { Workout, WorkoutExercise, Exercise, WorkoutPlan } from '@/types'
 
 // Helper type for local state
 type LocalExercise = Partial<WorkoutExercise> & { tempId: string, exercise?: Exercise, _isDeleted?: boolean }
 
 export default function WorkoutBuilder() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user } = useAuth()
   
@@ -21,6 +22,9 @@ export default function WorkoutBuilder() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [estimatedDuration, setEstimatedDuration] = useState(60)
+  const [planId, setPlanId] = useState<string>(searchParams.get('planId') || '')
+  const [dayNumber, setDayNumber] = useState<number | ''>('')
+  const [availablePlans, setAvailablePlans] = useState<WorkoutPlan[]>([])
   
   // Exercises State
   const [exercises, setExercises] = useState<LocalExercise[]>([])
@@ -31,13 +35,22 @@ export default function WorkoutBuilder() {
   const [showSelector, setShowSelector] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Load user's plans for dropdown selection
+  useEffect(() => {
+    if (user) {
+      getWorkoutPlans(user.id).then(res => {
+        if (res.data) setAvailablePlans(res.data)
+      })
+    }
+  }, [user])
+
   useEffect(() => {
     async function load() {
       if (!isEditing || !id) return
       
-      const { data, error } = await getWorkoutById(id)
-      if (error || !data) {
-        setError(error || 'Failed to load workout')
+      const { data, error: loadErr } = await getWorkoutById(id)
+      if (loadErr || !data) {
+        setError(loadErr || 'Failed to load workout')
         setLoading(false)
         return
       }
@@ -45,6 +58,8 @@ export default function WorkoutBuilder() {
       setName(data.name)
       setDescription(data.description || '')
       setEstimatedDuration(data.estimated_duration || 60)
+      if (data.plan_id) setPlanId(data.plan_id)
+      if (data.day_number) setDayNumber(data.day_number)
       
       if (data.workout_exercises) {
         setExercises(data.workout_exercises.map(we => ({
@@ -131,6 +146,8 @@ export default function WorkoutBuilder() {
         name: name.trim(),
         description: description.trim() || null,
         estimated_duration: estimatedDuration,
+        plan_id: planId || null,
+        day_number: dayNumber !== '' ? Number(dayNumber) : null,
         user_id: user.id
       }
 
@@ -230,7 +247,7 @@ export default function WorkoutBuilder() {
           />
         </div>
         
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4">
           <div>
             <label className="label-sm">Estimated Duration (mins)</label>
             <input
@@ -239,6 +256,33 @@ export default function WorkoutBuilder() {
               onChange={e => setEstimatedDuration(parseInt(e.target.value) || 0)}
               min={10}
               step={5}
+              className="input-base"
+            />
+          </div>
+
+          <div>
+            <label className="label-sm">Assigned Plan (Optional)</label>
+            <select
+              value={planId}
+              onChange={e => setPlanId(e.target.value)}
+              className="input-base"
+            >
+              <option value="">Standalone Workout</option>
+              {availablePlans.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label-sm">Day in Plan (Optional)</label>
+            <input
+              type="number"
+              value={dayNumber}
+              onChange={e => setDayNumber(e.target.value ? parseInt(e.target.value) : '')}
+              min={1}
+              max={7}
+              placeholder="e.g. 1"
               className="input-base"
             />
           </div>

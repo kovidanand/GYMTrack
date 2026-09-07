@@ -16,16 +16,52 @@ export async function saveWorkoutSession(sessionData: Partial<WorkoutSession>, s
     return { data: null, error: 'Failed to save workout session.' }
   }
 
-  // 2. Insert all sets linked to this session
+  // 2. Insert all sets linked to this session with automatic Personal Record detection
   if (setsData.length > 0) {
-    const setsToInsert = setsData.map(s => ({
-      ...s,
-      session_id: session.id
-    }))
+    const exerciseIds = [...new Set(setsData.map(s => s.exercise_id).filter(Boolean))] as string[]
     
-    // Evaluate PRs logic (simple implementation for now)
-    // We would ideally query previous bests, but for performance in this phase,
-    // we'll let a separate function calculate PRs asynchronously or later.
+    // Fetch previous maximum weights for these exercises to evaluate PRs
+    const previousMaxes = new Map<string, number>()
+    if (exerciseIds.length > 0 && sessionData.user_id) {
+      try {
+        const { data: previousSets } = await supabase
+          .from('workout_session_sets')
+          .select('exercise_id, weight')
+          .in('exercise_id', exerciseIds)
+          .gt('weight', 0)
+        
+        if (previousSets) {
+          previousSets.forEach(ps => {
+            const w = Number(ps.weight) || 0
+            const currentMax = previousMaxes.get(ps.exercise_id) || 0
+            if (w > currentMax) {
+              previousMaxes.set(ps.exercise_id, w)
+            }
+          })
+        }
+      } catch (err) {
+        console.error('[GYMTrack] Error evaluating previous PRs:', err)
+      }
+    }
+
+    // Evaluate PRs for each completed set
+    const setsToInsert = setsData.map(s => {
+      const weight = Number(s.weight) || 0
+      const prevMax = previousMaxes.get(s.exercise_id || '') || 0
+      let isPR = false
+
+      if (weight > 0 && weight > prevMax) {
+        isPR = true
+        // Update running best for this workout so subsequent sets don't re-trigger PR unless higher
+        previousMaxes.set(s.exercise_id || '', weight)
+      }
+
+      return {
+        ...s,
+        session_id: session.id,
+        is_personal_record: isPR
+      }
+    })
 
     const { error: setsError } = await supabase
       .from('workout_session_sets')
@@ -33,7 +69,6 @@ export async function saveWorkoutSession(sessionData: Partial<WorkoutSession>, s
 
     if (setsError) {
       console.error('[GYMTrack] saveWorkoutSession sets error:', setsError.message)
-      // Note: In a real prod env, we'd want a transaction here. Since Supabase REST doesn't natively do multi-table transactions easily from client, we just log it.
     }
   }
 
@@ -240,7 +275,7 @@ export async function getExerciseProgress(userId: string, exerciseId: string): P
   }))
 }
 
-export async function getPersonalRecords(userId: string): Promise<{ data: PersonalRecord[] | null; error: string | null }> {
+export async function getPersonalRecords(_userId: string): Promise<{ data: PersonalRecord[] | null; error: string | null }> {
   const { data, error } = await supabase
     .from('workout_session_sets')
     .select(`

@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Clock, Dumbbell, Calendar, Target, Trophy } from 'lucide-react'
+import { Plus, Clock, Dumbbell, Calendar, Target, Trophy, Play } from 'lucide-react'
 import { PageHeader, SectionHeader, EmptyState } from '@/components/shared'
 import { useWorkouts } from '@/hooks/useWorkouts'
 import { formatDuration } from '@/lib/utils'
@@ -7,9 +8,10 @@ import type { Workout } from '@/types'
 
 export default function Workouts() {
   const navigate = useNavigate()
-  const { plans, activePlan, workouts, loading, error } = useWorkouts()
+  const { activePlan, workouts, loading, error, createStarterRoutine } = useWorkouts()
+  const [generating, setGenerating] = useState(false)
 
-  if (loading) {
+  if (loading || generating) {
     return (
       <div className="p-8 text-center text-surface-500 animate-pulse">
         Loading workouts...
@@ -25,6 +27,16 @@ export default function Workouts() {
     )
   }
 
+  const handleGenerateStarter = async () => {
+    setGenerating(true)
+    await createStarterRoutine()
+    setGenerating(false)
+  }
+
+  const activePlanWorkouts = activePlan
+    ? workouts.filter(w => w.plan_id === activePlan.id).sort((a, b) => (a.day_number || 0) - (b.day_number || 0))
+    : []
+
   return (
     <div className="animate-fade-in space-y-8 pb-20">
       <PageHeader
@@ -32,6 +44,14 @@ export default function Workouts() {
         description="Plan your training, track your progress, and stay consistent."
         action={
           <div className="flex gap-2">
+            {workouts.length === 0 && (
+              <button
+                className="btn-secondary"
+                onClick={handleGenerateStarter}
+              >
+                Starter Split
+              </button>
+            )}
             <button
               className="btn-secondary"
               onClick={() => navigate('/plans')}
@@ -89,16 +109,70 @@ export default function Workouts() {
                 </div>
               )}
             </div>
+
+            {/* Workouts in Active Plan */}
+            {activePlanWorkouts.length > 0 && (
+              <div className="mt-6 pt-5 border-t border-brand-100">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-surface-600">
+                    Plan Routine ({activePlanWorkouts.length} Workouts)
+                  </span>
+                  <button
+                    onClick={() => navigate(`/workouts/new?planId=${activePlan.id}`)}
+                    className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                  >
+                    <Plus size={14} /> Add Workout
+                  </button>
+                </div>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {activePlanWorkouts.map(w => (
+                    <div
+                      key={w.id}
+                      className="p-3.5 rounded-xl bg-white border border-brand-100 shadow-sm hover:border-brand-300 transition-all cursor-pointer group flex flex-col justify-between"
+                      onClick={() => navigate(`/workouts/${w.id}`)}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-bold text-brand-600 uppercase">
+                            {w.day_number ? `Day ${w.day_number}` : 'Workout'}
+                          </span>
+                          <span className="text-[11px] text-surface-500">
+                            ~{w.estimated_duration || 45}m
+                          </span>
+                        </div>
+                        <p className="font-semibold text-surface-900 group-hover:text-brand-600 transition-colors text-sm line-clamp-1 mb-2">
+                          {w.name}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/workouts/${w.id}/run`)
+                        }}
+                        className="btn-primary text-xs py-1.5 w-full justify-center gap-1.5 mt-2"
+                      >
+                        <Play size={12} fill="currentColor" /> Start Workout
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="card p-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-dashed border-2 bg-surface-50/50">
             <div>
               <h3 className="font-semibold text-surface-900">No active plan</h3>
-              <p className="text-surface-500 text-sm">Create a structured training plan to stay on track.</p>
+              <p className="text-surface-500 text-sm">Create a structured training plan or generate a starter split to stay on track.</p>
             </div>
-            <button className="btn-secondary whitespace-nowrap" onClick={() => navigate('/plans/new')}>
-              Create a Plan
-            </button>
+            <div className="flex gap-2">
+              <button className="btn-primary whitespace-nowrap" onClick={handleGenerateStarter}>
+                Starter Routine
+              </button>
+              <button className="btn-secondary whitespace-nowrap" onClick={() => navigate('/plans/new')}>
+                Create a Plan
+              </button>
+            </div>
           </div>
         )}
       </section>
@@ -106,7 +180,7 @@ export default function Workouts() {
       {/* ── My Workouts ── */}
       <section aria-label="My standalone workouts">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-surface-900">My Workouts</h2>
+          <h2 className="text-lg font-bold text-surface-900">All Workouts ({workouts.length})</h2>
         </div>
         
         {workouts.length > 0 ? (
@@ -123,11 +197,16 @@ export default function Workouts() {
           <EmptyState
             icon={<Dumbbell className="w-12 h-12 text-surface-300" />}
             title="No workouts yet"
-            description="Create your first workout to get started."
+            description="Generate a proven 3-day Push-Pull-Legs routine or create your own custom workout."
             action={
-              <button className="btn-primary" onClick={() => navigate('/workouts/new')}>
-                Create Workout
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button className="btn-primary" onClick={handleGenerateStarter}>
+                  Generate Starter Routine
+                </button>
+                <button className="btn-secondary" onClick={() => navigate('/workouts/new')}>
+                  Create Custom Workout
+                </button>
+              </div>
             }
           />
         )}
