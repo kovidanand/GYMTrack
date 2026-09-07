@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { X, Check, Timer, Play, Pause, FastForward } from 'lucide-react'
+import { X, Check, Timer, Play, Pause, FastForward, WifiOff, Cloud } from 'lucide-react'
 import { useWorkoutExecution } from '@/hooks/useWorkoutExecution'
+import { ConnectionStatusBadge } from '@/components/shared/ConnectionStatusBadge'
 import { cn } from '@/lib/utils'
 import type { WorkoutExercise } from '@/types'
 
@@ -12,11 +13,12 @@ export default function WorkoutRunner() {
     workout, loading, error, 
     currentExerciseIndex, currentExercise, completedSets,
     timerState, timeRemaining,
-    completeSet, skipRest, nextExercise, prevExercise,
+    completeSet, removeSet, skipRest, nextExercise, prevExercise,
     finishWorkout
   } = useWorkoutExecution(id!)
 
   const [isFinished, setIsFinished] = useState(false)
+  const [isOfflineCompleted, setIsOfflineCompleted] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   if (loading) return <div className="h-screen flex items-center justify-center font-semibold text-brand-600 animate-pulse">Loading workout...</div>
@@ -30,9 +32,19 @@ export default function WorkoutRunner() {
           <span className="text-4xl">🎉</span>
         </div>
         <h1 className="text-3xl font-bold text-surface-900 mb-2">Workout Complete!</h1>
-        <p className="text-surface-600 mb-8 max-w-sm">
-          Great job! You crushed {workout.name}. 
+        <p className="text-surface-600 mb-4 max-w-sm">
+          Great job! You crushed {workout.name}.
         </p>
+
+        {isOfflineCompleted && (
+          <div className="mb-6 p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 flex items-center gap-2 max-w-sm text-left">
+            <WifiOff size={18} className="text-amber-600 flex-shrink-0" />
+            <span>
+              <strong>Saved Offline in Gym:</strong> Your sets are securely preserved on this device. They will synchronize automatically to your account as soon as you reconnect to internet.
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-col w-full max-w-xs gap-3">
           <button onClick={() => navigate('/progress')} className="btn-primary">
             View Progress
@@ -48,9 +60,10 @@ export default function WorkoutRunner() {
   const handleFinish = async () => {
     if (confirm('Are you sure you want to finish this workout?')) {
       setIsSaving(true)
-      const success = await finishWorkout()
+      const result = await finishWorkout()
       setIsSaving(false)
-      if (success) {
+      if (result.success) {
+        setIsOfflineCompleted(result.isOffline)
         setIsFinished(true)
       } else {
         alert("Failed to save workout session. Please try again.")
@@ -73,12 +86,15 @@ export default function WorkoutRunner() {
             Exercise {currentExerciseIndex + 1} of {exerciseCount}
           </span>
         </div>
-        <button 
-          onClick={handleFinish}
-          className="text-xs font-bold text-surface-500 hover:text-brand-600 px-3 py-1.5 rounded-full bg-surface-100 hover:bg-brand-50 transition-colors"
-        >
-          Finish
-        </button>
+        <div className="flex items-center gap-3">
+          <ConnectionStatusBadge />
+          <button 
+            onClick={handleFinish}
+            className="text-xs font-bold text-surface-500 hover:text-brand-600 px-3 py-1.5 rounded-full bg-surface-100 hover:bg-brand-50 transition-colors"
+          >
+            Finish
+          </button>
+        </div>
       </header>
 
       {/* ── Progress Bar ── */}
@@ -142,6 +158,7 @@ export default function WorkoutRunner() {
                       targetWeight={currentExercise.weight}
                       isCompleted={isCompleted}
                       onComplete={(weight, reps) => completeSet(currentExercise, setNum, weight, reps)}
+                      onRemove={() => removeSet(currentExercise.id, setNum)}
                     />
                   )
                 })}
@@ -188,24 +205,25 @@ export default function WorkoutRunner() {
   )
 }
 
-
 interface SetRowProps {
   setNum: number
   targetReps: string
   targetWeight: number | null
   isCompleted: boolean
   onComplete: (weight: number | null, reps: number | null) => void
+  onRemove: () => void
 }
 
-function SetRow({ setNum, targetReps, targetWeight, isCompleted, onComplete }: SetRowProps) {
+function SetRow({ setNum, targetReps, targetWeight, isCompleted, onComplete, onRemove }: SetRowProps) {
   // Local state for the inputs
   const [weight, setWeight] = useState<string>(targetWeight ? String(targetWeight) : '')
-  // Try to parse the targetReps string (e.g. "8-12") to a number, fallback to empty
   const parsedTargetReps = parseInt(targetReps.split('-')[0]) || ''
   const [reps, setReps] = useState<string>(String(parsedTargetReps))
 
   const handleToggle = () => {
-    if (!isCompleted) {
+    if (isCompleted) {
+      onRemove()
+    } else {
       onComplete(weight ? parseFloat(weight) : null, reps ? parseInt(reps) : null)
     }
   }
@@ -225,7 +243,7 @@ function SetRow({ setNum, targetReps, targetWeight, isCompleted, onComplete }: S
           placeholder="-"
           className={cn(
             "w-full text-center font-bold text-lg rounded-lg py-1 transition-all",
-            isCompleted ? "bg-transparent text-surface-500" : "bg-surface-100 text-surface-900 focus:bg-white focus:ring-2 focus:ring-brand-500"
+            isCompleted ? "bg-transparent text-surface-500 cursor-not-allowed" : "bg-surface-100 text-surface-900 focus:bg-white focus:ring-2 focus:ring-brand-500"
           )}
         />
       </div>
@@ -239,7 +257,7 @@ function SetRow({ setNum, targetReps, targetWeight, isCompleted, onComplete }: S
           placeholder="-"
           className={cn(
             "w-full text-center font-bold text-lg rounded-lg py-1 transition-all",
-            isCompleted ? "bg-transparent text-surface-500" : "bg-surface-100 text-surface-900 focus:bg-white focus:ring-2 focus:ring-brand-500"
+            isCompleted ? "bg-transparent text-surface-500 cursor-not-allowed" : "bg-surface-100 text-surface-900 focus:bg-white focus:ring-2 focus:ring-brand-500"
           )}
         />
       </div>
@@ -247,11 +265,11 @@ function SetRow({ setNum, targetReps, targetWeight, isCompleted, onComplete }: S
       <div className="col-span-2 flex justify-center">
         <button 
           onClick={handleToggle}
-          disabled={isCompleted}
+          title={isCompleted ? "Click to unlock and edit this set" : "Mark set as completed"}
           className={cn(
             "w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-sm",
             isCompleted 
-              ? "bg-emerald-500 text-white shadow-emerald-500/20" 
+              ? "bg-emerald-500 text-white shadow-emerald-500/20 hover:bg-emerald-600" 
               : "bg-surface-200 text-surface-400 hover:bg-brand-50 hover:text-brand-500 hover:shadow-brand-500/20"
           )}
         >

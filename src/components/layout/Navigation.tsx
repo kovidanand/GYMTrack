@@ -3,6 +3,7 @@ import { LayoutDashboard, Dumbbell, BookOpen, TrendingUp, User, LogOut, Plus, Sp
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { GYMTrackLogo, Avatar } from '@/components/shared'
+import { ConnectionStatusBadge } from '@/components/shared/ConnectionStatusBadge'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -26,9 +27,10 @@ export function Sidebar() {
 
   return (
     <aside className="hidden lg:flex flex-col w-60 xl:w-64 min-h-screen bg-white border-r border-surface-200 fixed top-0 left-0 z-30">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-surface-100">
+      {/* Logo & Connection Status */}
+      <div className="px-5 py-4 border-b border-surface-100 flex items-center justify-between">
         <GYMTrackLogo size="md" />
+        <ConnectionStatusBadge />
       </div>
 
       {/* Start Workout CTA */}
@@ -132,8 +134,9 @@ export function MobileNav() {
 
 export function MobileTopBar() {
   return (
-    <div className="lg:hidden fixed top-0 left-0 right-0 z-20 bg-white border-b border-surface-200 px-4 py-3">
+    <div className="lg:hidden fixed top-0 left-0 right-0 z-20 bg-white border-b border-surface-200 px-4 py-2.5 flex items-center justify-between">
       <GYMTrackLogo size="sm" />
+      <ConnectionStatusBadge />
     </div>
   )
 }
