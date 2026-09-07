@@ -232,6 +232,58 @@ export interface PersonalRecord {
   previousValue?: number
 }
 
+export interface ExerciseHistoricalSet {
+  id: string
+  setNumber: number
+  weight: number | null
+  reps: number | null
+  estimated1RM: number | null
+  isPersonalRecord: boolean
+  createdAt: string
+}
+
+export interface ExerciseSessionHistory {
+  sessionId: string
+  workoutName: string
+  date: string
+  formattedDate: string
+  sets: ExerciseHistoricalSet[]
+  best1RM: number | null
+  maxWeight: number | null
+  totalVolume: number
+  totalReps: number
+}
+
+export interface ExerciseProgressionPoint {
+  date: string
+  rawDate: string
+  estimated1RM: number | null
+  maxWeight: number | null
+  totalReps: number
+  volume: number
+  isPR: boolean
+}
+
+export interface ExerciseIntelligence {
+  exerciseId: string
+  exerciseName: string
+  slug?: string
+  isBodyweightOrTimed: boolean
+  current1RM: number | null
+  best1RM: number | null
+  bestWeight: number | null
+  latestWeight: number | null
+  latestReps: number | null
+  latestProgressionDate: string | null
+  totalSessions: number
+  totalSets: number
+  lastPerformedDate: string | null
+  trend: 'improving' | 'declining' | 'stable' | 'insufficient_data'
+  trendPercentage: number | null
+  sessions: ExerciseSessionHistory[]
+  progressionPoints: ExerciseProgressionPoint[]
+}
+
 export interface ProgressEntry {
   date: string
   value: number

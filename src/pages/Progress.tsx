@@ -1,7 +1,9 @@
-import { Activity, Clock, Flame, BarChart2, Trophy } from 'lucide-react'
+import { useState } from 'react'
+import { Activity, Clock, Flame, BarChart2, Trophy, Sparkles, ChevronRight } from 'lucide-react'
 import { PageHeader, StatCard, SectionHeader } from '@/components/shared'
 import { useProgress } from '@/hooks/useProgress'
 import { formatRelativeDate } from '@/lib/utils'
+import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
 import {
   XAxis,
   YAxis,
@@ -14,6 +16,7 @@ import {
 
 export default function Progress() {
   const { stats, volumeChart, personalRecords, timeRange, setTimeRange, loading, error } = useProgress()
+  const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
 
   if (loading) return <div className="p-8 text-center animate-pulse">Loading progress...</div>
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>
@@ -122,15 +125,27 @@ export default function Progress() {
 
       {/* ── Personal Records ── */}
       <section aria-label="Personal records">
-        <SectionHeader title="Personal Records" />
+        <div className="flex items-center justify-between mb-4">
+          <SectionHeader title="Personal Records" />
+          <span className="text-xs text-surface-500">
+            Click any PR to view 1RM & progression curve
+          </span>
+        </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {personalRecords && personalRecords.length > 0 ? (
             personalRecords.map(pr => (
-              <div key={pr.id} className="card p-5 relative overflow-hidden group hover:border-amber-300 transition-colors">
+              <div 
+                key={pr.id} 
+                className="card p-5 relative overflow-hidden group hover:border-amber-300 hover:shadow-md transition-all cursor-pointer"
+                onClick={() => setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
+              >
                 <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform" />
                 
                 <div className="flex items-start justify-between mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 mb-4 group-hover:scale-105 transition-transform">
                     <Trophy size={20} aria-hidden="true" />
                   </div>
                   <span className="text-xs font-medium text-surface-500 bg-surface-100 px-2 py-1 rounded-full">
@@ -138,11 +153,17 @@ export default function Progress() {
                   </span>
                 </div>
                 
-                <h3 className="font-semibold text-surface-900 mb-1">{pr.exerciseName}</h3>
+                <h3 className="font-semibold text-surface-900 mb-1 group-hover:text-brand-600 transition-colors flex items-center justify-between">
+                  <span>{pr.exerciseName}</span>
+                  <ChevronRight size={16} className="text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </h3>
                 <div className="flex items-end gap-2">
                   <span className="text-3xl font-black text-brand-600 tracking-tight">{pr.value}</span>
                   <span className="text-sm font-semibold text-surface-500 mb-1">{pr.unit}</span>
                 </div>
+                <p className="text-[11px] text-surface-400 mt-2 flex items-center gap-1">
+                  <Sparkles size={12} className="text-amber-500" /> View 1RM & progression graph
+                </p>
               </div>
             ))
           ) : (
@@ -152,6 +173,14 @@ export default function Progress() {
           )}
         </div>
       </section>
+
+      {/* ── Exercise Detail & Intelligence Modal ── */}
+      <ExerciseDetailModal
+        exerciseId={selectedExercise?.id || null}
+        exerciseName={selectedExercise?.name}
+        open={Boolean(selectedExercise)}
+        onOpenChange={(open) => !open && setSelectedExercise(null)}
+      />
     </div>
   )
 }

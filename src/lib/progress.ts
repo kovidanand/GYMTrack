@@ -311,3 +311,7 @@ export async function getPersonalRecords(_userId: string): Promise<{ data: Perso
 
   return { data: Array.from(prsMap.values()), error: null }
 }
+
+// Re-export exercise intelligence functions
+export { calculate1RM, getExerciseIntelligence } from '@/lib/exerciseIntelligence'
+

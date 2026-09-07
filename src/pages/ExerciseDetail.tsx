@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Heart, ArrowLeft, Loader2, PlayCircle } from 'lucide-react'
+import { Heart, ArrowLeft, Loader2, PlayCircle, Trophy, Activity, Sparkles, Flame, History } from 'lucide-react'
 import { getExerciseBySlug, getRelatedExercises, toggleFavorite, getUserFavorites } from '@/lib/exercises'
 import { useAuth } from '@/context/AuthContext'
 import { ExerciseIllustration, ExerciseCard } from '@/components/exercise/ExerciseComponents'
 import { MuscleGroupBadge } from '@/components/shared'
-import { getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, cn } from '@/lib/utils'
+import { getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, cn, formatRelativeDate } from '@/lib/utils'
+import { useExerciseIntelligence } from '@/hooks/useExerciseIntelligence'
+import { ExerciseProgressionGraph } from '@/components/exercise/ExerciseProgressionGraph'
+import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
 import type { Exercise } from '@/types'
 
 export default function ExerciseDetail() {
@@ -18,6 +21,9 @@ export default function ExerciseDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isFavorite, setIsFavorite] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+
+  const { intelligence, loading: intelLoading } = useExerciseIntelligence(exercise?.id)
 
   useEffect(() => {
     async function loadData() {
@@ -173,6 +179,120 @@ export default function ExerciseDetail() {
         </div>
       </section>
 
+      {/* ── Personal Intelligence & Progression Curve ── */}
+      {user && (
+        <section className="card p-6 sm:p-8 space-y-6" aria-label="Personal exercise analytics">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-100 pb-5">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="p-1 rounded bg-brand-50 text-brand-600">
+                  <Activity size={16} />
+                </span>
+                <h2 className="text-lg font-bold text-surface-900">Your Performance & 1RM</h2>
+              </div>
+              <p className="text-xs text-surface-500">
+                Real metrics calculated from your logged workouts using the Epley 1RM model.
+              </p>
+            </div>
+
+            {intelligence && intelligence.totalSessions > 0 && (
+              <button
+                onClick={() => setShowHistoryModal(true)}
+                className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <History size={14} /> Full Set History ({intelligence.totalSets} sets)
+              </button>
+            )}
+          </div>
+
+          {intelLoading ? (
+            <div className="p-8 text-center text-surface-500 flex flex-col items-center justify-center space-y-2">
+              <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+              <p className="text-xs">Calculating your performance metrics...</p>
+            </div>
+          ) : intelligence ? (
+            <div className="space-y-6">
+              {/* Stat Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
+                  <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Sparkles size={13} className="text-brand-500" /> Current 1RM
+                  </p>
+                  <p className="text-2xl font-black text-surface-900 tracking-tight">
+                    {intelligence.isBodyweightOrTimed
+                      ? 'Bodyweight'
+                      : intelligence.current1RM
+                      ? `${intelligence.current1RM} kg`
+                      : '-'}
+                  </p>
+                  <p className="text-[10px] text-surface-500 mt-0.5">
+                    {intelligence.isBodyweightOrTimed ? 'Tracked via Reps' : 'Epley Formula estimate'}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
+                  <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Trophy size={13} className="text-amber-500" /> Personal Best
+                  </p>
+                  <p className="text-2xl font-black text-surface-900 tracking-tight">
+                    {intelligence.best1RM
+                      ? `${intelligence.best1RM} kg`
+                      : intelligence.bestWeight
+                      ? `${intelligence.bestWeight} kg`
+                      : '-'}
+                  </p>
+                  <p className="text-[10px] text-surface-500 mt-0.5">
+                    {intelligence.bestWeight ? `Peak weight: ${intelligence.bestWeight} kg` : 'No heavy sets'}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
+                  <p className="text-[11px] font-bold text-surface-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Flame size={13} className="text-orange-500" /> Latest Effort
+                  </p>
+                  <p className="text-2xl font-black text-surface-900 tracking-tight">
+                    {intelligence.latestWeight != null && intelligence.latestReps != null
+                      ? `${intelligence.latestWeight} × ${intelligence.latestReps}`
+                      : intelligence.latestReps != null
+                      ? `${intelligence.latestReps} reps`
+                      : '-'}
+                  </p>
+                  <p className="text-[10px] text-surface-500 mt-0.5">
+                    {intelligence.lastPerformedDate
+                      ? formatRelativeDate(intelligence.lastPerformedDate)
+                      : 'Never logged'}
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
+                  <p className="text-[11px] font-bold text-surface-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <History size={13} className="text-indigo-500" /> Workouts
+                  </p>
+                  <p className="text-2xl font-black text-surface-900 tracking-tight">
+                    {intelligence.totalSessions}
+                  </p>
+                  <p className="text-[10px] text-surface-500 mt-0.5">
+                    {intelligence.totalSets} total completed sets
+                  </p>
+                </div>
+              </div>
+
+              {/* Progression Graph */}
+              <ExerciseProgressionGraph
+                points={intelligence.progressionPoints}
+                isBodyweightOrTimed={intelligence.isBodyweightOrTimed}
+                trend={intelligence.trend}
+                trendPercentage={intelligence.trendPercentage}
+              />
+            </div>
+          ) : (
+            <div className="p-6 text-center text-surface-500 text-sm">
+              Log a workout with this exercise to start tracking your estimated 1RM and progress.
+            </div>
+          )}
+        </section>
+      )}
+
       <div className="grid md:grid-cols-3 gap-8">
         {/* ── Main Content (Instructions, Tips) ── */}
         <div className="md:col-span-2 space-y-8">
@@ -297,6 +417,13 @@ export default function ExerciseDetail() {
         </section>
       )}
 
+      {/* ── Exercise Set History Modal ── */}
+      <ExerciseDetailModal
+        exerciseId={exercise?.id || null}
+        exerciseName={exercise?.name}
+        open={showHistoryModal}
+        onOpenChange={setShowHistoryModal}
+      />
     </div>
   )
 }
