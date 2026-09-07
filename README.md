@@ -1,290 +1,204 @@
 <div align="center">
 
-# 🏋️ GYMTrack
+# 🏋️ GYMTrack — Production Fitness Intelligence & Offline Tracking Platform
 
-**Train. Track. Improve.**
+**Intelligent. Resilient. Data-Grounded.**
 
-A full-stack AI-powered fitness tracking application built with React, Supabase, and Google Gemini.
+An enterprise-grade, full-stack fitness tracking application engineered for high reliability, offline resilience in connection-poor environments, transparent 1RM progression analytics, and evidence-grounded AI coaching.
 
-[![Live Demo](https://img.shields.io/badge/Live-gymtrack--fitness--kovid.vercel.app-00C853?style=for-the-badge&logo=vercel&logoColor=white)](https://gymtrack-fitness-kovid.vercel.app)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20DB-3FCF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
-[![Gemini](https://img.shields.io/badge/Gemini-AI%20Coach-8E75B2?style=flat-square&logo=google&logoColor=white)](https://ai.google.dev)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-gymtrack--fitness--kovid.vercel.app-00C853?style=for-the-badge&logo=vercel&logoColor=white)](https://gymtrack-fitness-kovid.vercel.app)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20Postgres%20%2B%20RLS-3FCF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
+[![IndexedDB](https://img.shields.io/badge/Storage-IndexedDB%20Offline%20Engine-FFA116?style=flat-square&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+[![Google Gemini](https://img.shields.io/badge/AI-Gemini%201.5%20Edge%20Coach-8E75B2?style=flat-square&logo=google&logoColor=white)](https://ai.google.dev)
+[![Vercel](https://img.shields.io/badge/Deployed-Vercel%20SPA-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
 
 </div>
 
 ---
 
-## ✨ Features
+## 📌 Executive Product Overview
 
-### 🔐 Authentication
-- Email/password signup and login
-- **Google OAuth** (one-click Continue with Google)
-- Password reset via email
-- Persistent sessions with automatic token refresh
-- Protected routes with auth guards
+GYMTrack solves a major real-world fitness software dilemma: **gym basements have notoriously poor cellular reception**, yet lifters need real-time workout logging, progressive overload tracking, and personalized coaching without data loss or lagging UIs.
 
-### 🏠 Dashboard
-- Today's workout suggestions
-- Weekly training streak tracker
-- Quick-access stats (workouts completed, total volume, active streak)
-- Recent workout history at a glance
-
-### 💪 Exercise Library
-- **50+ exercises** across 8 muscle groups — Chest, Back, Shoulders, Biceps, Triceps, Legs, Core, Full Body
-- Advanced search with real-time filtering by muscle group, equipment, and difficulty
-- Detailed exercise pages with instructions, tips, and common mistakes
-- Personal favorites system
-
-### 📋 Workout System
-- **Workout Builder** — create custom workouts with drag-and-drop exercise ordering
-- Configure sets, reps, weight, and rest periods per exercise
-- **Workout Plans** — organize workouts into multi-day training plans
-- Duplicate and edit existing workouts
-- **Live Workout Runner** — execute workouts in real time with:
-  - Set-by-set logging
-  - Built-in rest timer
-  - Auto-progression through exercises
-  - Session summary on completion
-
-### 📊 Progress & Analytics
-- **Workout history** with detailed session breakdowns
-- **Personal records** (PRs) tracked automatically
-- Training volume charts over time
-- Workout frequency and consistency metrics
-- **Streak tracking** — consecutive training day counter
-- Per-exercise performance history
-
-### 🤖 AI Fitness Coach
-- Powered by **Google Gemini** via a secure Supabase Edge Function
-- Context-aware — the AI reads your profile, workout history, PRs, and active plan
-- Ask questions like:
-  - *"What should I train today?"*
-  - *"How am I progressing?"*
-  - *"Create a push day workout for me"*
-- **Structured workout proposals** — the AI can generate full workouts you can save directly
-- Conversation history is persisted per user
-- Safety guardrails prevent medical advice and fabricated statistics
-
-### 👤 Profile & Onboarding
-- Guided onboarding flow for new users (goals, experience, body metrics, equipment)
-- Editable profile with fitness preferences
-- Avatar support (including Google profile pictures)
+GYMTrack combines a **zero-loss IndexedDB local caching engine** with an **asynchronous reconciliation queue** to allow seamless logging even in total airplane mode. On top of this rock-solid offline-first foundation, GYMTrack implements transparent **Epley 1RM progression analytics**, rigorous **Row Level Security (RLS)** user isolation, and a **data-grounded AI Fitness Coach** powered by Google Gemini and Supabase Edge Functions with a deterministic fallback engine.
 
 ---
 
-## 🛠️ Tech Stack
+## 🎯 Key Architectural Pillars & Features
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 18, TypeScript 5, Vite 5 |
-| **Styling** | Tailwind CSS 3 |
-| **Routing** | React Router v6 |
-| **UI Components** | Radix UI (Dialog, Select, Tabs, Tooltip, Switch, Avatar, Progress) |
-| **Icons** | Lucide React |
-| **Charts** | Recharts |
-| **Auth & Database** | Supabase (Auth + PostgreSQL + Row Level Security) |
-| **AI** | Google Gemini 1.5 Flash via Supabase Edge Functions (Deno) |
-| **Deployment** | Vercel |
+### 1. 🛡️ Bulletproof Authentication & Security
+- **Email OTP & Magic Codes**: Secure passwordless verification codes and standard credentials.
+- **Google OAuth with PKCE**: RFC 7636 Proof Key for Code Exchange preventing authorization code injection attacks.
+- **Session Persistence & Auto-Refresh**: Seamless token lifecycle management with automatic refresh in local storage.
+- **Multi-Tenant Row Level Security (RLS)**: Strict database-level isolation where `auth.uid() = user_id` enforces complete privacy across all tables (`profiles`, `workouts`, `workout_sessions`, `workout_session_sets`, `ai_conversations`).
+- **Zero Token Leakage in Cache**: IndexedDB explicitly stores only non-sensitive workout definitions, session queue state, and exercise metadata. Passwords, auth tokens, OTP codes, and API secrets are never persisted in IndexedDB or client state.
+
+### 2. ⚡ Offline Sync & Local-First Resilience (Basement Mode)
+- **IndexedDB Sync Engine**: Local IndexedDB database managing `sync_queue`, `active_sessions`, and `cached_workouts`.
+- **Automatic Network Reconnection Listener**: Real-time detection of online/offline status with an interactive sync indicator badge.
+- **Idempotent Queue Replay**: Retries pending workout writes sequentially upon reconnection, deduplicating inflight requests to prevent duplicate session records.
+- **Survives Refresh & Interruption**: Active workouts persist in IndexedDB across browser reloads, accidental tab closures, or phone screen timeouts.
+
+### 3. 📈 Exercise Intelligence & 1RM Overload Tracking
+- **Standardized Epley Formula**: Evaluates dynamic One-Rep Max (1RM):
+  $$\text{1RM} = \text{weight} \times \left(1 + \frac{\text{reps}}{30}\right)$$
+- **Transparent Progression Metrics**: Displays estimated maxes and overload velocity with mathematical explanations rather than opaque scores.
+- **Differentiated Exercise Types**: Safely distinguishes weighted barbell/dumbbell movements from bodyweight, assisted, and time-based exercises, preventing inaccurate 1RM estimations.
+- **Volume & PR Tracking**: Automatic detection and celebration of all-time Personal Records (PRs) by weight and calculated 1RM.
+
+### 4. 🤖 Grounded AI Coach & Deterministic Fallback Engine
+- **Strict Data Grounding**: The AI Coach operates solely on the user's authentic logged workout sessions, actual volume trends, real rest days, and calculated PRs.
+- **Zero Hallucination Guardrails**: Prohibits fabricating biometric recovery stats (e.g., HRV, sleep stages) unless explicitly provided, and includes an explicit transparency disclosure.
+- **Medical Safety Filtering**: Automatically screens prompt queries for medical advice or injury treatment requests, returning responsible medical disclaimers.
+- **Deterministic Offline Fallback**: If the Google Gemini Edge Function is unreachable or network is offline, a deterministic heuristic engine analyzes the user's local volume and frequency patterns to supply instantaneous, rule-based training guidance.
+
+### 5. ⏱️ Live Workout Runner
+- Set-by-set execution interface with previous session benchmarks displayed inline.
+- Integrated rest timer with audio-visual notifications.
+- Dynamic exercise re-ordering and ad-hoc set additions during live training.
+- Instant session breakdown and volume summary upon completion.
 
 ---
 
-## 🏗️ Architecture
+## 🛠️ Technology Stack
+
+| Domain | Technology | Implementation Details |
+|---|---|---|
+| **Frontend Framework** | React 18.3 | TypeScript 5.5, Vite 5 build system with tree-shaking |
+| **Styling & UI** | Tailwind CSS 3, Radix UI | Headless accessible UI primitives (Dialog, Tabs, Avatar, Tooltip) |
+| **State & Storage** | React Context + IndexedDB | Dual-layer persistence with local-first sync queue |
+| **Data Visualization**| Recharts | Responsive volume load trends, PR timelines, and frequency heatmaps |
+| **Backend & Auth** | Supabase (PostgreSQL 15) | Row Level Security (RLS), GoTrue Auth (PKCE & Email OTP) |
+| **Serverless AI** | Supabase Edge Functions | Deno runtime, Google Gemini 1.5 Flash API with server-side secrets |
+| **Error Handling** | React ErrorBoundary | Global crash resilience with graceful recovery and reload actions |
+| **Hosting & CI/CD** | Vercel | Single-Page Application rewrites and automated production builds |
+
+---
+
+## 🏗️ System Architecture & Data Flow
 
 ```
-GYMTrack/
-├── src/
-│   ├── components/
-│   │   ├── ai/            # ChatInterface, message bubbles
-│   │   ├── exercise/      # ExerciseCard, ExerciseSelector, FilterChips
-│   │   ├── layout/        # Sidebar, MobileNav, MobileTopBar
-│   │   ├── progress/      # Charts, PRCard, ConsistencyCalendar
-│   │   ├── routing/       # ProtectedRoute
-│   │   ├── shared/        # Logo, Badge, Avatar, StatCard, SearchInput
-│   │   └── workout/       # WorkoutCard, SessionCard, DayActivity
-│   ├── context/           # AuthContext (Supabase auth state management)
-│   ├── hooks/             # useExercises, useWorkouts, useProgress, useWorkoutExecution
-│   ├── layouts/           # AppLayout (sidebar + mobile nav wrapper)
-│   ├── lib/
-│   │   ├── supabase.ts    # Singleton Supabase client
-│   │   ├── ai.ts          # Edge Function invocation + context builder
-│   │   ├── exercises.ts   # Exercise CRUD + favorites
-│   │   ├── workouts.ts    # Workout/plan CRUD + set logging
-│   │   ├── progress.ts    # Session saving, PR detection, streak calc
-│   │   ├── profile.ts     # Profile CRUD
-│   │   └── authErrors.ts  # Auth error mapping + validation
-│   ├── pages/             # 18 page components
-│   ├── types/             # TypeScript interfaces and Supabase types
-│   ├── App.tsx            # Route definitions
-│   └── main.tsx           # Entry point
-├── supabase/
-│   ├── functions/
-│   │   └── ai-coach/      # Gemini Edge Function (Deno)
-│   └── migrations/        # 5 SQL migrations (profiles → exercises → workouts → progress → ai)
-├── vercel.json            # SPA routing configuration
-└── .env.example           # Required environment variables
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              GYMTrack Client (Vite + React)                  │
+├───────────────────┬───────────────────────────────┬─────────────────────────┤
+│    Auth Layer     │      State & Components       │   Local Offline Engine  │
+│  - Supabase Auth  │  - Dashboard & Workout Runner │   - IndexedDB Storage   │
+│  - PKCE / OTP     │  - 1RM Epley Analytics        │   - Sync Queue Manager  │
+│  - Protected Route│  - ErrorBoundary Protection   │   - Network Listeners   │
+└─────────┬─────────┴───────────────┬───────────────┴────────────┬────────────┘
+          │                         │                            │
+          ▼                         ▼                            ▼
+┌──────────────────┐      ┌──────────────────┐      ┌─────────────────────────┐
+│ Supabase Auth API│      │ Supabase PostgREST│     │ Supabase Edge Functions │
+│ - Token Refresh  │      │ - RLS Enforced   │      │ - ai-coach (Gemini 1.5) │
+│ - User Session   │      │ - PostgreSQL DB  │      │ - Server Secret Guard   │
+└──────────────────┘      └──────────────────┘      └─────────────────────────┘
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🔒 Security & Row Level Security (RLS) Policies
+
+All tables are protected by PostgreSQL Row Level Security to prevent unauthorized access across tenants:
+
+- **`profiles`**: `auth.uid() = id` (Users manage their own fitness profile).
+- **`workout_plans`**: `auth.uid() = user_id` (Private training routines).
+- **`workouts`**: `auth.uid() = user_id` (Custom workout definitions).
+- **`workout_exercises`**: Inherits workout ownership via foreign key constraints.
+- **`workout_sessions`**: `auth.uid() = user_id` (Full session logs).
+- **`workout_session_sets`**: Inherits session ownership via `workout_sessions.user_id = auth.uid()`.
+- **`ai_conversations` & `ai_messages`**: `auth.uid() = user_id` (Private coaching history).
+
+> **API Key Safety Notice**: Frontend bundles contain only public `VITE_SUPABASE_ANON_KEY`. All Gemini AI API secrets remain isolated inside Supabase Edge Function environment vaults.
+
+---
+
+## 🚀 Local Development Setup
 
 ### Prerequisites
+- **Node.js** ≥ 18.x
+- **npm** ≥ 9.x
+- A [Supabase](https://supabase.com) project with PostgreSQL instance
+- (Optional) [Google AI Studio API Key](https://aistudio.google.com) for Gemini Edge Function
 
-- **Node.js** ≥ 18
-- **npm** ≥ 9
-- A [Supabase](https://supabase.com) project
-- A [Google Cloud](https://console.cloud.google.com) project with OAuth 2.0 configured (for Google login)
-- A [Google AI Studio](https://aistudio.google.com) API key (for the AI Coach)
-
-### 1. Clone and install
-
+### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/yourusername/GYMTrack.git
+git clone https://github.com/kovidanand/GYMTrack.git
 cd GYMTrack
 npm install
 ```
 
-### 2. Configure environment variables
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local`:
-
+### 2. Environment Configuration
+Create a `.env.local` file in the root directory:
 ```env
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-> **Note:** The Gemini API key (`GEMINI_API_KEY`) is configured as a Supabase Edge Function secret — it is **never** exposed to the frontend.
+### 3. Run Database Migrations
+Apply the migrations sequentially in your Supabase SQL Editor:
+1. `supabase/migrations/001_profiles.sql` — User profiles and triggers
+2. `supabase/migrations/002_exercises.sql` — Exercise reference library
+3. `supabase/migrations/003_workouts.sql` — Workouts, plans, exercises
+4. `supabase/migrations/004_progress.sql` — Workout session tracking
+5. `supabase/migrations/005_ai_coach.sql` — AI Coach conversation tables
 
-### 3. Set up the database
-
-Run the SQL migrations in order in your Supabase SQL Editor:
-
-1. `supabase/migrations/001_profiles.sql` — User profiles + RLS
-2. `supabase/migrations/002_exercises.sql` — Exercise library (50+ seeded exercises) + favorites
-3. `supabase/migrations/003_workouts.sql` — Workout plans, workouts, workout exercises + RLS
-4. `supabase/migrations/004_progress.sql` — Workout sessions, session sets + RLS
-5. `supabase/migrations/005_ai_coach.sql` — AI conversations and messages + RLS
-
-### 4. Configure authentication
-
-In your Supabase Dashboard:
-
-1. **Authentication → Providers → Google** — Enable and add your Google OAuth Client ID and Secret
-2. **Authentication → URL Configuration** — Add your redirect URLs:
-   - `http://localhost:5173` (development)
-   - `https://your-production-domain.vercel.app` (production)
-
-### 5. Deploy the AI Coach Edge Function
-
+### 4. Deploy AI Edge Function (Optional)
 ```bash
 supabase functions deploy ai-coach
-supabase secrets set GEMINI_API_KEY=your-gemini-api-key
+supabase secrets set GEMINI_API_KEY=your-gemini-key
 ```
 
-### 6. Start development
-
+### 5. Start Development Server
 ```bash
 npm run dev
 ```
-
-The app will be available at `http://localhost:5173`.
-
----
-
-## 📦 Available Scripts
-
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Vite dev server with HMR |
-| `npm run build` | TypeScript check + production build |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run ESLint across the project |
+Open `http://localhost:5173` in your browser.
 
 ---
 
-## 🗺️ Routes
+## 🧪 Verification & Production Build
 
-| Route | Access | Description |
-|---|---|---|
-| `/` | Public | Landing page |
-| `/login` | Public | Email/password + Google login |
-| `/signup` | Public | Account creation + Google signup |
-| `/forgot-password` | Public | Password reset request |
-| `/onboarding` | Protected | New user fitness profile setup |
-| `/dashboard` | Protected | Main dashboard with stats and suggestions |
-| `/exercises` | Protected | Searchable exercise library |
-| `/exercises/:slug` | Protected | Exercise detail page |
-| `/workouts` | Protected | User's workout list |
-| `/workouts/new` | Protected | Workout builder |
-| `/workouts/:id` | Protected | Workout detail |
-| `/workouts/:id/edit` | Protected | Edit existing workout |
-| `/workouts/:id/run` | Protected | Live workout execution |
-| `/plans` | Protected | Workout plans |
-| `/plans/new` | Protected | Plan builder |
-| `/history` | Protected | Workout session history |
-| `/history/:id` | Protected | Session detail breakdown |
-| `/progress` | Protected | Analytics, charts, PRs, streaks |
-| `/ai-coach` | Protected | AI fitness coach chat |
-| `/profile` | Protected | User profile and settings |
+To validate code quality, strict typing, and build integrity:
 
----
+```bash
+# Run strict TypeScript validation
+npx tsc --noEmit
 
-## 🔒 Security
+# Compile production bundle with Vite
+npm run build
 
-- **Row Level Security (RLS)** is enabled on every table — users can only access their own data
-- **Supabase anon key** (publishable) is the only key used in the frontend
-- **Service role key** is never exposed to the client
-- **Gemini API key** is stored as a Supabase Edge Function secret (server-side only)
-- **Google OAuth client secret** remains in the Supabase Dashboard (server-side only)
-- Environment files (`.env.local`) are git-ignored
-
----
-
-## 🌐 Deployment
-
-GYMTrack is deployed on **Vercel** with SPA routing configured via `vercel.json`.
-
-### Production checklist
-
-1. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to Vercel Environment Variables
-2. Set the **Site URL** in Supabase Dashboard → Authentication → URL Configuration to your Vercel domain
-3. Add your Vercel domain to **Supabase Redirect URLs**
-4. Add your Vercel domain to **Google Cloud Console → Authorized redirect URIs**
-5. Ensure the `ai-coach` Edge Function is deployed with `GEMINI_API_KEY` set
-
----
-
-## 📐 Database Schema
-
-```
-profiles              ← 1:1 with auth.users
-exercises             ← Global exercise library (50+ seeded)
-user_favorite_exercises ← User ↔ Exercise favorites
-workout_plans         ← Multi-day training plans
-workouts              ← Individual workouts (optionally linked to plans)
-workout_exercises     ← Exercises within a workout (ordered, with sets/reps/weight config)
-workout_sessions      ← Completed workout records
-workout_session_sets  ← Individual set logs within a session
-ai_conversations      ← AI Coach chat threads
-ai_messages           ← Messages within AI conversations
+# Preview production build locally
+npm run preview
 ```
 
-All tables enforce **RLS** — users can only read, write, update, and delete their own rows.
+---
+
+## 🌐 Production Deployment
+
+GYMTrack is configured for continuous zero-downtime deployment on **Vercel**:
+
+1. Link the repository to your Vercel project.
+2. In Vercel Project Settings → **Environment Variables**, provide:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. In Supabase Dashboard → **Authentication** → **URL Configuration**:
+   - Add your production domain: `https://gymtrack-fitness-kovid.vercel.app`
+   - Add OAuth Redirect URL: `https://gymtrack-fitness-kovid.vercel.app/`
+4. Deploy — `vercel.json` ensures client-side routing rewrites are respected.
 
 ---
 
-## 📄 License
-
-This project is private and not open-source.
+## 🔮 Future Enhancements
+- **Wearable Device Integration**: Apple HealthKit and Google Health Connect sync.
+- **Plate Calculator & Barbell Loader**: Visual rack and plate configuration helper during live sets.
+- **Social Workout Sharing**: Shareable deep links for community routines with read-only previews.
+- **Camera Form Check**: On-device lightweight pose detection for squat and deadlift path tracking.
 
 ---
 
 <div align="center">
-  <sub>Built by <strong>Kovid Anand</strong></sub>
+  <sub>Engineered with precision by <strong>Kovid Anand</strong></sub>
 </div>
