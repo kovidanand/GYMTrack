@@ -9,6 +9,8 @@ import { getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, cn, formatR
 import { useExerciseIntelligence } from '@/hooks/useExerciseIntelligence'
 import { ExerciseProgressionGraph } from '@/components/exercise/ExerciseProgressionGraph'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
+import { AddToWorkoutModal } from '@/components/workout/AddToWorkoutModal'
+import { getExerciseVisual, getExerciseMediaMeta } from '@/lib/exerciseMedia'
 import type { Exercise } from '@/types'
 
 export default function ExerciseDetail() {
@@ -22,6 +24,7 @@ export default function ExerciseDetail() {
   const [error, setError] = useState<string | null>(null)
   const [isFavorite, setIsFavorite] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [showAddToWorkoutModal, setShowAddToWorkoutModal] = useState(false)
 
   const { intelligence, loading: intelLoading } = useExerciseIntelligence(exercise?.id)
 
@@ -112,26 +115,44 @@ export default function ExerciseDetail() {
       <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-surface-200">
         <div className="relative">
           {/* Media / Illustration */}
-          {exercise.image_url ? (
-            <div className="aspect-video w-full bg-surface-100 relative">
-              <img src={exercise.image_url} alt={exercise.name} className="w-full h-full object-cover" />
-              {exercise.video_url && (
-                <a 
-                  href={exercise.video_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
-                >
-                  <PlayCircle className="w-16 h-16 text-white opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all" />
-                </a>
-              )}
-            </div>
-          ) : (
-            <ExerciseIllustration 
-              muscleGroup={exercise.muscle_group} 
-              className="h-48 sm:h-64 rounded-none" 
-            />
-          )}
+          {(() => {
+            const visualUrl = getExerciseVisual(exercise.slug, exercise.image_url)
+            const meta = getExerciseMediaMeta(exercise.slug)
+            if (visualUrl) {
+              return (
+                <div className="aspect-video w-full bg-gradient-to-b from-surface-100 to-surface-200 relative flex items-center justify-center overflow-hidden">
+                  <img
+                    src={visualUrl}
+                    alt={exercise.name}
+                    className="max-h-full max-w-full object-contain p-4 transition-transform hover:scale-105 duration-300"
+                    loading="lazy"
+                  />
+                  {meta && (
+                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-[10px] text-surface-200 px-2 py-0.5 rounded">
+                      {meta.attribution} ({meta.license})
+                    </div>
+                  )}
+                  {exercise.video_url && (
+                    <a
+                      href={exercise.video_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
+                      aria-label={`Watch video demonstration for ${exercise.name}`}
+                    >
+                      <PlayCircle className="w-16 h-16 text-white opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all" />
+                    </a>
+                  )}
+                </div>
+              )
+            }
+            return (
+              <ExerciseIllustration 
+                muscleGroup={exercise.muscle_group} 
+                className="h-48 sm:h-64 rounded-none" 
+              />
+            )
+          })()}
 
           {/* Favorite Floating Button */}
           <button
@@ -167,7 +188,11 @@ export default function ExerciseDetail() {
             </div>
             
             <div className="flex gap-3">
-              <button className="btn-primary flex-1 sm:flex-none">
+              <button 
+                onClick={() => setShowAddToWorkoutModal(true)} 
+                className="btn-primary flex-1 sm:flex-none"
+                id="exercise-detail-add-to-workout"
+              >
                 Add to Workout
               </button>
             </div>
@@ -423,6 +448,12 @@ export default function ExerciseDetail() {
         exerciseName={exercise?.name}
         open={showHistoryModal}
         onOpenChange={setShowHistoryModal}
+      />
+      {/* ── Add to Workout Modal ── */}
+      <AddToWorkoutModal
+        exercise={exercise}
+        isOpen={showAddToWorkoutModal}
+        onOpenChange={setShowAddToWorkoutModal}
       />
     </div>
   )

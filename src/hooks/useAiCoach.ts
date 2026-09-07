@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { subscribeGymtrackEvent } from '@/lib/events'
 import { getStructuredWorkoutAnalysis, type StructuredWorkoutAnalysis } from '@/lib/coachAnalysis'
 import { askCoachQuestion, type CoachAnswer } from '@/lib/coachProvider'
 
@@ -42,6 +43,16 @@ export function useAiCoach() {
 
   useEffect(() => {
     loadAnalysis()
+
+    const unsub1 = subscribeGymtrackEvent('gymtrack:session_completed', () => loadAnalysis())
+    const unsub2 = subscribeGymtrackEvent('gymtrack:sync_completed', () => loadAnalysis())
+    const unsub3 = subscribeGymtrackEvent('gymtrack:workout_updated', () => loadAnalysis())
+
+    return () => {
+      unsub1()
+      unsub2()
+      unsub3()
+    }
   }, [loadAnalysis])
 
   const ask = async (query: string): Promise<CoachAnswer | null> => {

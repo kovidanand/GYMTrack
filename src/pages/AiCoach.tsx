@@ -19,6 +19,7 @@ import { PageHeader, EmptyState } from '@/components/shared'
 import { useAiCoach } from '@/hooks/useAiCoach'
 import { CoachSummary } from '@/components/ai/CoachSummary'
 import { CoachRecommendationCard } from '@/components/ai/CoachRecommendationCard'
+import type { StructuredWorkoutAnalysis, ExerciseCoachAnalysis, CoachRecommendation } from '@/lib/coachAnalysis'
 import { cn } from '@/lib/utils'
 
 export default function AiCoach() {
@@ -70,30 +71,27 @@ export default function AiCoach() {
     )
   }
 
-  // Empty State: User has zero workouts recorded
-  if (!analysis || !analysis.hasData || analysis.totalWorkouts === 0) {
-    return (
-      <div className="space-y-6 pb-20 animate-fade-in">
-        <PageHeader
-          title="AI Coach"
-          description="Data-grounded training intelligence derived from your real workout telemetry."
-        />
-
-        <EmptyState
-          icon={<Bot className="w-12 h-12 text-brand-500" />}
-          title="No Workout Telemetry Available"
-          description="GYMTrack AI Coach is grounded exclusively in your real performance data. Log your first workout to unlock estimated 1RM calculations, progressive overload cues, and plateau detection."
-          action={
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button onClick={() => navigate('/workouts')} className="btn-primary">
-                <Dumbbell size={16} /> Go to Workouts
-              </button>
-            </div>
-          }
-        />
-      </div>
-    )
+  const safeAnalysis: StructuredWorkoutAnalysis = analysis || {
+    hasData: false,
+    totalWorkouts: 0,
+    recentSessionsCount: 0,
+    previousSessionsCount: 0,
+    frequencyTrend: 'insufficient_data',
+    recentVolume: 0,
+    previousVolume: 0,
+    volumeChangePct: null,
+    totalTrainingHours: 0,
+    currentStreakDays: 0,
+    longestStreakDays: 0,
+    exercises: [],
+    biggestImprovement: null,
+    potentialPlateau: null,
+    recommendations: [],
+    recoveryNotice: 'Deterministic telemetry models are ready. Log your first workout session to track volume and 1RM progression.',
+    recentWorkoutsSummary: []
   }
+
+  const hasWorkouts = safeAnalysis.hasData && safeAnalysis.totalWorkouts > 0
 
   return (
     <div className="space-y-6 pb-24 animate-fade-in max-w-5xl mx-auto">
@@ -114,9 +112,19 @@ export default function AiCoach() {
         }
       />
 
+      {/* ── Baseline Guidance Banner if no workouts ── */}
+      {!hasWorkouts && (
+        <div className="p-4 rounded-xl bg-brand-50/80 border border-brand-200/80 flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-brand-600 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-brand-900">
+            <span className="font-bold">AI Coach Baseline Mode:</span> Log your first workout session to unlock calculated 1RM metrics, plateau detection, and automated progressive overload cues. You can ask form and technique questions anytime in the <strong>Ask Coach</strong> tab!
+          </div>
+        </div>
+      )}
+
       {/* ── Coach Key Summary ── */}
       <section aria-label="Telemetry Overview">
-        <CoachSummary analysis={analysis} />
+        <CoachSummary analysis={safeAnalysis} />
       </section>
 
       {/* ── Tab Navigation ── */}
@@ -131,7 +139,7 @@ export default function AiCoach() {
           )}
         >
           <Sparkles size={16} />
-          Recommendations ({analysis.recommendations.length})
+          Recommendations ({safeAnalysis.recommendations.length})
         </button>
 
         <button
@@ -162,18 +170,45 @@ export default function AiCoach() {
           )}
         >
           <Database size={16} />
-          Telemetry Data ({analysis.exercises.length} lifts)
+          Telemetry Data ({safeAnalysis.exercises.length} lifts)
         </button>
       </div>
 
       {/* ── TAB 1: RECOMMENDATIONS ── */}
       {activeTab === 'recommendations' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="grid sm:grid-cols-2 gap-4">
-            {analysis.recommendations.map(rec => (
-              <CoachRecommendationCard key={rec.id} recommendation={rec} />
-            ))}
-          </div>
+          {safeAnalysis.recommendations.length > 0 ? (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {safeAnalysis.recommendations.map((rec: CoachRecommendation) => (
+                <CoachRecommendationCard key={rec.id} recommendation={rec} />
+              ))}
+            </div>
+          ) : (
+            <div className="card p-6 bg-white border border-surface-200 text-center max-w-lg mx-auto space-y-3">
+              <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+                <Sparkles size={24} />
+              </div>
+              <h4 className="font-bold text-surface-900 text-base">Progressive Overload Telemetry</h4>
+              <p className="text-xs text-surface-600">
+                Log exercises and sets in your workouts to unlock personalized recommendations, 1RM progression tracking, and plateau detection.
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center pt-2">
+                <button
+                  onClick={() => setActiveTab('ask')}
+                  className="btn-primary text-xs py-2 px-3"
+                >
+                  <Bot size={14} /> Ask Form / Technique
+                </button>
+                <button
+                  onClick={() => navigate('/workouts')}
+                  className="btn-secondary text-xs py-2 px-3"
+                >
+                  <Dumbbell size={14} /> Start a Workout
+                </button>
+              </div>
+            </div>
+          )}
+
 
           {/* Quick Questions Prompter */}
           <div className="card p-5 bg-gradient-to-r from-brand-50/70 to-surface-50 border-brand-100">
@@ -351,11 +386,11 @@ export default function AiCoach() {
               <div>
                 <h3 className="font-bold text-sm text-surface-900">Tracked Exercise Telemetry</h3>
                 <p className="text-xs text-surface-500">
-                  Deterministic metrics computed from {analysis.totalWorkouts} workout sessions across the last 28 days.
+                  Deterministic metrics computed from {safeAnalysis.totalWorkouts} workout sessions across the last 28 days.
                 </p>
               </div>
               <span className="badge bg-brand-50 text-brand-700 font-bold border border-brand-200">
-                {analysis.exercises.length} Exercises
+                {safeAnalysis.exercises.length} Exercises
               </span>
             </div>
 
@@ -372,7 +407,7 @@ export default function AiCoach() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100">
-                  {analysis.exercises.map(ex => (
+                  {safeAnalysis.exercises.map((ex: ExerciseCoachAnalysis) => (
                     <tr key={ex.exerciseId} className="hover:bg-surface-50/60">
                       <td className="px-4 py-3 font-bold text-surface-900">
                         {ex.exerciseName}
@@ -422,7 +457,7 @@ export default function AiCoach() {
         <div className="flex items-start gap-2">
           <Database size={15} className="text-brand-500 mt-0.5 flex-shrink-0" />
           <p>
-            <strong>Recovery Data Notice:</strong> {analysis.recoveryNotice}
+            <strong>Recovery Data Notice:</strong> {safeAnalysis.recoveryNotice}
           </p>
         </div>
         <div className="flex items-start gap-2">

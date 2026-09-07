@@ -5,6 +5,7 @@ import {
   removeSyncOperation,
   type SyncOperation
 } from './db'
+import { emitGymtrackEvent } from '@/lib/events'
 
 export type ConnectionStatus = 'ONLINE' | 'OFFLINE' | 'SYNCING' | 'SYNCED' | 'SYNC ERROR'
 
@@ -161,6 +162,11 @@ class SyncEngine {
             this.updateStatus('ONLINE')
           }
         }, 3000)
+
+        // Notify app that new records were synced to Supabase
+        if (syncedCount > 0) {
+          emitGymtrackEvent('gymtrack:sync_completed', { syncedCount })
+        }
 
         this.isSyncing = false
         return { success: true, syncedCount, error: null }

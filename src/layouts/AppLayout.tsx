@@ -1,5 +1,6 @@
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { Sidebar, MobileNav, MobileTopBar } from '@/components/layout/Navigation'
+import { FloatingAiCoach } from '@/components/ai/FloatingAiCoach'
 import { useAuth } from '@/context/AuthContext'
 import { Loader2 } from 'lucide-react'
 
@@ -42,6 +43,9 @@ export function AppLayout() {
 
       {/* Mobile bottom nav */}
       <MobileNav />
+
+      {/* Floating AI Coach Assistant (available across all app pages except full chat) */}
+      {location.pathname !== '/ai-coach' && <FloatingAiCoach />}
     </div>
   )
 }

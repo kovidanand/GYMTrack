@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { StatCard, SectionHeader, PageHeader, Avatar } from '@/components/shared'
 import { useProgress } from '@/hooks/useProgress'
 import { useWorkouts } from '@/hooks/useWorkouts'
+import { FourteenDayHistory } from '@/components/progress/FourteenDayHistory'
 import { formatDuration, formatRelativeDate } from '@/lib/utils'
 
 function getGreeting(): string {
@@ -173,6 +174,13 @@ export default function Dashboard() {
           />
         </div>
       </section>
+
+      {/* ── 14-Day Training History & Consistency ── */}
+      <FourteenDayHistory
+        sessions={history}
+        activePlan={activePlan}
+        workouts={workouts}
+      />
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* ── Recent Workout ── */}

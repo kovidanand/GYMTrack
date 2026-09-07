@@ -11,6 +11,7 @@ import {
   generateUUID
 } from '@/lib/offline/db'
 import { syncEngine } from '@/lib/offline/syncEngine'
+import { emitGymtrackEvent } from '@/lib/events'
 import type { Workout, WorkoutExercise, WorkoutSessionSet } from '@/types'
 
 export type TimerState = 'idle' | 'running' | 'paused' | 'finished'
@@ -294,6 +295,9 @@ export function useWorkoutExecution(workoutId: string) {
           console.error('[GYMTrack] Immediate sync attempt error:', err)
         })
       }
+
+      // 4. Notify app of completed workout session
+      emitGymtrackEvent('gymtrack:session_completed', { sessionId, workoutId })
 
       return { success: true, isOffline: !isOnline }
     } catch (err) {

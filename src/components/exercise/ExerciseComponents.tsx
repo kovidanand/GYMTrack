@@ -1,7 +1,8 @@
 import { cn, getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel } from '@/lib/utils'
 import type { Exercise } from '@/types'
 import { MuscleGroupBadge } from '@/components/shared'
-import { Dumbbell, Heart } from 'lucide-react'
+import { Dumbbell, Heart, Plus } from 'lucide-react'
+import { getExerciseVisual } from '@/lib/exerciseMedia'
 
 // ─── Muscle Group Visual ────────────────────────────────────────────────────────
 
@@ -37,15 +38,17 @@ interface ExerciseCardProps {
   exercise: Exercise
   isFavorite?: boolean
   onToggleFavorite?: (id: string, e: React.MouseEvent) => void
+  onAddToWorkout?: (exercise: Exercise, e: React.MouseEvent) => void
   onClick: (exercise: Exercise) => void
 }
 
-export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, onClick }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, onAddToWorkout, onClick }: ExerciseCardProps) {
   const difficultyClass = getDifficultyColor(exercise.difficulty)
+  const visualUrl = getExerciseVisual(exercise.slug, exercise.image_url)
 
   return (
     <article
-      className="card card-hover cursor-pointer group overflow-hidden animate-fade-in relative"
+      className="card card-hover cursor-pointer group overflow-hidden animate-fade-in relative flex flex-col justify-between"
       onClick={() => onClick(exercise)}
       role="button"
       tabIndex={0}
@@ -56,46 +59,78 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
       {onToggleFavorite && (
         <button
           onClick={(e) => onToggleFavorite(exercise.id, e)}
-          className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur-sm rounded-full z-10 hover:scale-110 transition-transform shadow-sm"
+          className="absolute top-2 right-2 p-2 bg-white/85 backdrop-blur-sm rounded-full z-10 hover:scale-110 transition-transform shadow-sm"
           aria-label={isFavorite ? `Remove ${exercise.name} from favorites` : `Add ${exercise.name} to favorites`}
         >
           <Heart 
-            size={18} 
+            size={16} 
             className={cn("transition-colors", isFavorite ? "fill-brand-500 text-brand-500" : "text-surface-400 hover:text-brand-500")} 
           />
         </button>
       )}
 
-      {/* Illustration area */}
-      <ExerciseIllustration
-        muscleGroup={exercise.muscle_group}
-        className="h-28 mb-4 -mx-5 -mt-5 rounded-t-xl rounded-b-none"
-      />
-
-      <div className="space-y-2.5 relative z-0">
-        {/* Name */}
-        <h3 className="font-semibold text-surface-900 text-sm leading-snug group-hover:text-brand-600 transition-colors line-clamp-1">
-          {exercise.name}
-        </h3>
-
-        {/* Muscle + Equipment */}
-        <div className="flex flex-wrap gap-1.5">
-          <MuscleGroupBadge group={exercise.muscle_group} />
-          {exercise.equipment && exercise.equipment.length > 0 && (
-            <span className="badge bg-surface-100 text-surface-600">
-              {getEquipmentLabel(exercise.equipment[0])}
-            </span>
+      <div>
+        {/* Visual Media or Illustration area */}
+        <div className="h-32 mb-3 -mx-5 -mt-5 rounded-t-xl overflow-hidden bg-surface-100 flex items-center justify-center relative">
+          {visualUrl ? (
+            <img
+              src={visualUrl}
+              alt={exercise.name}
+              className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              onError={(e) => {
+                // Fallback to illustration on error
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+          ) : (
+            <ExerciseIllustration
+              muscleGroup={exercise.muscle_group}
+              className="w-full h-full rounded-none"
+            />
           )}
         </div>
 
-        {/* Difficulty */}
-        <div className="flex items-center justify-between pt-1">
-          <span className={cn('badge border', difficultyClass)}>
-            {exercise.difficulty}
-          </span>
-          <span className="text-xs text-surface-400 capitalize">{exercise.exercise_type}</span>
+        <div className="space-y-2 relative z-0">
+          {/* Name */}
+          <h3 className="font-bold text-surface-900 text-sm leading-snug group-hover:text-brand-600 transition-colors line-clamp-1">
+            {exercise.name}
+          </h3>
+
+          {/* Muscle + Equipment */}
+          <div className="flex flex-wrap gap-1.5">
+            <MuscleGroupBadge group={exercise.muscle_group} />
+            {exercise.equipment && exercise.equipment.length > 0 && (
+              <span className="badge bg-surface-100 text-surface-600 text-[11px]">
+                {getEquipmentLabel(exercise.equipment[0])}
+              </span>
+            )}
+          </div>
+
+          {/* Difficulty & Type */}
+          <div className="flex items-center justify-between text-xs pt-0.5">
+            <span className={cn('badge border text-[10px]', difficultyClass)}>
+              {exercise.difficulty}
+            </span>
+            <span className="text-[11px] text-surface-400 capitalize">{exercise.exercise_type}</span>
+          </div>
         </div>
       </div>
+
+      {/* Quick Add to Workout Button */}
+      {onAddToWorkout && (
+        <div className="mt-3 pt-2.5 border-t border-surface-100">
+          <button
+            type="button"
+            onClick={(e) => onAddToWorkout(exercise, e)}
+            className="w-full py-1.5 px-2.5 rounded-lg bg-surface-50 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-surface-200 text-surface-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            title={`Add ${exercise.name} to a workout`}
+          >
+            <Plus size={13} className="text-brand-500" />
+            Add to Workout
+          </button>
+        </div>
+      )}
     </article>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getWorkoutHistory, getProgressStats, getVolumeChartData, getPersonalRecords, getExerciseProgress } from '@/lib/progress'
 import { useAuth } from '@/context/AuthContext'
+import { subscribeGymtrackEvent } from '@/lib/events'
 import type { WorkoutSession, ProgressStats, ChartDataPoint, PersonalRecord } from '@/types'
 
 export type TimeRange = '7d' | '30d' | '90d' | '1y'
@@ -50,6 +51,17 @@ export function useProgress() {
 
   useEffect(() => {
     fetchData()
+
+    // Listen for reactive session completions and sync flushes
+    const unsub1 = subscribeGymtrackEvent('gymtrack:session_completed', () => fetchData())
+    const unsub2 = subscribeGymtrackEvent('gymtrack:sync_completed', () => fetchData())
+    const unsub3 = subscribeGymtrackEvent('gymtrack:workout_updated', () => fetchData())
+
+    return () => {
+      unsub1()
+      unsub2()
+      unsub3()
+    }
   }, [fetchData])
 
   return {

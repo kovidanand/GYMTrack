@@ -4,7 +4,9 @@ import { SlidersHorizontal, X, Heart } from 'lucide-react'
 import { PageHeader, SearchInput, EmptyState } from '@/components/shared'
 import { ExerciseCard, FilterChips } from '@/components/exercise/ExerciseComponents'
 import { ExerciseSkeleton } from '@/components/exercise/ExerciseSkeleton'
+import { AddToWorkoutModal } from '@/components/workout/AddToWorkoutModal'
 import { useExercises, type SortOption } from '@/hooks/useExercises'
+import type { Exercise } from '@/types'
 import { cn } from '@/lib/utils'
 
 const muscleOptions = [
@@ -60,6 +62,8 @@ export default function Exercises() {
   } = useExercises()
 
   const [showFilters, setShowFilters] = useState(false)
+  const [selectedExerciseForWorkout, setSelectedExerciseForWorkout] = useState<Exercise | null>(null)
+  const [showAddToWorkoutModal, setShowAddToWorkoutModal] = useState(false)
 
   return (
     <div className="animate-fade-in space-y-6 pb-12">
@@ -210,6 +214,11 @@ export default function Exercises() {
                   e.stopPropagation()
                   toggleFavorite(id)
                 }}
+                onAddToWorkout={(ex, e) => {
+                  e.stopPropagation()
+                  setSelectedExerciseForWorkout(ex)
+                  setShowAddToWorkoutModal(true)
+                }}
                 onClick={(ex) => navigate(`/exercises/${ex.slug}`)}
               />
             ))}
@@ -231,6 +240,13 @@ export default function Exercises() {
           }
         />
       )}
+
+      {/* ── Add to Workout Modal ── */}
+      <AddToWorkoutModal
+        exercise={selectedExerciseForWorkout}
+        isOpen={showAddToWorkoutModal}
+        onOpenChange={setShowAddToWorkoutModal}
+      />
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
   createStarterRoutine
 } from '@/lib/workouts'
 import { useAuth } from '@/context/AuthContext'
+import { subscribeGymtrackEvent } from '@/lib/events'
 import type { WorkoutPlan, Workout } from '@/types'
 
 export function useWorkouts() {
@@ -44,6 +45,17 @@ export function useWorkouts() {
 
   useEffect(() => {
     fetchData()
+
+    // Listen for reactive workout mutations and session completions
+    const unsub1 = subscribeGymtrackEvent('gymtrack:workout_updated', () => fetchData())
+    const unsub2 = subscribeGymtrackEvent('gymtrack:session_completed', () => fetchData())
+    const unsub3 = subscribeGymtrackEvent('gymtrack:sync_completed', () => fetchData())
+
+    return () => {
+      unsub1()
+      unsub2()
+      unsub3()
+    }
   }, [fetchData])
 
   const handleDeleteWorkout = async (id: string) => {
