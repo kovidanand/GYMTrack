@@ -1,4 +1,4 @@
-import type { Workout, WorkoutSession, WorkoutSessionSet } from '@/types'
+import type { Workout, WorkoutSession, WorkoutSessionSet, Exercise, WorkoutExercise } from '@/types'
 
 const DB_NAME = 'gymtrack_offline_db'
 const DB_VERSION = 1
@@ -217,3 +217,67 @@ export async function getCachedWorkout(workoutId: string): Promise<Workout | nul
     req.onerror = () => reject(req.error)
   })
 }
+
+// ─── Today / Quick Workout Exercise Queue ─────────────────────────────────────
+
+const QUEUED_EXERCISES_KEY = 'gymtrack_queued_today_exercises'
+
+export function queueExerciseForTodayWorkout(
+  exercise: Exercise, 
+  sets = 3, 
+  reps = '10', 
+  weight?: number | null
+): WorkoutExercise {
+  const existing = getQueuedExercisesForTodayWorkout()
+  const nowStr = new Date().toISOString()
+  
+  // Check if already in queue
+  const found = existing.find(e => e.exercise_id === exercise.id)
+  if (found) {
+    return found
+  }
+
+  const defaultWeight = weight !== undefined 
+    ? weight 
+    : (exercise.equipment?.includes('bodyweight') ? null : 50)
+
+  const newItem: WorkoutExercise = {
+    id: generateUUID(),
+    workout_id: 'quick',
+    exercise_id: exercise.id,
+    exercise_order: existing.length + 1,
+    sets,
+    reps,
+    weight: defaultWeight,
+    rest_seconds: 60,
+    notes: null,
+    created_at: nowStr,
+    updated_at: nowStr,
+    exercise
+  }
+
+  const updated = [...existing, newItem]
+  try {
+    localStorage.setItem(QUEUED_EXERCISES_KEY, JSON.stringify(updated))
+  } catch (err) {
+    console.warn('[GYMTrack] Failed to save queued exercise to localStorage:', err)
+  }
+
+  return newItem
+}
+
+export function getQueuedExercisesForTodayWorkout(): WorkoutExercise[] {
+  try {
+    const raw = localStorage.getItem(QUEUED_EXERCISES_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function clearQueuedExercisesForTodayWorkout(): void {
+  try {
+    localStorage.removeItem(QUEUED_EXERCISES_KEY)
+  } catch {}
+}
+

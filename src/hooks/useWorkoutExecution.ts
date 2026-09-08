@@ -8,11 +8,13 @@ import {
   getActiveSession, 
   clearActiveSession,
   enqueueSyncOperation,
-  generateUUID
+  generateUUID,
+  getQueuedExercisesForTodayWorkout,
+  clearQueuedExercisesForTodayWorkout
 } from '@/lib/offline/db'
 import { syncEngine } from '@/lib/offline/syncEngine'
 import { emitGymtrackEvent } from '@/lib/events'
-import type { Workout, WorkoutExercise, WorkoutSessionSet } from '@/types'
+import type { Workout, WorkoutExercise, WorkoutSessionSet, Exercise } from '@/types'
 
 export type TimerState = 'idle' | 'running' | 'paused' | 'finished'
 
@@ -41,21 +43,34 @@ export function useWorkoutExecution(workoutId: string) {
 
       let loadedWorkout: Workout | null = null
 
-      // 1. Try loading workout from cloud or local cache
-      try {
-        const { data, error: fetchErr } = await getWorkoutById(workoutId)
-        if (data && !fetchErr) {
-          loadedWorkout = data
-          // Cache locally for future offline usage
-          await cacheWorkout(data).catch(() => {})
+      if (workoutId === 'quick' || !workoutId) {
+        const queued = getQueuedExercisesForTodayWorkout()
+        loadedWorkout = {
+          id: 'quick',
+          user_id: user?.id || '',
+          name: 'Quick Workout',
+          description: 'Quick workout session',
+          workout_exercises: queued,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        } as unknown as Workout
+      } else {
+        // 1. Try loading workout from cloud or local cache
+        try {
+          const { data, error: fetchErr } = await getWorkoutById(workoutId)
+          if (data && !fetchErr) {
+            loadedWorkout = data
+            // Cache locally for future offline usage
+            await cacheWorkout(data).catch(() => {})
+          }
+        } catch {
+          // Network failure
         }
-      } catch {
-        // Network failure
-      }
 
-      if (!loadedWorkout) {
-        // Fallback to cached workout in IndexedDB
-        loadedWorkout = await getCachedWorkout(workoutId).catch(() => null)
+        if (!loadedWorkout) {
+          // Fallback to cached workout in IndexedDB
+          loadedWorkout = await getCachedWorkout(workoutId).catch(() => null)
+        }
       }
 
       if (!loadedWorkout) {
@@ -270,8 +285,9 @@ export function useWorkoutExecution(workoutId: string) {
     }
 
     try {
-      // 1. Clear in-progress session from IndexedDB
+      // 1. Clear in-progress session from IndexedDB and local queue
       await clearActiveSession(workoutId).catch(() => {})
+      clearQueuedExercisesForTodayWorkout()
 
       // 2. Enqueue in IndexedDB sync queue
       await enqueueSyncOperation({
@@ -306,6 +322,66 @@ export function useWorkoutExecution(workoutId: string) {
     }
   }
 
+  // Dynamically add an exercise to current workout session
+  const addExercise = (exercise: Exercise, sets = 3, reps = '10', weight?: number | null) => {
+    if (!workout) return
+    const nowStr = new Date().toISOString()
+    const newWorkoutExercise: WorkoutExercise = {
+      id: generateUUID(),
+      workout_id: workout.id,
+      exercise_id: exercise.id,
+      exercise_order: (workout.workout_exercises?.length || 0) + 1,
+      sets,
+      reps,
+      weight: weight ?? null,
+      rest_seconds: 60,
+      notes: null,
+      created_at: nowStr,
+      updated_at: nowStr,
+      exercise
+    }
+    const updatedExercises = [...(workout.workout_exercises || []), newWorkoutExercise]
+    const updatedWorkout = { ...workout, workout_exercises: updatedExercises }
+    setWorkout(updatedWorkout)
+    if (updatedExercises.length === 1) {
+      setCurrentExerciseIndex(0)
+    }
+  }
+
+  // Add a set to an exercise in current session
+  const addSetToExercise = (exerciseId: string) => {
+    if (!workout?.workout_exercises) return
+    const updated = workout.workout_exercises.map(ex => {
+      if (ex.id === exerciseId) {
+        return { ...ex, sets: ex.sets + 1 }
+      }
+      return ex
+    })
+    setWorkout({ ...workout, workout_exercises: updated })
+  }
+
+  // Remove a set from an exercise in current session
+  const removeSetFromExercise = (exerciseId: string) => {
+    if (!workout?.workout_exercises) return
+    const updated = workout.workout_exercises.map(ex => {
+      if (ex.id === exerciseId && ex.sets > 1) {
+        return { ...ex, sets: ex.sets - 1 }
+      }
+      return ex
+    })
+    setWorkout({ ...workout, workout_exercises: updated })
+  }
+
+  // Remove an exercise from current session
+  const removeExerciseFromWorkout = (exerciseId: string) => {
+    if (!workout?.workout_exercises) return
+    const updated = workout.workout_exercises.filter(ex => ex.id !== exerciseId)
+    setWorkout({ ...workout, workout_exercises: updated })
+    if (currentExerciseIndex >= updated.length) {
+      setCurrentExerciseIndex(Math.max(0, updated.length - 1))
+    }
+  }
+
   // Navigation
   const nextExercise = () => {
     if (workout?.workout_exercises && currentExerciseIndex < workout.workout_exercises.length - 1) {
@@ -332,6 +408,8 @@ export function useWorkoutExecution(workoutId: string) {
     currentExerciseIndex,
     currentExercise: workout?.workout_exercises?.[currentExerciseIndex] || null,
     completedSets,
+    sessionSetsData,
+    sessionStartTime,
     timerState,
     timeRemaining,
     completeSet,
@@ -340,6 +418,11 @@ export function useWorkoutExecution(workoutId: string) {
     skipRest,
     nextExercise,
     prevExercise,
+    setCurrentExerciseIndex,
+    addExercise,
+    addSetToExercise,
+    removeSetFromExercise,
+    removeExerciseFromWorkout,
     finishWorkout
   }
 }

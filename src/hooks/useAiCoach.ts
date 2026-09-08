@@ -10,6 +10,7 @@ export interface CoachChatMessage {
   content: string
   supportingData?: string
   suggestedQuestions?: string[]
+  imageUrl?: string
   createdAt: number
 }
 
@@ -100,6 +101,7 @@ export function useAiCoach() {
         content: answer.content,
         supportingData: answer.supportingData,
         suggestedQuestions: answer.suggestedQuestions,
+        imageUrl: answer.imageUrl,
         createdAt: Date.now()
       }
 

@@ -40,6 +40,7 @@ export default function App() {
           <Route element={<ProtectedRoute requireOnboarding={false} />}>
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/workouts/:id/run" element={<WorkoutRunner />} />
+            <Route path="/workouts/quick" element={<WorkoutRunner />} />
           </Route>
 
           {/* Protected app routes — require completed onboarding */}

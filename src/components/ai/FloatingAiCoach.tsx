@@ -196,6 +196,17 @@ export function FloatingAiCoach() {
                     {msg.content}
                   </div>
 
+                  {msg.imageUrl && (
+                    <div className="my-2.5 rounded-xl overflow-hidden border border-surface-200 bg-surface-50 p-1">
+                      <img 
+                        src={msg.imageUrl} 
+                        alt="Exercise Demonstration" 
+                        className="w-full max-h-48 object-contain rounded-lg bg-white"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+
                   {msg.supportingData && (
                     <div className="mt-2 pt-1.5 border-t border-surface-100 text-[10px] text-surface-400 italic">
                       {msg.supportingData}

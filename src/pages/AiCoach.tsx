@@ -315,6 +315,17 @@ export default function AiCoach() {
                       )}
                     >
                       {msg.content}
+
+                      {msg.imageUrl && (
+                        <div className="my-3 rounded-xl overflow-hidden border border-surface-200 bg-white p-2">
+                          <img 
+                            src={msg.imageUrl} 
+                            alt="Exercise Demonstration" 
+                            className="w-full max-h-56 object-contain rounded-lg"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {msg.supportingData && (

@@ -350,21 +350,32 @@ export function FourteenDayHistory({
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-surface-900 text-sm">{d.dayOfMonth}</span>
                       {d.isToday && (
-                        <span className="badge bg-brand-100 text-brand-700 text-[10px] py-0.5 px-1.5">
+                        <span className="badge bg-brand-100 text-brand-700 text-[10px] py-0.5 px-1.5 font-bold">
                           Today
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-surface-500 font-medium line-clamp-1">
-                      {d.session?.workout_name || (d.status === 'REST_DAY' ? 'Rest Day' : d.status === 'PLANNED' ? 'Scheduled Training' : 'No Activity')}
-                    </p>
+                    {d.status === 'COMPLETED' && d.session ? (
+                      <div>
+                        <p className="text-xs font-semibold text-surface-800 line-clamp-1">
+                          {d.session.workout_name}
+                        </p>
+                        <p className="text-[11px] text-surface-500 font-medium">
+                          {d.session.total_exercises || 0} exercises · {d.session.completed_sets || 0} sets{d.session.duration_seconds ? ` · ${Math.round(d.session.duration_seconds / 60)} min` : ''}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-surface-400 font-medium">
+                        Rest / No workout
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 {/* Status Badge & Metrics */}
                 <div className="flex items-center gap-3 flex-shrink-0">
                   {d.status === 'COMPLETED' ? (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       {d.session?.total_volume ? (
                         <span className="text-xs font-bold text-surface-700 hidden sm:inline">
                           {d.session.total_volume.toLocaleString()} kg
@@ -383,17 +394,9 @@ export function FourteenDayHistory({
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
                     </div>
-                  ) : d.status === 'REST_DAY' ? (
-                    <span className="badge bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-semibold">
-                      Rest Day
-                    </span>
-                  ) : d.status === 'PLANNED' ? (
-                    <span className="badge bg-brand-50 text-brand-700 border border-brand-200 text-xs font-semibold">
-                      Planned
-                    </span>
                   ) : (
-                    <span className="text-xs text-surface-400 font-medium">
-                      No Activity
+                    <span className="text-xs text-surface-400 font-medium px-2 py-0.5 bg-surface-100 rounded-md">
+                      Rest / No workout
                     </span>
                   )}
                 </div>

@@ -6,6 +6,7 @@ export interface CoachAnswer {
   content: string
   supportingData?: string
   suggestedQuestions?: string[]
+  imageUrl?: string
 }
 
 interface ExerciseTechniqueGuide {
@@ -180,6 +181,33 @@ const TECHNIQUE_GUIDES: Record<string, ExerciseTechniqueGuide> = {
       'Keep your neck neutral—do not crank your head up to stare in the mirror.'
     ],
     alternatives: ['One-Arm Dumbbell Row', 'Seated Cable Row', 'Chest-Supported T-Bar Row']
+  },
+  'romanian-deadlift': {
+    name: 'Romanian Deadlift (RDL)',
+    slug: 'romanian-deadlift',
+    targetMuscles: 'Primary: Hamstrings, Gluteus Maximus · Secondary: Erector Spinae, Latissimus Dorsi, Forearms',
+    setup: [
+      'Stand tall holding a barbell or dumbbells at hip height with feet hip-width apart.',
+      'Maintain soft knees (slight 15° bend) and keep that knee angle completely locked throughout.',
+      'Pull shoulders back, pack your lats down, and lock your core with a neutral spine.'
+    ],
+    execution: [
+      'Hinge backward at the hips by pushing your butt toward the wall behind you.',
+      'Slide the weights directly down your thighs and shins, keeping the bar touching your legs.',
+      'Lower until you feel an intense, deep stretch across your hamstrings (just below the kneecap).',
+      'Drive hips forcefully forward and contract your glutes at the top to return to full upright position.'
+    ],
+    breathing: 'Inhale and brace before hinging; exhale as you stand up through the hip extension.',
+    commonMistakes: [
+      'Rounding the lower back to force extra depth.',
+      'Bending the knees too much turning the hinge into a conventional squat.',
+      'Allowing the barbell or dumbbells to drift forward away from the legs.'
+    ],
+    tips: [
+      'Think of pushing a door closed with your butt rather than bending over.',
+      'Stop descending immediately once your hips stop moving backward.'
+    ],
+    alternatives: ['Single-Leg Dumbbell RDL', 'Good Mornings', 'Kettlebell Hinge']
   }
 }
 
@@ -267,15 +295,16 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
     const matchesSlug = query.includes(slug)
     const matchesName = query.includes(guide.name.toLowerCase())
     const matchesKeyWords = guide.name.toLowerCase().split(' ').some(w => w.length > 3 && query.includes(w))
+    const matchesRdl = (query.includes('rdl') || query.includes('romanian')) && slug === 'romanian-deadlift'
 
-    if (isTechniqueQuery || matchesSlug || matchesName || matchesKeyWords) {
+    if (matchesSlug || matchesName || matchesRdl || (isTechniqueQuery && matchesKeyWords)) {
       const media = EXERCISE_MEDIA_REGISTRY[slug]
       
       let content = `### 🏋️ Form Guide: ${guide.name}\n\n`
       content += `**Target Muscles:**\n${guide.targetMuscles}\n\n`
       
       if (media?.demonstrationUrl) {
-        content += `📸 **Visual Demonstration:** Verified instructional form available in the Exercise Library.\n\n`
+        content += `📸 **Visual Demonstration:** Verified instructional asset available in the Exercise Library.\n\n`
       }
 
       content += `**Proper Setup:**\n`
@@ -291,6 +320,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
 
       return {
         content,
+        imageUrl: media?.demonstrationUrl,
         supportingData: `Verified exercise form guide for ${guide.name} (${media?.attribution || 'Licensed exercise asset'}).`,
         suggestedQuestions: [
           `What should I train today?`,
@@ -300,6 +330,103 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
       }
     }
   }
+
+  // ─── Topic: Historical Queries ("What did I do yesterday?", "What did I do for chest?", "What weight did I use?") ───
+  if (
+    query.includes('what did i do') ||
+    query.includes('what did i train') ||
+    query.includes('what did i lift') ||
+    query.includes('what was my last workout') ||
+    query.includes('what weight did i use') ||
+    query.includes('my bench press weight') ||
+    query.includes('my squat weight') ||
+    query.includes('last week') ||
+    query.includes('yesterday')
+  ) {
+    if (analysis.hasData && analysis.recentWorkoutsSummary.length > 0) {
+      // Check if querying a specific exercise like bench press
+      const matchedEx = analysis.exercises.find(e => 
+        query.includes(e.exerciseName.toLowerCase()) || 
+        query.includes(e.exerciseId) ||
+        (query.includes('bench') && e.exerciseName.toLowerCase().includes('bench')) ||
+        (query.includes('squat') && e.exerciseName.toLowerCase().includes('squat')) ||
+        (query.includes('deadlift') && e.exerciseName.toLowerCase().includes('deadlift'))
+      )
+
+      if (matchedEx) {
+        return {
+          content: `### 📊 Your Recorded Performance: **${matchedEx.exerciseName}**\n\n` +
+            `- **Current Est. 1RM:** ${matchedEx.current1RM ? `${matchedEx.current1RM} kg` : (matchedEx.latestWeight ? `${matchedEx.latestWeight} kg` : 'Bodyweight')}\n` +
+            `- **All-Time Peak 1RM:** ${matchedEx.best1RM ? `${matchedEx.best1RM} kg` : (matchedEx.latestWeight ? `${matchedEx.latestWeight} kg` : 'Bodyweight')}\n` +
+            `- **Latest Working Weight:** ${matchedEx.latestWeight ? `${matchedEx.latestWeight} kg` : 'Recorded'}\n` +
+            `- **Total Sessions Logged:** ${matchedEx.totalSessions}\n` +
+            `- **Progression Delta:** ${matchedEx.oneRMChangePct != null ? `${matchedEx.oneRMChangePct >= 0 ? `+${matchedEx.oneRMChangePct}%` : `${matchedEx.oneRMChangePct}%`}` : 'Establishing baseline'}\n\n` +
+            `*This record is derived directly from your completed workout session sets.*`,
+          supportingData: matchedEx.supportingData,
+          suggestedQuestions: [
+            `Should I increase my ${matchedEx.exerciseName} weight?`,
+            `How do I do a ${matchedEx.exerciseName}?`,
+            'What should I train today?'
+          ]
+        }
+      }
+
+      // If querying recent workouts / last week
+      const sessions = analysis.recentWorkoutsSummary
+      let content = `### 🗓️ Your Recent Workout Records\n\n`
+      sessions.slice(0, 4).forEach((s, idx) => {
+        content += `${idx + 1}. **${s.name}** (${s.date})\n`
+        content += `   - Duration: ${s.durationMins} minutes\n`
+        content += `   - Volume: ${s.volume.toLocaleString()} kg across ${s.exercisesCount} exercises\n\n`
+      })
+      content += `*You can inspect full set-by-set breakdowns anytime in your **History** tab.*`
+
+      return {
+        content,
+        supportingData: `Grounded in ${sessions.length} recent sessions stored in your GYMTrack account.`,
+        suggestedQuestions: [
+          'What should I train today?',
+          'How has my training volume changed?',
+          'Which exercise improved the most?'
+        ]
+      }
+    } else {
+      return {
+        content: `You don't have any completed workouts recorded in GYMTrack yet.\n\nOnce you complete your first workout using the **Start Workout** runner, I will track and recall your exact weights, sets, and reps right here!`,
+        supportingData: 'Zero workout telemetry currently stored.',
+        suggestedQuestions: [
+          'What should I train today?',
+          'How do I do a bench press?',
+          'How do I do a squat?'
+        ]
+      }
+    }
+  }
+
+  // ─── Topic: 30-Minute Express Workout ───────────────────────────────────────
+  if (query.includes('30 minutes') || query.includes('half hour') || query.includes('30 min')) {
+    return {
+      content: `### ⏱️ Rapid 30-Minute Express Workout\n\n` +
+        `When you only have 30 minutes, utilize **antagonistic supersets** (alternating push and pull) with minimal downtime (~45–60s rest):\n\n` +
+        `**Superset 1 (12 mins):**\n` +
+        `- **Dumbbell Bench Press:** 3 sets × 8–10 reps\n` +
+        `- *paired immediately with*\n` +
+        `- **Dumbbell Row or Pull-Up:** 3 sets × 8–10 reps\n\n` +
+        `**Superset 2 (12 mins):**\n` +
+        `- **Goblet Squat or Bulgarian Split Squat:** 3 sets × 10 reps\n` +
+        `- *paired immediately with*\n` +
+        `- **Romanian Deadlift or Plank:** 3 sets × 10 reps (or 45s hold)\n\n` +
+        `**Cooldown (3–5 mins):** Deep diaphragmatic breathing and lower body stretch.\n\n` +
+        `💡 *This circuit preserves maximum stimulus density while fitting neatly into 30 minutes.*`,
+      supportingData: 'Express superset conditioning protocol for compressed time windows.',
+      suggestedQuestions: [
+        'How do I do a bench press?',
+        'How do I do a squat?',
+        'What should I train today?'
+      ]
+    }
+  }
+
 
   // ─── Topic 2: "What should I train today?" / Workout Planning ───────────────
   if (

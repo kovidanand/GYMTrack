@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, Plus, Dumbbell, Check, Loader2 } from 'lucide-react'
+import { X, Plus, Dumbbell, Check, Loader2, Zap, Calendar, Play } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { getWorkouts, createWorkout, addWorkoutExercise } from '@/lib/workouts'
+import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
 import { emitGymtrackEvent } from '@/lib/events'
 import { useToast } from '@/components/shared/Toast'
 import type { Exercise, Workout } from '@/types'
@@ -15,6 +17,7 @@ interface AddToWorkoutModalProps {
 
 export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorkoutModalProps) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const { success: showSuccessToast } = useToast()
 
   const [workouts, setWorkouts] = useState<Workout[]>([])
@@ -22,19 +25,18 @@ export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorko
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Selection & Form state
+  // Quick vs Routine Tab
+  const [showRoutines, setShowRoutines] = useState(false)
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string>('')
   const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [newWorkoutName, setNewWorkoutName] = useState('')
-  const [targetSets, setTargetSets] = useState<number>(3)
-  const [targetReps, setTargetReps] = useState<string>('8-12')
-  const [targetWeight, setTargetWeight] = useState<string>('')
 
   useEffect(() => {
     if (isOpen && user) {
       loadWorkouts()
     }
     if (!isOpen) {
+      setShowRoutines(false)
       setIsCreatingNew(false)
       setNewWorkoutName('')
       setError(null)
@@ -47,25 +49,42 @@ export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorko
     setError(null)
     try {
       const { data, error: err } = await getWorkouts(user.id)
-      if (err) {
-        setError(err)
-      } else {
-        const list = data || []
-        setWorkouts(list)
-        if (list.length > 0) {
-          setSelectedWorkoutId(list[0].id)
-        } else {
-          setIsCreatingNew(true)
+      if (!err && data) {
+        setWorkouts(data)
+        if (data.length > 0) {
+          setSelectedWorkoutId(data[0].id)
         }
       }
     } catch {
-      setError('Failed to load workouts.')
+      // Ignored
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 1-Tap Quick Action: Add to Today's Workout
+  const handleAddToTodayWorkout = () => {
+    if (!exercise) return
+    queueExerciseForTodayWorkout(exercise, 3, '10', null)
+    emitGymtrackEvent('gymtrack:workout_updated', {
+      workoutId: 'quick',
+      action: 'add_exercise'
+    })
+    showSuccessToast(
+      `Added ${exercise.name} to Today's Workout!`,
+      'Ready to log in your active session.'
+    )
+    onOpenChange(false)
+  }
+
+  // Quick Start Now
+  const handleStartTodayWorkoutNow = () => {
+    handleAddToTodayWorkout()
+    navigate('/workouts/quick')
+  }
+
+  // Routine Submission
+  const handleRoutineSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !exercise) return
 
@@ -79,7 +98,7 @@ export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorko
       if (isCreatingNew) {
         const trimmed = newWorkoutName.trim()
         if (!trimmed) {
-          setError('Please provide a workout name.')
+          setError('Please provide a workout routine name.')
           setSaving(false)
           return
         }
@@ -91,7 +110,7 @@ export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorko
         })
 
         if (createErr || !newW) {
-          throw new Error(createErr || 'Failed to create new workout.')
+          throw new Error(createErr || 'Failed to create new routine.')
         }
 
         targetWorkoutId = newW.id
@@ -101,32 +120,27 @@ export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorko
         targetWorkoutName = found?.name || 'Workout'
       }
 
-      // Calculate next exercise order
       const targetWorkout = workouts.find(w => w.id === targetWorkoutId)
       const currentOrder = targetWorkout?.workout_exercises?.length ? targetWorkout.workout_exercises.length + 1 : 1
 
-      // Add exercise to workout
       const { error: addErr } = await addWorkoutExercise({
         workout_id: targetWorkoutId,
         exercise_id: exercise.id,
         exercise_order: currentOrder,
-        sets: Math.max(1, targetSets),
-        reps: targetReps.trim() || '8-12',
-        weight: targetWeight ? parseFloat(targetWeight) : null,
-        rest_seconds: 90
+        sets: 3,
+        reps: '10',
+        weight: null,
+        rest_seconds: 60
       })
 
-      if (addErr) {
-        throw new Error(addErr)
-      }
+      if (addErr) throw new Error(addErr)
 
-      // Emit global synchronization event
       emitGymtrackEvent('gymtrack:workout_updated', {
         workoutId: targetWorkoutId,
         action: 'add_exercise'
       })
 
-      showSuccessToast(`Added ${exercise.name} to ${targetWorkoutName}!`, 'Exercise configured with target sets and reps')
+      showSuccessToast(`Added ${exercise.name} to ${targetWorkoutName}!`, 'Routine updated successfully')
       onOpenChange(false)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to add exercise to workout.'
@@ -142,9 +156,9 @@ export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorko
     <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md bg-white rounded-2xl p-6 shadow-xl border border-surface-200 z-50 animate-scale-in focus:outline-none">
+        <Dialog.Content className="fixed bottom-0 sm:top-1/2 sm:bottom-auto left-1/2 -translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[94vw] max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-surface-200 z-50 animate-slide-up sm:animate-scale-in focus:outline-none">
           {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-surface-100">
+          <div className="flex items-center justify-between pb-3.5 border-b border-surface-100">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
                 <Dumbbell size={18} />
@@ -166,143 +180,122 @@ export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorko
             </Dialog.Close>
           </div>
 
-          {/* Form Content */}
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <div className="mt-4 space-y-4">
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 leading-relaxed">
                 {error}
               </div>
             )}
 
-            {/* Target Workout Selection */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-surface-700 uppercase tracking-wider">
-                  Target Workout
-                </label>
-                {workouts.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatingNew(!isCreatingNew)}
-                    className="text-xs font-semibold text-brand-600 hover:text-brand-700 transition-colors"
-                  >
-                    {isCreatingNew ? 'Choose Existing' : '+ New Workout'}
-                  </button>
-                )}
+            {/* ── 1-Tap Fast Logging Action (Phase 15) ── */}
+            <div className="card p-4 bg-gradient-to-br from-brand-50/60 to-surface-50 border border-brand-200 rounded-2xl space-y-3">
+              <div className="flex items-center gap-2">
+                <Zap size={16} className="text-brand-600 fill-brand-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-800">
+                  Today's Workout
+                </h3>
               </div>
-
-              {loading ? (
-                <div className="flex items-center justify-center py-4 text-surface-400 gap-2 text-sm">
-                  <Loader2 size={16} className="animate-spin text-brand-500" />
-                  Loading your workouts...
-                </div>
-              ) : isCreatingNew || workouts.length === 0 ? (
-                <div>
-                  <input
-                    type="text"
-                    value={newWorkoutName}
-                    onChange={e => setNewWorkoutName(e.target.value)}
-                    placeholder="e.g. Upper Body Push, Leg Day"
-                    className="input-base"
-                    required
-                    autoFocus
-                  />
-                  <p className="text-[11px] text-surface-500 mt-1">
-                    A new workout will be created and added to your routines.
-                  </p>
-                </div>
-              ) : (
-                <select
-                  value={selectedWorkoutId}
-                  onChange={e => setSelectedWorkoutId(e.target.value)}
-                  className="input-base"
-                  required
+              <p className="text-xs text-surface-600 leading-relaxed">
+                Instantly stage <strong>{exercise.name}</strong> to your session. When you start your workout, it will appear ready to log with default 3 sets.
+              </p>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleAddToTodayWorkout}
+                  className="flex-1 btn-primary py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  {workouts.map(w => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} ({w.workout_exercises?.length || 0} exercises)
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            {/* Configuration: Sets, Reps, Weight */}
-            <div className="grid grid-cols-3 gap-3 pt-2">
-              <div>
-                <label className="text-xs font-semibold text-surface-700 block mb-1">
-                  Sets
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={targetSets}
-                  onChange={e => setTargetSets(parseInt(e.target.value) || 1)}
-                  className="input-base text-center font-bold"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-surface-700 block mb-1">
-                  Reps
-                </label>
-                <input
-                  type="text"
-                  value={targetReps}
-                  onChange={e => setTargetReps(e.target.value)}
-                  placeholder="8-12"
-                  className="input-base text-center font-bold"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-surface-700 block mb-1">
-                  Weight (kg)
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={targetWeight}
-                  onChange={e => setTargetWeight(e.target.value)}
-                  placeholder="Optional"
-                  className="input-base text-center font-bold"
-                />
+                  <Plus size={15} />
+                  Add to Today's Workout
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStartTodayWorkoutNow}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition-colors flex items-center gap-1 shadow-sm"
+                  title="Add and start workout runner immediately"
+                >
+                  <Play size={13} />
+                  Start Now
+                </button>
               </div>
             </div>
 
-            {/* Submit Actions */}
-            <div className="pt-3 flex gap-3">
+            {/* ── Optional: Add to Saved Routine ── */}
+            <div className="border-t border-surface-100 pt-3">
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
-                className="flex-1 btn-secondary text-sm py-2.5"
-                disabled={saving}
+                onClick={() => setShowRoutines(!showRoutines)}
+                className="w-full text-left text-xs font-semibold text-surface-500 hover:text-surface-800 flex items-center justify-between py-1"
               >
-                Cancel
+                <span className="flex items-center gap-1.5">
+                  <Calendar size={14} />
+                  Or add to a saved routine
+                </span>
+                <span>{showRoutines ? '▲' : '▼'}</span>
               </button>
-              <button
-                type="submit"
-                className="flex-1 btn-primary text-sm py-2.5 flex items-center justify-center gap-2"
-                disabled={saving || loading}
-              >
-                {saving ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Adding...
-                  </>
-                ) : (
-                  <>
-                    <Check size={16} />
-                    Confirm Add
-                  </>
-                )}
-              </button>
+
+              {showRoutines && (
+                <form onSubmit={handleRoutineSubmit} className="mt-3 space-y-3 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-surface-600 uppercase tracking-wider">
+                      Select Routine
+                    </label>
+                    {workouts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingNew(!isCreatingNew)}
+                        className="text-[11px] font-semibold text-brand-600 hover:text-brand-700"
+                      >
+                        {isCreatingNew ? 'Choose Existing' : '+ New Routine'}
+                      </button>
+                    )}
+                  </div>
+
+                  {loading ? (
+                    <div className="flex items-center justify-center py-2 text-surface-400 gap-2 text-xs">
+                      <Loader2 size={14} className="animate-spin text-brand-500" />
+                      Loading routines...
+                    </div>
+                  ) : isCreatingNew || workouts.length === 0 ? (
+                    <input
+                      type="text"
+                      value={newWorkoutName}
+                      onChange={e => setNewWorkoutName(e.target.value)}
+                      placeholder="e.g. Upper Body Push"
+                      className="input-base text-xs"
+                      required
+                      autoFocus
+                    />
+                  ) : (
+                    <select
+                      value={selectedWorkoutId}
+                      onChange={e => setSelectedWorkoutId(e.target.value)}
+                      className="input-base text-xs"
+                      required
+                    >
+                      {workouts.map(w => (
+                        <option key={w.id} value={w.id}>
+                          {w.name} ({w.workout_exercises?.length || 0} exercises)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={saving || loading}
+                    className="w-full btn-secondary text-xs py-2 flex items-center justify-center gap-1.5 font-bold"
+                  >
+                    {saving ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Check size={14} />
+                    )}
+                    Save to Routine
+                  </button>
+                </form>
+              )}
             </div>
-          </form>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

@@ -366,3 +366,26 @@ export async function createStarterRoutine(userId: string): Promise<{ data: Work
     return { data: null, error: msg }
   }
 }
+
+export async function getPreviousExercisePerformance(exerciseId: string, userId: string): Promise<{ weight: number; reps: number } | null> {
+  try {
+    const { data } = await supabase
+      .from('workout_session_sets')
+      .select('weight, reps')
+      .eq('exercise_id', exerciseId)
+      .eq('user_id', userId)
+      .not('weight', 'is', null)
+      .not('reps', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (data && data.weight != null && data.reps != null) {
+      return { weight: Number(data.weight), reps: Number(data.reps) }
+    }
+  } catch (err) {
+    console.warn('[GYMTrack] Error fetching previous performance:', err)
+  }
+  return null
+}
+
