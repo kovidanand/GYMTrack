@@ -9,14 +9,16 @@ import { getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, cn, formatR
 import { useExerciseIntelligence } from '@/hooks/useExerciseIntelligence'
 import { ExerciseProgressionGraph } from '@/components/exercise/ExerciseProgressionGraph'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
-import { AddToWorkoutModal } from '@/components/workout/AddToWorkoutModal'
 import { getExerciseVisual, getExerciseMediaMeta } from '@/lib/exerciseMedia'
+import { useToast } from '@/components/shared/Toast'
+import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
 import type { Exercise } from '@/types'
 
 export default function ExerciseDetail() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const toast = useToast()
   
   const [exercise, setExercise] = useState<Exercise | null>(null)
   const [related, setRelated] = useState<Exercise[]>([])
@@ -24,7 +26,6 @@ export default function ExerciseDetail() {
   const [error, setError] = useState<string | null>(null)
   const [isFavorite, setIsFavorite] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
-  const [showAddToWorkoutModal, setShowAddToWorkoutModal] = useState(false)
 
   const { intelligence, loading: intelLoading } = useExerciseIntelligence(exercise?.id)
 
@@ -189,11 +190,17 @@ export default function ExerciseDetail() {
             
             <div className="flex gap-3">
               <button 
-                onClick={() => setShowAddToWorkoutModal(true)} 
+                onClick={() => {
+                  queueExerciseForTodayWorkout(exercise)
+                  toast.success(
+                    `${exercise.name} added to today's workout`,
+                    'Ready to train? Tap Start Workout on Home or sidebar.'
+                  )
+                }} 
                 className="btn-primary flex-1 sm:flex-none"
                 id="exercise-detail-add-to-workout"
               >
-                Add to Workout
+                Add to Today's Workout
               </button>
             </div>
           </div>
@@ -448,12 +455,6 @@ export default function ExerciseDetail() {
         exerciseName={exercise?.name}
         open={showHistoryModal}
         onOpenChange={setShowHistoryModal}
-      />
-      {/* ── Add to Workout Modal ── */}
-      <AddToWorkoutModal
-        exercise={exercise}
-        isOpen={showAddToWorkoutModal}
-        onOpenChange={setShowAddToWorkoutModal}
       />
     </div>
   )

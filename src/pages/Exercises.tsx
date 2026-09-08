@@ -4,8 +4,9 @@ import { SlidersHorizontal, X, Heart } from 'lucide-react'
 import { PageHeader, SearchInput, EmptyState } from '@/components/shared'
 import { ExerciseCard, FilterChips } from '@/components/exercise/ExerciseComponents'
 import { ExerciseSkeleton } from '@/components/exercise/ExerciseSkeleton'
-import { AddToWorkoutModal } from '@/components/workout/AddToWorkoutModal'
 import { useExercises, type SortOption } from '@/hooks/useExercises'
+import { useToast } from '@/components/shared/Toast'
+import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
 import type { Exercise } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -61,15 +62,14 @@ export default function Exercises() {
     resetFilters, activeFilterCount, toggleFavorite
   } = useExercises()
 
+  const toast = useToast()
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedExerciseForWorkout, setSelectedExerciseForWorkout] = useState<Exercise | null>(null)
-  const [showAddToWorkoutModal, setShowAddToWorkoutModal] = useState(false)
 
   return (
     <div className="animate-fade-in space-y-6 pb-12">
       <PageHeader
         title="Exercise Library"
-        description="Explore exercises, learn proper form, and build better workouts."
+        description="Explore movements, learn proper technique, and add exercises to today's workout in one tap."
       />
 
       {error && (
@@ -89,7 +89,7 @@ export default function Exercises() {
         />
         
         <div className="flex gap-2 w-full sm:w-auto">
-          {/* Sort Dropdown (Simple select for now) */}
+          {/* Sort Dropdown */}
           <select 
             className="input-base py-2 pl-3 pr-8 w-full sm:w-40 text-sm bg-white"
             value={sortBy}
@@ -216,8 +216,11 @@ export default function Exercises() {
                 }}
                 onAddToWorkout={(ex, e) => {
                   e.stopPropagation()
-                  setSelectedExerciseForWorkout(ex)
-                  setShowAddToWorkoutModal(true)
+                  queueExerciseForTodayWorkout(ex)
+                  toast.success(
+                    `${ex.name} added to today's workout`,
+                    'Ready to train? Tap Start Workout on Home or sidebar.'
+                  )
                 }}
                 onClick={(ex) => navigate(`/exercises/${ex.slug}`)}
               />
@@ -240,13 +243,6 @@ export default function Exercises() {
           }
         />
       )}
-
-      {/* ── Add to Workout Modal ── */}
-      <AddToWorkoutModal
-        exercise={selectedExerciseForWorkout}
-        isOpen={showAddToWorkoutModal}
-        onOpenChange={setShowAddToWorkoutModal}
-      />
     </div>
   )
 }

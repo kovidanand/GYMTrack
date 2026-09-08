@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { User, Target, Dumbbell, Calendar, Ruler, Weight, Trophy, Loader2 } from 'lucide-react'
+import { User, Target, Dumbbell, Calendar, Ruler, Weight, Trophy, Loader2, Timer } from 'lucide-react'
 import { PageHeader, SectionHeader, Avatar, Badge } from '@/components/shared'
 import { personalRecords } from '@/data/progress'
 import { capitalise } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import { WorkoutTimerModal } from '@/components/workout/WorkoutTimerModal'
 import type { FitnessGoal, ExperienceLevel } from '@/types/supabase'
 
 const fitnessGoalLabel: Record<string, string> = {
@@ -23,6 +24,7 @@ export default function Profile() {
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [showToast, setShowToast] = useState(false)
+  const [isTimerOpen, setIsTimerOpen] = useState(false)
 
   // Form fields
   const [firstName, setFirstName] = useState('')
@@ -287,6 +289,29 @@ export default function Profile() {
         </section>
       </div>
 
+      {/* ── Training Tools ── */}
+      <section aria-label="Training tools">
+        <SectionHeader title="Training Tools" />
+        <div className="card p-5 bg-white border border-surface-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
+              <Timer size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-surface-900 text-sm">Workout Timer & Stopwatch</h3>
+              <p className="text-xs text-surface-500 mt-0.5">Control your rest periods, HIIT intervals, or timed workout sets.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsTimerOpen(true)}
+            className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5 flex-shrink-0"
+          >
+            <Timer size={14} />
+            Open Timer
+          </button>
+        </div>
+      </section>
+
       {/* ── Personal Records (Mock data retained) ── */}
       <section aria-label="Personal records">
         <SectionHeader title="Personal Records" />
@@ -302,6 +327,11 @@ export default function Profile() {
         </div>
       </section>
 
+      {/* ── Timer Modal ── */}
+      <WorkoutTimerModal
+        isOpen={isTimerOpen}
+        onOpenChange={setIsTimerOpen}
+      />
     </div>
   )
 }

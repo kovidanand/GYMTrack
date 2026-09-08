@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { calculate1RM } from '@/lib/exerciseIntelligence'
+import { getWorkoutHistory } from '@/lib/progress'
 import type { WorkoutSession, WorkoutSessionSet } from '@/types'
 
 export interface ExerciseCoachAnalysis {
@@ -70,36 +71,11 @@ export async function getStructuredWorkoutAnalysis(userId: string): Promise<Stru
   const recoveryNotice = 'Recommendations are grounded exclusively in logged workout volume, frequency, and load progression. GYMTrack does not track biometric recovery metrics such as sleep, HRV, or soreness.'
 
   try {
-    // 1. Fetch up to 25 recent workout sessions with their sets
-    const { data: sessionsData, error: sErr } = await supabase
-      .from('workout_sessions')
-      .select(`
-        id,
-        workout_name,
-        started_at,
-        completed_at,
-        duration_seconds,
-        total_exercises,
-        total_sets,
-        completed_sets,
-        total_volume,
-        workout_session_sets (
-          id,
-          exercise_id,
-          exercise_name,
-          set_number,
-          weight,
-          reps,
-          completed,
-          is_personal_record,
-          created_at
-        )
-      `)
-      .eq('user_id', userId)
-      .order('started_at', { ascending: false })
-      .limit(25)
+    // 1. Fetch up to 25 recent workout sessions with their sets (merged from Supabase, local cache, and pending sync queue)
+    const { data: historyData } = await getWorkoutHistory(userId)
+    const sessionsData = (historyData || []).slice(0, 25)
 
-    if (sErr || !sessionsData || sessionsData.length === 0) {
+    if (!sessionsData || sessionsData.length === 0) {
       return {
         hasData: false,
         totalWorkouts: 0,

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { getPendingSyncOperations } from '@/lib/offline/db'
 import type { WorkoutSession, WorkoutSessionSet, ProgressStats, ChartDataPoint, PersonalRecord } from '@/types'
 
 // ─── Core Session Saving ──────────────────────────────────────────────────────
@@ -77,46 +78,120 @@ export async function saveWorkoutSession(sessionData: Partial<WorkoutSession>, s
 
 // ─── Fetching History ─────────────────────────────────────────────────────────
 
-export async function getWorkoutHistory(userId: string): Promise<{ data: WorkoutSession[] | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from('workout_sessions')
-    .select(`
-      *,
-      workout_session_sets (*)
-    `)
-    .eq('user_id', userId)
-    .order('started_at', { ascending: false })
+const CACHED_HISTORY_PREFIX = 'gymtrack_cached_history_'
 
-  if (error) {
-    console.error('[GYMTrack] getWorkoutHistory error:', error.message)
-    return { data: null, error: 'Failed to fetch history.' }
+export async function getWorkoutHistory(userId: string): Promise<{ data: WorkoutSession[] | null; error: string | null }> {
+  // 1. Fetch any pending local sessions waiting to sync
+  let pendingSessions: WorkoutSession[] = []
+  try {
+    const pendingOps = await getPendingSyncOperations(userId)
+    pendingSessions = pendingOps
+      .filter(op => op.operationType === 'SAVE_WORKOUT_SESSION' && op.payload?.sessionData)
+      .map(op => ({
+        ...op.payload.sessionData,
+        workout_session_sets: op.payload.setsData || []
+      })) as unknown as WorkoutSession[]
+  } catch (err) {
+    console.warn('[GYMTrack] Failed to read pending operations from IndexedDB:', err)
   }
-  return { data, error: null }
+
+  // 2. Fetch from Supabase
+  let remoteSessions: WorkoutSession[] = []
+  let fetchError: string | null = null
+
+  try {
+    const { data, error } = await supabase
+      .from('workout_sessions')
+      .select(`
+        *,
+        workout_session_sets (*)
+      `)
+      .eq('user_id', userId)
+      .order('started_at', { ascending: false })
+
+    if (error) {
+      fetchError = error.message
+    } else if (data) {
+      remoteSessions = data as WorkoutSession[]
+    }
+  } catch (err) {
+    fetchError = err instanceof Error ? err.message : 'Network error'
+  }
+
+  // 3. Fall back to cached sessions if remote failed and offline
+  if (fetchError && remoteSessions.length === 0) {
+    try {
+      const cachedRaw = localStorage.getItem(CACHED_HISTORY_PREFIX + userId)
+      if (cachedRaw) {
+        remoteSessions = JSON.parse(cachedRaw)
+      }
+    } catch {}
+  }
+
+  // 4. Merge remote sessions and pending sessions, deduplicating by ID
+  const sessionMap = new Map<string, WorkoutSession>()
+  
+  // Remote sessions first
+  remoteSessions.forEach(s => {
+    if (s.id) sessionMap.set(s.id, s)
+  })
+
+  // Pending local sessions take precedence (or are added)
+  pendingSessions.forEach(s => {
+    if (s.id) sessionMap.set(s.id, s)
+  })
+
+  const merged = Array.from(sessionMap.values()).sort(
+    (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+  )
+
+  // 5. Update local cache for instant offline loads
+  if (merged.length > 0) {
+    try {
+      localStorage.setItem(CACHED_HISTORY_PREFIX + userId, JSON.stringify(merged))
+    } catch {}
+  }
+
+  return { data: merged, error: null }
 }
 
 export async function getWorkoutSessionById(sessionId: string): Promise<{ data: WorkoutSession | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from('workout_sessions')
-    .select(`
-      *,
-      workout_session_sets (
+  // 1. Check remote
+  try {
+    const { data, error } = await supabase
+      .from('workout_sessions')
+      .select(`
         *,
-        exercise:exercises (*)
-      )
-    `)
-    .eq('id', sessionId)
-    .single()
+        workout_session_sets (
+          *,
+          exercise:exercises (*)
+        )
+      `)
+      .eq('id', sessionId)
+      .single()
 
-  if (error) {
-    console.error('[GYMTrack] getWorkoutSessionById error:', error.message)
-    return { data: null, error: 'Failed to fetch session.' }
-  }
-  
-  if (data && data.workout_session_sets) {
-    data.workout_session_sets.sort((a: WorkoutSessionSet, b: WorkoutSessionSet) => a.set_number - b.set_number)
-  }
-  
-  return { data, error: null }
+    if (!error && data) {
+      if (data.workout_session_sets) {
+        data.workout_session_sets.sort((a: WorkoutSessionSet, b: WorkoutSessionSet) => a.set_number - b.set_number)
+      }
+      return { data, error: null }
+    }
+  } catch {}
+
+  // 2. Check local pending operations or cached history
+  try {
+    const pendingOps = await getPendingSyncOperations()
+    const op = pendingOps.find(o => o.sessionId === sessionId || o.payload?.sessionData?.id === sessionId)
+    if (op && op.payload?.sessionData) {
+      const localSession: WorkoutSession = {
+        ...op.payload.sessionData,
+        workout_session_sets: op.payload.setsData || []
+      } as unknown as WorkoutSession
+      return { data: localSession, error: null }
+    }
+  } catch {}
+
+  return { data: null, error: 'Session not found.' }
 }
 
 // ─── Analytics Aggregation ────────────────────────────────────────────────────

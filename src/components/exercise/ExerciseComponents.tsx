@@ -124,10 +124,10 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
             type="button"
             onClick={(e) => onAddToWorkout(exercise, e)}
             className="w-full py-1.5 px-2.5 rounded-lg bg-surface-50 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-surface-200 text-surface-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-            title={`Add ${exercise.name} to a workout`}
+            title={`Add ${exercise.name} to today's workout`}
           >
             <Plus size={13} className="text-brand-500" />
-            Add to Workout
+            Add to Today's Workout
           </button>
         </div>
       )}

@@ -6,11 +6,9 @@ import { GYMTrackLogo, Avatar } from '@/components/shared'
 import { ConnectionStatusBadge } from '@/components/shared/ConnectionStatusBadge'
 
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/workouts', label: 'Workouts', icon: Dumbbell },
-  { to: '/history', label: 'History', icon: Calendar },
-  { to: '/exercises', label: 'Exercise Library', icon: BookOpen },
+  { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
+  { to: '/exercises', label: 'Library', icon: BookOpen },
   { to: '/profile', label: 'Profile', icon: User },
 ]
 
@@ -48,10 +46,10 @@ export function Sidebar({ onOpenTimer }: { onOpenTimer?: () => void }) {
       {/* Start Workout CTA */}
       <div className="px-4 pt-5 pb-2">
         <button
-          onClick={() => navigate('/workouts')}
-          className="btn-primary w-full text-sm py-2.5"
+          onClick={() => navigate('/workouts/quick')}
+          className="btn-primary w-full text-sm py-2.5 shadow-sm hover:shadow-brand-500/20"
           id="sidebar-start-workout"
-          aria-label="Start a workout"
+          aria-label="Start today's workout"
         >
           <Plus size={15} />
           Start Workout
@@ -106,8 +104,7 @@ export function Sidebar({ onOpenTimer }: { onOpenTimer?: () => void }) {
 
 const mobileNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { to: '/workouts', label: 'Workouts', icon: Dumbbell },
-  { to: '/history', label: 'History', icon: Calendar },
+  { to: '/progress', label: 'Progress', icon: TrendingUp },
   { to: '/exercises', label: 'Library', icon: BookOpen },
   { to: '/profile', label: 'Profile', icon: User },
 ]

@@ -47,18 +47,18 @@ export default function App() {
           <Route element={<ProtectedRoute requireOnboarding={true} />}>
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/workouts"  element={<Workouts />} />
+              <Route path="/workouts"  element={<Navigate to="/dashboard" replace />} />
               <Route path="/workouts/new" element={<WorkoutBuilder />} />
               <Route path="/workouts/:id" element={<WorkoutDetail />} />
               <Route path="/workouts/:id/edit" element={<WorkoutBuilder />} />
-              <Route path="/plans" element={<Plans />} />
+              <Route path="/plans" element={<Navigate to="/dashboard" replace />} />
               <Route path="/plans/new" element={<PlanBuilder />} />
               <Route path="/exercises" element={<Exercises />} />
               <Route path="/exercises/:slug" element={<ExerciseDetail />} />
-              <Route path="/history" element={<History />} />
+              <Route path="/history" element={<Navigate to="/progress" replace />} />
               <Route path="/history/:id" element={<SessionDetail />} />
               <Route path="/progress"  element={<Progress />} />
-              <Route path="/ai-coach"  element={<AiCoach />} />
+              <Route path="/ai-coach"  element={<Navigate to="/dashboard" replace />} />
               <Route path="/profile"   element={<Profile />} />
             </Route>
           </Route>

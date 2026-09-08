@@ -103,8 +103,8 @@ export default function WorkoutRunner() {
     return (
       <div className="p-8 text-center text-red-500 space-y-4">
         <p>{error || 'Workout not found'}</p>
-        <button onClick={() => navigate('/workouts')} className="btn-primary">
-          Back to Workouts
+        <button onClick={() => navigate('/dashboard')} className="btn-primary">
+          Back to Home
         </button>
       </div>
     )
@@ -171,14 +171,15 @@ export default function WorkoutRunner() {
           {/* Actions */}
           <div className="flex flex-col gap-2.5 pt-2">
             <button 
-              onClick={() => navigate('/history')} 
-              className="btn-primary w-full py-3 text-sm font-bold shadow-sm"
+              onClick={() => navigate('/progress')} 
+              className="btn-primary w-full py-3 text-sm font-bold shadow-sm flex items-center justify-center gap-1.5"
             >
-              View in History
+              <span>View in Progress & History</span>
+              <ArrowRight size={15} />
             </button>
             <button 
               onClick={() => navigate('/dashboard')} 
-              className="btn-secondary w-full py-2.5 text-xs text-surface-600"
+              className="btn-secondary w-full py-2.5 text-xs text-surface-600 hover:text-surface-900"
             >
               Back to Home
             </button>
@@ -421,12 +422,19 @@ export default function WorkoutRunner() {
                   const setNum = i + 1
                   const isCompleted = completedSets[currentExercise.id]?.includes(setNum)
                   
+                  // Set duplication: inherit from immediately previous set if logged
+                  const prevLoggedSet = sessionSetsData.find(
+                    s => s.exercise_id === currentExercise.exercise_id && s.set_number === i
+                  )
+                  const fallbackWeight = prevLoggedSet?.weight ?? prevPerformance?.weight ?? currentExercise.weight ?? 50
+                  const fallbackReps = prevLoggedSet?.reps ?? prevPerformance?.reps ?? 10
+
                   return (
                     <FrictionlessSetRow 
                       key={`${currentExercise.id}-set-${setNum}`}
                       setNum={setNum}
-                      defaultWeight={prevPerformance?.weight ?? currentExercise.weight ?? 50}
-                      defaultReps={prevPerformance?.reps ?? 10}
+                      defaultWeight={fallbackWeight}
+                      defaultReps={fallbackReps}
                       isCompleted={isCompleted}
                       onComplete={(w, r) => completeSet(currentExercise, setNum, w, r)}
                       onRemove={() => removeSet(currentExercise.id, setNum)}
@@ -663,6 +671,8 @@ function FrictionlessSetRow({
 
 // ─── Exercise Picker Modal ───────────────────────────────────────────────────
 
+const CATEGORIES = ['all', 'chest', 'back', 'shoulders', 'legs', 'biceps', 'triceps'] as const
+
 function ExercisePickerModal({ 
   isOpen, 
   onClose, 
@@ -673,18 +683,22 @@ function ExercisePickerModal({
   onSelect: (ex: Exercise) => void 
 }) {
   const [search, setSearch] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setLoading(true)
-      getExercises({ search: search.trim() || undefined }).then(res => {
+      getExercises({ 
+        search: search.trim() || undefined,
+        muscleGroup: selectedCategory === 'all' ? undefined : (selectedCategory as any)
+      }).then(res => {
         if (res.data) setExercises(res.data)
         setLoading(false)
       })
     }
-  }, [isOpen, search])
+  }, [isOpen, search, selectedCategory])
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -707,7 +721,7 @@ function ExercisePickerModal({
           </div>
 
           {/* Search Input */}
-          <div className="my-3 relative flex-shrink-0">
+          <div className="mt-3 relative flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" size={15} />
             <input 
               type="text" 
@@ -717,6 +731,25 @@ function ExercisePickerModal({
               className="w-full bg-surface-50 border border-surface-200 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 font-medium"
               autoFocus
             />
+          </div>
+
+          {/* Category Filter Chips */}
+          <div className="flex gap-1.5 overflow-x-auto py-2 flex-shrink-0 no-scrollbar">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-[11px] font-bold capitalize whitespace-nowrap transition-colors",
+                  selectedCategory === cat
+                    ? "bg-brand-600 text-white shadow-xs"
+                    : "bg-surface-100 text-surface-600 hover:bg-surface-200"
+                )}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
 
           {/* Exercise List */}
