@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🏋️ GYMTrack — Production Fitness Intelligence & Offline Tracking Platform
+#  GYMTrack — Production Fitness Intelligence & Offline Tracking Platform
 
 **Intelligent. Resilient. Data-Grounded.**
 
@@ -200,5 +200,4 @@ GYMTrack is configured for continuous zero-downtime deployment on **Vercel**:
 ---
 
 <div align="center">
-  <sub>Engineered with precision by <strong>Kovid Anand</strong></sub>
 </div>
