@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { Timer as TimerIcon, Play, Pause, RotateCcw, X, Zap } from 'lucide-react'
+import { Timer as TimerIcon, Play, Pause, RotateCcw, X, Clock, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface WorkoutTimerModalProps {
@@ -8,10 +8,10 @@ interface WorkoutTimerModalProps {
   onOpenChange: (open: boolean) => void
 }
 
-type TimerTab = 'stopwatch' | 'timer' | 'rest'
+type TimerTab = 'stopwatch' | 'rest'
 
 export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalProps) {
-  const [activeTab, setActiveTab] = useState<TimerTab>('rest')
+  const [activeTab, setActiveTab] = useState<TimerTab>('stopwatch')
 
   // ── Stopwatch State ──
   const [stopwatchMs, setStopwatchMs] = useState(0)
@@ -37,10 +37,12 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
     setStopwatchMs(0)
   }
 
-  // ── Countdown Timer State ──
+  // ── Rest Timer State ──
   const [timerDurationSec, setTimerDurationSec] = useState(60)
   const [timerRemainingSec, setTimerRemainingSec] = useState(60)
   const [isTimerRunning, setIsTimerRunning] = useState(false)
+  const [customInput, setCustomInput] = useState('')
+  const [showCustomInput, setShowCustomInput] = useState(false)
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -67,9 +69,21 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
   }, [isTimerRunning])
 
   const handleStartPreset = (sec: number) => {
+    setShowCustomInput(false)
     setTimerDurationSec(sec)
     setTimerRemainingSec(sec)
     setIsTimerRunning(true)
+  }
+
+  const handleApplyCustom = () => {
+    const val = parseInt(customInput, 10)
+    if (!isNaN(val) && val > 0) {
+      setTimerDurationSec(val)
+      setTimerRemainingSec(val)
+      setIsTimerRunning(true)
+      setShowCustomInput(false)
+      setCustomInput('')
+    }
   }
 
   const handleResetTimer = () => {
@@ -77,16 +91,16 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
     setTimerRemainingSec(timerDurationSec)
   }
 
-  // Format stopwatch: MM:SS.s
+  // Format stopwatch: HH:MM:SS
   const formatStopwatch = (ms: number) => {
     const totalSec = Math.floor(ms / 1000)
-    const minutes = Math.floor(totalSec / 60)
+    const hours = Math.floor(totalSec / 3600)
+    const minutes = Math.floor((totalSec % 3600) / 60)
     const seconds = totalSec % 60
-    const tenths = Math.floor((ms % 1000) / 100)
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
   }
 
-  // Format countdown: MM:SS
+  // Format rest countdown: MM:SS
   const formatTimer = (sec: number) => {
     const minutes = Math.floor(sec / 60)
     const seconds = sec % 60
@@ -106,25 +120,39 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
               </div>
               <div>
                 <Dialog.Title className="text-base font-bold text-surface-900 leading-none">
-                  Workout Clock
+                  Training Timer
                 </Dialog.Title>
-                <p className="text-[11px] text-surface-500 mt-0.5">Stopwatch & Rest Interval Timer</p>
+                <p className="text-[11px] text-surface-500 mt-0.5">Stopwatch & Rest Countdown</p>
               </div>
             </div>
             <Dialog.Close asChild>
               <button
                 className="w-8 h-8 rounded-full flex items-center justify-center text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors"
-                aria-label="Close timer modal"
+                aria-label="Close timer panel"
               >
                 <X size={18} />
               </button>
             </Dialog.Close>
           </div>
 
-          {/* Navigation Tabs */}
+          {/* Navigation Tabs: Stopwatch & Rest Timer */}
           <div className="flex bg-surface-100 p-1 rounded-xl mt-4 mb-5">
             <button
+              onClick={() => setActiveTab('stopwatch')}
+              id="timer-tab-stopwatch"
+              className={cn(
+                "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5",
+                activeTab === 'stopwatch'
+                  ? "bg-white text-brand-600 shadow-sm"
+                  : "text-surface-500 hover:text-surface-800"
+              )}
+            >
+              <Clock size={13} />
+              Stopwatch
+            </button>
+            <button
               onClick={() => setActiveTab('rest')}
+              id="timer-tab-rest"
               className={cn(
                 "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5",
                 activeTab === 'rest'
@@ -133,54 +161,66 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
               )}
             >
               <Zap size={13} />
-              Rest Presets
-            </button>
-            <button
-              onClick={() => setActiveTab('stopwatch')}
-              className={cn(
-                "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5",
-                activeTab === 'stopwatch'
-                  ? "bg-white text-brand-600 shadow-sm"
-                  : "text-surface-500 hover:text-surface-800"
-              )}
-            >
-              Stopwatch
-            </button>
-            <button
-              onClick={() => setActiveTab('timer')}
-              className={cn(
-                "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5",
-                activeTab === 'timer'
-                  ? "bg-white text-brand-600 shadow-sm"
-                  : "text-surface-500 hover:text-surface-800"
-              )}
-            >
-              Countdown
+              Rest Timer
             </button>
           </div>
 
-          {/* ── TAB: REST PRESETS ── */}
-          {activeTab === 'rest' && (
-            <div className="space-y-4 text-center">
+          {/* ── STOPWATCH ── */}
+          {activeTab === 'stopwatch' && (
+            <div className="space-y-4 text-center py-1">
               <div className="py-4">
+                <div className="text-5xl font-extrabold font-mono tracking-tight text-surface-900">
+                  {formatStopwatch(stopwatchMs)}
+                </div>
+                <p className="text-[11px] text-surface-400 mt-1 font-medium">Hours : Minutes : Seconds</p>
+              </div>
+
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => setIsStopwatchRunning(!isStopwatchRunning)}
+                  id="stopwatch-toggle-btn"
+                  className="btn-primary flex-1 py-2.5 text-sm flex items-center justify-center gap-2"
+                >
+                  {isStopwatchRunning ? <Pause size={16} /> : <Play size={16} />}
+                  {isStopwatchRunning ? 'Pause' : 'Start'}
+                </button>
+                <button
+                  onClick={handleResetStopwatch}
+                  id="stopwatch-reset-btn"
+                  className="btn-secondary py-2.5 px-4 text-sm"
+                  title="Reset Stopwatch"
+                  aria-label="Reset Stopwatch"
+                >
+                  <RotateCcw size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── REST TIMER ── */}
+          {activeTab === 'rest' && (
+            <div className="space-y-4 text-center py-1">
+              <div className="py-3">
                 <div className="text-5xl font-extrabold font-mono tracking-tight text-surface-900">
                   {formatTimer(timerRemainingSec)}
                 </div>
-                {isTimerRunning && (
-                  <p className="text-xs text-brand-600 font-medium mt-1 animate-pulse">
-                    Rest timer active...
-                  </p>
+                {timerRemainingSec === 0 ? (
+                  <p className="text-xs text-emerald-600 font-bold mt-1">Rest complete! Next set ready.</p>
+                ) : isTimerRunning ? (
+                  <p className="text-xs text-brand-600 font-medium mt-1 animate-pulse">Rest interval running...</p>
+                ) : (
+                  <p className="text-[11px] text-surface-400 mt-1">Select interval or start</p>
                 )}
               </div>
 
-              {/* Quick Preset Buttons */}
-              <div className="grid grid-cols-4 gap-2">
+              {/* Presets: 30 sec, 60 sec, 90 sec, 120 sec, Custom */}
+              <div className="grid grid-cols-5 gap-1.5">
                 {[30, 60, 90, 120].map(sec => (
                   <button
                     key={sec}
                     onClick={() => handleStartPreset(sec)}
                     className={cn(
-                      "py-2.5 px-1 rounded-xl text-xs font-bold transition-all border",
+                      "py-2 px-1 rounded-xl text-xs font-bold transition-all border",
                       timerDurationSec === sec && isTimerRunning
                         ? "bg-brand-600 text-white border-brand-600 shadow-sm"
                         : "bg-surface-50 hover:bg-brand-50 border-surface-200 text-surface-800"
@@ -189,119 +229,47 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
                     {sec}s
                   </button>
                 ))}
-              </div>
-
-              {/* Control Buttons */}
-              <div className="flex items-center justify-center gap-3 pt-2">
                 <button
-                  onClick={() => setIsTimerRunning(!isTimerRunning)}
-                  className="btn-primary flex-1 py-2.5 text-sm flex items-center justify-center gap-2"
+                  onClick={() => setShowCustomInput(!showCustomInput)}
+                  className={cn(
+                    "py-2 px-1 rounded-xl text-xs font-bold transition-all border",
+                    showCustomInput
+                      ? "bg-surface-200 text-surface-900 border-surface-300"
+                      : "bg-surface-50 hover:bg-surface-100 border-surface-200 text-surface-700"
+                  )}
                 >
-                  {isTimerRunning ? <Pause size={16} /> : <Play size={16} />}
-                  {isTimerRunning ? 'Pause' : 'Start'}
-                </button>
-                <button
-                  onClick={handleResetTimer}
-                  className="btn-secondary py-2.5 px-4 text-sm"
-                  title="Reset"
-                >
-                  <RotateCcw size={16} />
+                  Custom
                 </button>
               </div>
-            </div>
-          )}
 
-          {/* ── TAB: STOPWATCH ── */}
-          {activeTab === 'stopwatch' && (
-            <div className="space-y-4 text-center">
-              <div className="py-4">
-                <div className="text-5xl font-extrabold font-mono tracking-tight text-surface-900">
-                  {formatStopwatch(stopwatchMs)}
-                </div>
-                <p className="text-xs text-surface-400 mt-1 font-medium">Minutes : Seconds . Tenths</p>
-              </div>
-
-              <div className="flex items-center justify-center gap-3 pt-2">
-                <button
-                  onClick={() => setIsStopwatchRunning(!isStopwatchRunning)}
-                  className="btn-primary flex-1 py-2.5 text-sm flex items-center justify-center gap-2"
-                >
-                  {isStopwatchRunning ? <Pause size={16} /> : <Play size={16} />}
-                  {isStopwatchRunning ? 'Pause' : 'Start'}
-                </button>
-                <button
-                  onClick={handleResetStopwatch}
-                  className="btn-secondary py-2.5 px-4 text-sm"
-                  title="Reset"
-                >
-                  <RotateCcw size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── TAB: COUNTDOWN TIMER ── */}
-          {activeTab === 'timer' && (
-            <div className="space-y-4 text-center">
-              <div className="py-4">
-                <div className="text-5xl font-extrabold font-mono tracking-tight text-surface-900">
-                  {formatTimer(timerRemainingSec)}
-                </div>
-                {timerRemainingSec === 0 && (
-                  <p className="text-xs text-emerald-600 font-bold mt-1">Time is up!</p>
-                )}
-              </div>
-
-              {/* Set Duration Steppers */}
-              {!isTimerRunning && (
-                <div className="flex items-center justify-center gap-2 text-xs font-semibold text-surface-600">
+              {/* Custom Duration Input */}
+              {showCustomInput && (
+                <div className="flex items-center gap-2 pt-1 animate-fade-in">
+                  <input
+                    type="number"
+                    min="5"
+                    max="600"
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    placeholder="Seconds (e.g. 45)"
+                    className="input-base text-xs py-1.5 flex-1"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleApplyCustom()}
+                  />
                   <button
-                    onClick={() => {
-                      const next = Math.max(15, timerRemainingSec - 15)
-                      setTimerDurationSec(next)
-                      setTimerRemainingSec(next)
-                    }}
-                    className="px-2.5 py-1 bg-surface-100 hover:bg-surface-200 rounded-lg text-surface-700"
+                    onClick={handleApplyCustom}
+                    className="btn-primary py-1.5 px-3 text-xs"
                   >
-                    -15s
-                  </button>
-                  <button
-                    onClick={() => {
-                      const next = Math.max(60, timerRemainingSec - 60)
-                      setTimerDurationSec(next)
-                      setTimerRemainingSec(next)
-                    }}
-                    className="px-2.5 py-1 bg-surface-100 hover:bg-surface-200 rounded-lg text-surface-700"
-                  >
-                    -1m
-                  </button>
-                  <span className="text-surface-400 font-mono">|</span>
-                  <button
-                    onClick={() => {
-                      const next = timerRemainingSec + 15
-                      setTimerDurationSec(next)
-                      setTimerRemainingSec(next)
-                    }}
-                    className="px-2.5 py-1 bg-surface-100 hover:bg-surface-200 rounded-lg text-surface-700"
-                  >
-                    +15s
-                  </button>
-                  <button
-                    onClick={() => {
-                      const next = timerRemainingSec + 60
-                      setTimerDurationSec(next)
-                      setTimerRemainingSec(next)
-                    }}
-                    className="px-2.5 py-1 bg-surface-100 hover:bg-surface-200 rounded-lg text-surface-700"
-                  >
-                    +1m
+                    Set
                   </button>
                 </div>
               )}
 
+              {/* Controls */}
               <div className="flex items-center justify-center gap-3 pt-2">
                 <button
                   onClick={() => setIsTimerRunning(!isTimerRunning)}
+                  id="rest-timer-toggle-btn"
                   className="btn-primary flex-1 py-2.5 text-sm flex items-center justify-center gap-2"
                 >
                   {isTimerRunning ? <Pause size={16} /> : <Play size={16} />}
@@ -309,8 +277,10 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
                 </button>
                 <button
                   onClick={handleResetTimer}
+                  id="rest-timer-reset-btn"
                   className="btn-secondary py-2.5 px-4 text-sm"
-                  title="Reset"
+                  title="Reset Timer"
+                  aria-label="Reset Timer"
                 >
                   <RotateCcw size={16} />
                 </button>

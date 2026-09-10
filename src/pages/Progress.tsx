@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Activity, Clock, Flame, BarChart2, Trophy, Sparkles, ChevronRight, Calendar, List } from 'lucide-react'
+import { Activity, Clock, Flame, BarChart2, Trophy, Sparkles, ChevronRight, Calendar, List, Dumbbell } from 'lucide-react'
 import { PageHeader, StatCard, SectionHeader, EmptyState } from '@/components/shared'
 import { FourteenDayHistory } from '@/components/progress/FourteenDayHistory'
 import { useProgress } from '@/hooks/useProgress'
 import { useWorkouts } from '@/hooks/useWorkouts'
-import { formatDuration, formatRelativeDate } from '@/lib/utils'
+import { formatDuration, formatRelativeDate, cn } from '@/lib/utils'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
 import {
   XAxis,
@@ -25,7 +25,32 @@ export default function Progress() {
   const [historyViewMode, setHistoryViewMode] = useState<'14day' | 'list'>('14day')
   const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
 
-  if (loading) {
+  // Derived key exercise progression (e.g. Bench Press, Squat, Lat Pulldown, Deadlift, etc.)
+  const exerciseProgressList = useMemo(() => {
+    if (!personalRecords || personalRecords.length === 0) return []
+    return personalRecords.slice(0, 6).map(pr => {
+      // Find all sets for this exercise in history
+      let latestWeight = pr.value
+      history.forEach(session => {
+        const matchingSet = session.workout_session_sets?.find(s => s.exercise_id === pr.exerciseId && s.completed && s.weight)
+        if (matchingSet && matchingSet.weight) {
+          latestWeight = matchingSet.weight
+        }
+      })
+      const pct = pr.value > 0 ? Math.min(100, Math.round((latestWeight / pr.value) * 100)) : 100
+      return {
+        id: pr.exerciseId,
+        name: pr.exerciseName,
+        bestWeight: pr.value,
+        latestWeight,
+        unit: pr.unit || 'kg',
+        progressPct: pct,
+        achievedAt: pr.achievedAt
+      }
+    })
+  }, [personalRecords, history])
+
+  if (loading && history.length === 0) {
     return <div className="p-12 text-center text-surface-500 font-medium animate-pulse">Loading training progress...</div>
   }
   
@@ -37,11 +62,14 @@ export default function Progress() {
     <div className="animate-fade-in space-y-8 pb-28 max-w-5xl mx-auto">
       <PageHeader
         title="Progress & History"
-        description="Review your 14-day training consistency, volume analytics, and personal records."
+        description="Review your long-term training metrics, exercise progression, and 14-day consistency."
       />
 
-      {/* ── Key Stats ── */}
-      <section aria-label="Key statistics">
+      {/* ── 1. TRAINING OVERVIEW ── */}
+      <section aria-label="Training Overview" className="space-y-3">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">
+          Training Overview
+        </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
           <StatCard
             label="Total Workouts"
@@ -51,42 +79,199 @@ export default function Progress() {
             trendValue={`${stats?.workoutsThisMonth || 0} this month`}
           />
           <StatCard
-            label="Training Time"
-            value={Math.round((stats?.totalTrainingTime || 0) / 3600)}
-            unit="hours"
-            icon={<Clock size={18} />}
-            trend="up"
-          />
-          <StatCard
-            label="Current Streak"
-            value={stats?.currentStreak || 0}
-            unit="days"
-            icon={<Flame size={18} />}
-            trend="up"
-            trendValue={`Best: ${stats?.longestStreak || 0} days`}
-          />
-          <StatCard
             label="Total Volume"
             value={((stats?.totalVolume || 0) / 1000).toFixed(1)}
             unit="k kg"
             icon={<BarChart2 size={18} />}
             trend="up"
           />
+          <StatCard
+            label="Training Frequency"
+            value={stats?.currentStreak || 0}
+            unit="day streak"
+            icon={<Flame size={18} />}
+            trend="up"
+            trendValue={`Best: ${stats?.longestStreak || 0} days`}
+          />
+          <StatCard
+            label="Personal Bests"
+            value={personalRecords?.length || 0}
+            unit="records"
+            icon={<Trophy size={18} />}
+            trend="up"
+          />
         </div>
       </section>
 
-      {/* ── 14-Day Training History Section (Embedded) ── */}
+      {/* ── 2. EXERCISE PROGRESS ── */}
+      <section aria-label="Exercise Progress" className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-surface-900 tracking-tight">Exercise Progress</h2>
+          <p className="text-xs text-surface-500 mt-0.5">Performance benchmarks and volume trajectory.</p>
+        </div>
+
+        {/* Key Movement Progress Bars */}
+        {exerciseProgressList.length > 0 && (
+          <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">
+              Key Movement Progression
+            </h3>
+            <div className="space-y-4">
+              {exerciseProgressList.map(ex => (
+                <div
+                  key={ex.id}
+                  onClick={() => setSelectedExercise({ id: ex.id, name: ex.name })}
+                  className="group cursor-pointer space-y-1.5 p-2 rounded-xl hover:bg-surface-50 transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => e.key === 'Enter' && setSelectedExercise({ id: ex.id, name: ex.name })}
+                >
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="font-bold text-surface-900 group-hover:text-brand-600 transition-colors flex items-center gap-1.5">
+                      <Dumbbell size={14} className="text-surface-400" />
+                      {ex.name}
+                    </span>
+                    <span className="font-mono text-surface-600 font-semibold text-xs">
+                      {ex.latestWeight} {ex.unit} <span className="text-surface-400 font-normal">/ {ex.bestWeight} {ex.unit} peak</span>
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-surface-100 overflow-hidden">
+                    <div
+                      className="h-full bg-brand-600 rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${ex.progressPct}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Volume Analytics Chart */}
+        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-surface-900">Volume Analytics</h3>
+              <p className="text-xs text-surface-500 mt-0.5">Aggregate tonnage lifted over time.</p>
+            </div>
+            <div className="flex bg-surface-100 p-1 rounded-lg self-start sm:self-auto">
+              {(['7d', '30d', '90d', '1y'] as const).map(range => (
+                <button
+                  key={range}
+                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                    timeRange === range
+                      ? 'bg-white text-brand-600 shadow-sm'
+                      : 'text-surface-600 hover:text-surface-900'
+                  }`}
+                  onClick={() => setTimeRange(range)}
+                >
+                  {range.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="min-h-[260px]">
+            {volumeChart && volumeChart.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={volumeChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <XAxis 
+                    dataKey="date" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748B', fontSize: 11 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748B', fontSize: 11 }}
+                    tickFormatter={(val) => `${val / 1000}k`}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#F1F5F9' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: number) => [`${value} kg`, 'Volume']}
+                  />
+                  <Bar 
+                    dataKey="value" 
+                    fill="#0EA5E9" 
+                    radius={[4, 4, 0, 0]} 
+                    maxBarSize={45}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[260px] flex items-center justify-center text-surface-400 text-xs font-medium">
+                Not enough workout data to display volume trajectory.
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 3. PERSONAL BESTS ── */}
+      <section aria-label="Personal records" className="space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-surface-900 tracking-tight">Personal Bests</h2>
+          <p className="text-xs text-surface-500 mt-0.5">Highest recorded working weight per exercise.</p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {personalRecords && personalRecords.length > 0 ? (
+            personalRecords.map(pr => (
+              <div 
+                key={pr.id} 
+                className="card p-5 relative overflow-hidden group hover:border-amber-300 hover:shadow-md transition-all cursor-pointer bg-white border border-surface-200 rounded-2xl shadow-xs"
+                onClick={() => setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 mb-3 group-hover:scale-105 transition-transform">
+                    <Trophy size={18} aria-hidden="true" />
+                  </div>
+                  <span className="text-[11px] font-medium text-surface-500 bg-surface-100 px-2 py-0.5 rounded-full">
+                    {formatRelativeDate(pr.achievedAt)}
+                  </span>
+                </div>
+                
+                <h3 className="font-bold text-surface-900 mb-1 group-hover:text-brand-600 transition-colors flex items-center justify-between text-sm">
+                  <span>{pr.exerciseName}</span>
+                  <ChevronRight size={15} className="text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </h3>
+                <div className="flex items-end gap-1.5 mt-2">
+                  <span className="text-2xl sm:text-3xl font-black text-brand-600 tracking-tight">{pr.value}</span>
+                  <span className="text-xs font-semibold text-surface-500 mb-1">{pr.unit}</span>
+                </div>
+                <p className="text-[10px] text-surface-400 mt-2 flex items-center gap-1">
+                  <Sparkles size={11} className="text-amber-500" /> View 1RM & progression graph
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full card p-8 text-center text-surface-500 bg-white border border-surface-200 text-xs rounded-2xl">
+              No personal records logged yet. Complete your first session to set baselines!
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── 4. TRAINING HISTORY (Embedded under Progress) ── */}
       <section aria-label="Training history" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-100 pb-3">
           <div>
             <h2 className="text-lg font-bold text-surface-900 tracking-tight">Training History</h2>
-            <p className="text-xs text-surface-500 mt-0.5">Your consecutive workout records and daily activity breakdown.</p>
+            <p className="text-xs text-surface-500 mt-0.5">Consecutive workout telemetry and historical records.</p>
           </div>
 
           {history.length > 0 && (
             <div className="flex items-center bg-surface-100 rounded-lg p-1 border border-surface-200 self-start sm:self-auto">
               <button
                 onClick={() => setHistoryViewMode('14day')}
+                id="progress-tab-14day"
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
                   historyViewMode === '14day'
                     ? 'bg-white text-brand-600 shadow-sm'
@@ -97,6 +282,7 @@ export default function Progress() {
               </button>
               <button
                 onClick={() => setHistoryViewMode('list')}
+                id="progress-tab-list"
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
                   historyViewMode === 'list'
                     ? 'bg-white text-brand-600 shadow-sm'
@@ -112,7 +298,7 @@ export default function Progress() {
         {history.length === 0 ? (
           <EmptyState
             title="No workout records yet"
-            description="Record your first workout to start building your permanent training history."
+            description="Record your first workout from the Home dashboard to start your training history."
             icon={<Calendar size={28} className="text-brand-500" />}
             action={
               <button className="btn-primary text-xs" onClick={() => navigate('/workouts/quick')}>
@@ -131,7 +317,7 @@ export default function Progress() {
             {history.map(session => (
               <article 
                 key={session.id} 
-                className="card p-4 sm:p-5 cursor-pointer hover:border-brand-300 transition-colors group bg-white border border-surface-200 shadow-2xs"
+                className="card p-4 sm:p-5 cursor-pointer hover:border-brand-300 transition-colors group bg-white border border-surface-200 rounded-xl shadow-2xs"
                 onClick={() => navigate(`/history/${session.id}`)}
               >
                 <div className="flex items-start justify-between gap-3 mb-2.5">
@@ -165,120 +351,6 @@ export default function Progress() {
             ))}
           </div>
         )}
-      </section>
-
-      {/* ── Training Volume Chart ── */}
-      <section aria-label="Analytics charts">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-bold text-surface-900">Volume Analytics</h2>
-            <p className="text-xs text-surface-500 mt-0.5">Aggregate tonnage lifted over time.</p>
-          </div>
-          <div className="flex bg-surface-100 p-1 rounded-lg">
-            {(['7d', '30d', '90d', '1y'] as const).map(range => (
-              <button
-                key={range}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
-                  timeRange === range
-                    ? 'bg-white text-brand-600 shadow-sm'
-                    : 'text-surface-600 hover:text-surface-900'
-                }`}
-                onClick={() => setTimeRange(range)}
-              >
-                {range.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="card p-6 min-h-[300px] bg-white border border-surface-200">
-          {volumeChart && volumeChart.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={volumeChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748B', fontSize: 12 }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748B', fontSize: 12 }}
-                  tickFormatter={(val) => `${val / 1000}k`}
-                />
-                <Tooltip 
-                  cursor={{ fill: '#F1F5F9' }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => [`${value} kg`, 'Volume']}
-                />
-                <Bar 
-                  dataKey="value" 
-                  fill="#0EA5E9" 
-                  radius={[4, 4, 0, 0]} 
-                  maxBarSize={50}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-             <div className="h-[300px] flex items-center justify-center text-surface-400 text-xs">
-               Not enough data to display chart.
-             </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── Personal Records ── */}
-      <section aria-label="Personal records">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <SectionHeader title="Personal Records" />
-            <p className="text-xs text-surface-500 -mt-2">Highest recorded weight per exercise with Epley 1RM model.</p>
-          </div>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {personalRecords && personalRecords.length > 0 ? (
-            personalRecords.map(pr => (
-              <div 
-                key={pr.id} 
-                className="card p-5 relative overflow-hidden group hover:border-amber-300 hover:shadow-md transition-all cursor-pointer bg-white border border-surface-200"
-                onClick={() => setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
-              >
-                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform" />
-                
-                <div className="flex items-start justify-between mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 mb-4 group-hover:scale-105 transition-transform">
-                    <Trophy size={20} aria-hidden="true" />
-                  </div>
-                  <span className="text-xs font-medium text-surface-500 bg-surface-100 px-2 py-1 rounded-full">
-                    {formatRelativeDate(pr.achievedAt)}
-                  </span>
-                </div>
-                
-                <h3 className="font-semibold text-surface-900 mb-1 group-hover:text-brand-600 transition-colors flex items-center justify-between">
-                  <span>{pr.exerciseName}</span>
-                  <ChevronRight size={16} className="text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </h3>
-                <div className="flex items-end gap-2">
-                  <span className="text-3xl font-black text-brand-600 tracking-tight">{pr.value}</span>
-                  <span className="text-sm font-semibold text-surface-500 mb-1">{pr.unit}</span>
-                </div>
-                <p className="text-[11px] text-surface-400 mt-2 flex items-center gap-1">
-                  <Sparkles size={12} className="text-amber-500" /> View 1RM & progression graph
-                </p>
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full card p-8 text-center text-surface-500 bg-white border border-surface-200 text-xs">
-              No personal records yet. Log your heavy sets to see them here!
-            </div>
-          )}
-        </div>
       </section>
 
       {/* ── Exercise Detail & Intelligence Modal ── */}

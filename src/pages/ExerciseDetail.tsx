@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Heart, ArrowLeft, Loader2, PlayCircle, Trophy, Activity, Sparkles, Flame, History } from 'lucide-react'
+import { Heart, ArrowLeft, Loader2, PlayCircle, Trophy, Activity, Sparkles, Flame, History, Search, Lightbulb, AlertTriangle, Check, X as XIcon } from 'lucide-react'
 import { getExerciseBySlug, getRelatedExercises, toggleFavorite, getUserFavorites } from '@/lib/exercises'
 import { useAuth } from '@/context/AuthContext'
 import { ExerciseIllustration, ExerciseCard } from '@/components/exercise/ExerciseComponents'
@@ -89,7 +89,9 @@ export default function ExerciseDetail() {
   if (error || !exercise) {
     return (
       <div className="text-center py-20 animate-fade-in">
-        <div className="text-5xl mb-4">🔍</div>
+        <div className="w-16 h-16 rounded-full bg-surface-100 flex items-center justify-center mx-auto mb-4 text-surface-400">
+          <Search size={32} />
+        </div>
         <h2 className="text-xl font-bold text-surface-900 mb-2">Exercise Not Found</h2>
         <p className="text-surface-500 mb-6">{error || "We couldn't find the exercise you were looking for."}</p>
         <button className="btn-primary" onClick={() => navigate('/exercises')}>
@@ -194,7 +196,7 @@ export default function ExerciseDetail() {
                   queueExerciseForTodayWorkout(exercise)
                   toast.success(
                     `${exercise.name} added to today's workout`,
-                    'Ready to train? Tap Start Workout on Home or sidebar.'
+                    'Ready to train? Tap Start Workout on Home.'
                   )
                 }} 
                 className="btn-primary flex-1 sm:flex-none"
@@ -347,17 +349,17 @@ export default function ExerciseDetail() {
             </section>
           )}
 
-          {/* Pro Tips */}
+          {/* Pro Tips / Coach Tip */}
           {exercise.tips && exercise.tips.length > 0 && (
             <section className="card p-6 sm:p-8 border-brand-100 bg-brand-50/30">
               <h2 className="text-lg font-bold text-brand-900 mb-4 flex items-center gap-2">
-                <span className="text-brand-500">💡</span> Pro Tips
+                <Lightbulb size={18} className="text-brand-600" /> COACH TIP
               </h2>
               <ul className="space-y-3">
                 {exercise.tips.map((tip, i) => (
                   <li key={i} className="flex gap-3 text-surface-700">
-                    <span className="text-brand-500 mt-0.5 flex-shrink-0">✓</span>
-                    {tip}
+                    <Check size={16} className="text-brand-600 mt-0.5 flex-shrink-0" />
+                    <span>{tip}</span>
                   </li>
                 ))}
               </ul>
@@ -368,13 +370,13 @@ export default function ExerciseDetail() {
           {exercise.common_mistakes && exercise.common_mistakes.length > 0 && (
             <section className="card p-6 sm:p-8 border-amber-100 bg-amber-50/30">
               <h2 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
-                <span className="text-amber-500">⚠</span> Common Mistakes
+                <AlertTriangle size={18} className="text-amber-600" /> COMMON MISTAKES
               </h2>
               <ul className="space-y-3">
                 {exercise.common_mistakes.map((mistake, i) => (
                   <li key={i} className="flex gap-3 text-surface-700">
-                    <span className="text-amber-500 mt-0.5 flex-shrink-0">✕</span>
-                    {mistake}
+                    <XIcon size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                    <span>{mistake}</span>
                   </li>
                 ))}
               </ul>

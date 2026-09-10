@@ -123,11 +123,13 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
           <button
             type="button"
             onClick={(e) => onAddToWorkout(exercise, e)}
-            className="w-full py-1.5 px-2.5 rounded-lg bg-surface-50 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-surface-200 text-surface-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+            id={`exercise-card-add-${exercise.slug}`}
+            className="w-full py-2 px-3 rounded-xl bg-surface-50 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-surface-200 text-surface-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
             title={`Add ${exercise.name} to today's workout`}
+            aria-label={`Add ${exercise.name} to today's workout`}
           >
-            <Plus size={13} className="text-brand-500" />
-            Add to Today's Workout
+            <Plus size={14} className="text-brand-600 stroke-[2.5]" />
+            <span>+ Add</span>
           </button>
         </div>
       )}

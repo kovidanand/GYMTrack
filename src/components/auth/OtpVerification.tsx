@@ -12,7 +12,7 @@ interface OtpVerificationProps {
 }
 
 export function OtpVerification({ email, onBackToSignIn, onSuccess }: OtpVerificationProps) {
-  const { verifyEmailOtp, resendEmailOtp, profile } = useAuth()
+  const { verifyEmailOtp, resendEmailOtp, signInAsDemo, profile } = useAuth()
   const navigate = useNavigate()
 
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', ''])
@@ -272,6 +272,18 @@ export function OtpVerification({ email, onBackToSignIn, onSuccess }: OtpVerific
               {resendCooldown > 0 ? `Resend code (${resendCooldown}s)` : 'Resend code'}
             </>
           )}
+        </button>
+
+        <button
+          type="button"
+          id="otp-demo-access-btn"
+          onClick={() => {
+            signInAsDemo()
+            navigate('/dashboard', { replace: true })
+          }}
+          className="btn-secondary w-full justify-center text-xs py-2 font-medium border-brand-200 text-brand-700 hover:bg-brand-50"
+        >
+          Instant Demo Access (Skip Code)
         </button>
 
         {onBackToSignIn && (

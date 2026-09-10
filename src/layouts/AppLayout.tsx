@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
-import { Sidebar, MobileNav, MobileTopBar } from '@/components/layout/Navigation'
+import { TopNavigation, MobileNav, MobileTopBar } from '@/components/layout/Navigation'
 import { FloatingAiCoach } from '@/components/ai/FloatingAiCoach'
 import { WorkoutTimerModal } from '@/components/workout/WorkoutTimerModal'
 import { useAuth } from '@/context/AuthContext'
@@ -26,32 +26,28 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-50">
-      {/* Desktop sidebar */}
-      <Sidebar onOpenTimer={() => setIsTimerOpen(true)} />
+    <div className="min-h-screen bg-surface-50 flex flex-col selection:bg-brand-500 selection:text-white">
+      {/* Desktop Top Navigation (NO left sidebar) */}
+      <TopNavigation onOpenTimer={() => setIsTimerOpen(true)} />
 
-      {/* Mobile top bar */}
+      {/* Mobile Top Bar */}
       <MobileTopBar onOpenTimer={() => setIsTimerOpen(true)} />
 
-      {/* Main content */}
-      <main
-        className="lg:ml-60 xl:ml-64 min-h-screen
-                   pt-[57px] lg:pt-0
-                   pb-[88px] lg:pb-8"
-      >
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 lg:py-8">
+      {/* Main Content Area: Centered, spacious professional dashboard */}
+      <main className="flex-1 w-full pt-16 lg:pt-20 pb-24 lg:pb-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
           <Outlet />
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile Bottom Nav */}
       <MobileNav />
 
       {/* Workout Timer / Stopwatch Modal */}
       <WorkoutTimerModal isOpen={isTimerOpen} onOpenChange={setIsTimerOpen} />
 
-      {/* Floating AI Coach Assistant (available across all app pages except full chat) */}
-      {location.pathname !== '/ai-coach' && <FloatingAiCoach />}
+      {/* Floating AI Coach Assistant (anchored at bottom-right) */}
+      <FloatingAiCoach />
     </div>
   )
 }

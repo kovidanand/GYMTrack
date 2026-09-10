@@ -141,17 +141,10 @@ export function FloatingAiCoach() {
               ) : (
                 <>
                   <Dumbbell size={12} className="text-brand-600 flex-shrink-0" />
-                  <span>Ready to guide your form & routines</span>
+                  <span>Telemetry active · Ready to guide your training</span>
                 </>
               )}
             </span>
-            <Link 
-              to="/ai-coach" 
-              onClick={() => setIsOpen(false)}
-              className="font-bold text-brand-700 hover:underline flex items-center gap-0.5 flex-shrink-0 ml-2"
-            >
-              Full Page <ExternalLink size={10} />
-            </Link>
           </div>
 
           {/* ── Chat Messages Scroll Area ── */}
@@ -162,11 +155,11 @@ export function FloatingAiCoach() {
                 <Bot size={13} />
               </div>
               <div className="bg-white border border-surface-200 rounded-2xl rounded-tl-none p-3 shadow-xs max-w-[85%] text-surface-800 leading-relaxed">
-                <p className="font-semibold text-surface-900 mb-1">
-                  Hey {profile?.first_name || 'there'}! 👋
+                <p className="font-bold text-surface-900 mb-1">
+                  Hello, {profile?.first_name || 'Athlete'}
                 </p>
                 <p>
-                  I'm your GYMTrack coach. Ask me about **exercise technique**, **what to train today**, your **1RM progression**, or **target muscles**!
+                  I am your contextual training assistant. Ask me about <strong>exercise technique</strong>, <strong>what to train today</strong>, your <strong>recent workouts</strong>, or <strong>target muscle groups</strong>.
                 </p>
               </div>
             </div>

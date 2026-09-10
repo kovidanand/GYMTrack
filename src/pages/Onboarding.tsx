@@ -1,6 +1,23 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ChevronLeft, Loader2, Check } from 'lucide-react'
+import { 
+  ChevronRight, 
+  ChevronLeft, 
+  Loader2, 
+  Check,
+  Dumbbell,
+  Flame,
+  Trophy,
+  Activity,
+  Heart,
+  Sparkles,
+  Zap,
+  Target,
+  Calendar,
+  Building2,
+  Home,
+  User
+} from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { GYMTrackLogo } from '@/components/shared'
 import { cn } from '@/lib/utils'
@@ -12,7 +29,7 @@ interface OptionCardProps {
   id: string
   label: string
   description?: string
-  icon: string
+  icon: ReactNode
   selected: boolean
   onClick: () => void
 }
@@ -32,7 +49,12 @@ function OptionCard({ id, label, description, icon, selected, onClick }: OptionC
       aria-pressed={selected}
     >
       <div className="flex items-center gap-3">
-        <span className="text-2xl" aria-hidden="true">{icon}</span>
+        <div className={cn(
+          "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors",
+          selected ? "bg-brand-500 text-white" : "bg-surface-100 text-surface-600"
+        )}>
+          {icon}
+        </div>
         <div className="flex-1 min-w-0">
           <p className={cn('text-sm font-semibold', selected ? 'text-brand-700' : 'text-surface-900')}>
             {label}
@@ -53,35 +75,35 @@ function OptionCard({ id, label, description, icon, selected, onClick }: OptionC
 
 // ─── Step data ────────────────────────────────────────────────────────────────
 
-const goalOptions: { value: FitnessGoal; label: string; description: string; icon: string }[] = [
-  { value: 'build_muscle',       label: 'Build Muscle',       description: 'Gain size and strength over time',           icon: '💪' },
-  { value: 'lose_weight',        label: 'Lose Fat',           description: 'Reduce body fat through training',           icon: '🔥' },
-  { value: 'improve_strength',   label: 'Improve Strength',   description: 'Get stronger in the main lifts',             icon: '🏋️' },
-  { value: 'increase_endurance', label: 'Improve Fitness',    description: 'Better stamina and cardiovascular health',   icon: '🏃' },
-  { value: 'maintain_fitness',   label: 'General Fitness',    description: 'Stay active and healthy',                    icon: '⚖️' },
-  { value: 'improve_flexibility',label: 'Improve Mobility',   description: 'Flexibility, movement and recovery',         icon: '🧘' },
+const goalOptions: { value: FitnessGoal; label: string; description: string; icon: ReactNode }[] = [
+  { value: 'build_muscle',       label: 'Build Muscle',       description: 'Gain size and strength over time',           icon: <Dumbbell size={20} /> },
+  { value: 'lose_weight',        label: 'Lose Fat',           description: 'Reduce body fat through training',           icon: <Flame size={20} /> },
+  { value: 'improve_strength',   label: 'Improve Strength',   description: 'Get stronger in the main lifts',             icon: <Trophy size={20} /> },
+  { value: 'increase_endurance', label: 'Improve Fitness',    description: 'Better stamina and cardiovascular health',   icon: <Activity size={20} /> },
+  { value: 'maintain_fitness',   label: 'General Fitness',    description: 'Stay active and healthy',                    icon: <Heart size={20} /> },
+  { value: 'improve_flexibility',label: 'Improve Mobility',   description: 'Flexibility, movement and recovery',         icon: <Sparkles size={20} /> },
 ]
 
-const experienceOptions: { value: ExperienceLevel; label: string; description: string; icon: string }[] = [
-  { value: 'beginner',     label: 'Beginner',     description: 'Less than 1 year of consistent training',     icon: '🌱' },
-  { value: 'intermediate', label: 'Intermediate', description: '1–3 years of training experience',           icon: '⚡' },
-  { value: 'advanced',     label: 'Advanced',     description: '3+ years and good knowledge of programming',  icon: '🎯' },
+const experienceOptions: { value: ExperienceLevel; label: string; description: string; icon: ReactNode }[] = [
+  { value: 'beginner',     label: 'Beginner',     description: 'Less than 1 year of consistent training',     icon: <User size={20} /> },
+  { value: 'intermediate', label: 'Intermediate', description: '1–3 years of training experience',           icon: <Zap size={20} /> },
+  { value: 'advanced',     label: 'Advanced',     description: '3+ years and good knowledge of programming',  icon: <Target size={20} /> },
 ]
 
-const frequencyOptions: { value: number; label: string; icon: string }[] = [
-  { value: 2, label: '2 days / week', icon: '🌤️' },
-  { value: 3, label: '3 days / week', icon: '☀️' },
-  { value: 4, label: '4 days / week', icon: '💫' },
-  { value: 5, label: '5 days / week', icon: '🔆' },
-  { value: 6, label: '6+ days / week', icon: '⚡' },
+const frequencyOptions: { value: number; label: string; icon: ReactNode }[] = [
+  { value: 2, label: '2 days / week', icon: <Calendar size={18} /> },
+  { value: 3, label: '3 days / week', icon: <Calendar size={18} /> },
+  { value: 4, label: '4 days / week', icon: <Calendar size={18} /> },
+  { value: 5, label: '5 days / week', icon: <Calendar size={18} /> },
+  { value: 6, label: '6+ days / week', icon: <Calendar size={18} /> },
 ]
 
-const equipmentOptions: { value: string; label: string; description: string; icon: string }[] = [
-  { value: 'full_gym',        label: 'Full Gym',         description: 'Barbells, cables, machines, everything', icon: '🏢' },
-  { value: 'home_gym',        label: 'Home Gym',         description: 'A solid set of equipment at home',       icon: '🏠' },
-  { value: 'dumbbells',       label: 'Dumbbells',        description: 'Adjustable or fixed dumbbells',          icon: '🏋️' },
-  { value: 'bodyweight',      label: 'Bodyweight',       description: 'No equipment needed',                    icon: '🤸' },
-  { value: 'resistance_band', label: 'Resistance Bands', description: 'Bands and minimal equipment',            icon: '🎗️' },
+const equipmentOptions: { value: string; label: string; description: string; icon: ReactNode }[] = [
+  { value: 'full_gym',        label: 'Full Gym',         description: 'Barbells, cables, machines, everything', icon: <Building2 size={20} /> },
+  { value: 'home_gym',        label: 'Home Gym',         description: 'A solid set of equipment at home',       icon: <Home size={20} /> },
+  { value: 'dumbbells',       label: 'Dumbbells',        description: 'Adjustable or fixed dumbbells',          icon: <Dumbbell size={20} /> },
+  { value: 'bodyweight',      label: 'Bodyweight',       description: 'No equipment needed',                    icon: <User size={20} /> },
+  { value: 'resistance_band', label: 'Resistance Bands', description: 'Bands and minimal equipment',            icon: <Activity size={20} /> },
 ]
 
 // ─── Onboarding Page ──────────────────────────────────────────────────────────
@@ -251,7 +273,7 @@ export default function Onboarding() {
                           : 'border-surface-200 bg-white text-surface-700 hover:border-surface-300'
                       )}
                     >
-                      <div className="text-xl mb-1">{opt.icon}</div>
+                      <div className="flex justify-center mb-1 text-surface-600">{opt.icon}</div>
                       <p className="text-xs font-medium">{opt.label}</p>
                     </button>
                   ))}

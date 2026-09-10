@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SlidersHorizontal, X, Heart } from 'lucide-react'
+import { SlidersHorizontal, X, Heart, HeartOff, Search } from 'lucide-react'
 import { PageHeader, SearchInput, EmptyState } from '@/components/shared'
 import { ExerciseCard, FilterChips } from '@/components/exercise/ExerciseComponents'
 import { ExerciseSkeleton } from '@/components/exercise/ExerciseSkeleton'
@@ -119,6 +119,39 @@ export default function Exercises() {
         </div>
       </div>
 
+      {/* ── Quick Categories (Consumer fitness discovery) ── */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" role="tablist" aria-label="Exercise categories">
+        {[
+          { id: 'all', label: 'All' },
+          { id: 'chest', label: 'Chest' },
+          { id: 'back', label: 'Back' },
+          { id: 'shoulders', label: 'Shoulders' },
+          { id: 'legs', label: 'Legs' },
+          { id: 'arms', label: 'Arms' },
+          { id: 'core', label: 'Core' },
+          { id: 'glutes', label: 'Glutes' },
+        ].map(cat => {
+          const isActive = (cat.id === 'all' && (muscleGroup === 'all' || !muscleGroup)) || muscleGroup === cat.id
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setMuscleGroup(cat.id as any)}
+              id={`category-tab-${cat.id}`}
+              role="tab"
+              aria-selected={isActive}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap border shadow-2xs",
+                isActive
+                  ? "bg-surface-900 text-white border-surface-900 shadow-xs"
+                  : "bg-white text-surface-600 border-surface-200 hover:border-surface-300 hover:text-surface-900"
+              )}
+            >
+              {cat.label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* ── Filter Panel ── */}
       {showFilters && (
         <div className="card p-5 space-y-5 animate-slide-up">
@@ -219,7 +252,7 @@ export default function Exercises() {
                   queueExerciseForTodayWorkout(ex)
                   toast.success(
                     `${ex.name} added to today's workout`,
-                    'Ready to train? Tap Start Workout on Home or sidebar.'
+                    'Ready to train? Tap Start Workout on Home.'
                   )
                 }}
                 onClick={(ex) => navigate(`/exercises/${ex.slug}`)}
@@ -229,7 +262,7 @@ export default function Exercises() {
         </>
       ) : (
         <EmptyState
-          icon={<span className="text-5xl">{favoritesOnly ? '💔' : '🔍'}</span>}
+          icon={favoritesOnly ? <HeartOff size={40} className="text-surface-400" /> : <Search size={40} className="text-surface-400" />}
           title={favoritesOnly ? "No favorite exercises yet" : "No exercises found"}
           description={
             favoritesOnly 

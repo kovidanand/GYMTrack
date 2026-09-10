@@ -49,6 +49,7 @@ export interface AuthContextType {
   ) => Promise<{ error: string | null }>
 
   refreshSession: () => Promise<void>
+  signInAsDemo: () => void
 
   // Profile actions
   refreshProfile: () => Promise<void>
@@ -56,6 +57,47 @@ export interface AuthContextType {
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
+
+const DEMO_USER: User = {
+  id: '00000000-0000-0000-0000-000000000001',
+  app_metadata: { provider: 'email' },
+  user_metadata: { first_name: 'Kovid', last_name: 'Anand', full_name: 'Kovid Anand' },
+  aud: 'authenticated',
+  created_at: new Date().toISOString(),
+  email: 'kovid.anand@gymtrack.com',
+  email_confirmed_at: new Date().toISOString(),
+  phone: '',
+  confirmed_at: new Date().toISOString(),
+  last_sign_in_at: new Date().toISOString(),
+  role: 'authenticated',
+  updated_at: new Date().toISOString()
+}
+
+const DEMO_PROFILE: Profile = {
+  id: '00000000-0000-0000-0000-000000000001',
+  first_name: 'Kovid',
+  last_name: 'Anand',
+  avatar_url: null,
+  fitness_goal: 'build_muscle',
+  secondary_goal: 'improve_strength',
+  experience_level: 'intermediate',
+  training_frequency: 4,
+  session_duration: 60,
+  height: 180,
+  weight: 78,
+  age: 26,
+  sex: 'male',
+  preferred_equipment: ['barbell', 'dumbbell', 'cable'],
+  training_location: 'full_gym',
+  preferred_split: 'push_pull_legs',
+  preferred_exercises: ['Barbell Bench Press', 'Barbell Squat', 'Romanian Deadlift'],
+  disliked_exercises: [],
+  health_limitations: null,
+  onboarding_complete: true,
+  onboarding_step: 4,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -72,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Determine email verification status
   const isEmailVerified = Boolean(
     user && (
+      user.id === DEMO_USER.id ||
       user.email_confirmed_at ||
       (user as { confirmed_at?: string }).confirmed_at ||
       user.app_metadata?.provider === 'google'
@@ -145,6 +188,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Listen to auth state changes ───────────────────────────────────────────
   useEffect(() => {
     let mounted = true
+
+    // Check if demo mode is enabled
+    if (localStorage.getItem('gymtrack:demo_mode') === 'true') {
+      setUser(DEMO_USER)
+      setProfile(DEMO_PROFILE)
+      setLoading(false)
+      setInitialized(true)
+      return
+    }
 
     // Subscribe to auth state changes:
     // INITIAL_SESSION, SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED, PASSWORD_RECOVERY
@@ -350,9 +402,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // ── Demo Mode Sign In ──────────────────────────────────────────────────────
+  const signInAsDemo = useCallback(() => {
+    localStorage.setItem('gymtrack:demo_mode', 'true')
+    setUser(DEMO_USER)
+    setProfile(DEMO_PROFILE)
+    setLoading(false)
+    setInitialized(true)
+  }, [])
+
   // ── Sign Out ───────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {
     try {
+      localStorage.removeItem('gymtrack:demo_mode')
       await supabase.auth.signOut()
     } finally {
       setUser(null)
@@ -404,6 +466,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ error: string | null }> => {
     if (!user) return { error: 'Not authenticated.' }
 
+    if (user.id === DEMO_USER.id) {
+      setProfile(prev => prev ? { ...prev, ...updates } : null)
+      return { error: null }
+    }
+
     const { data, error } = await updateProfile(user.id, updates)
     if (error) return { error }
     if (data) setProfile(data)
@@ -422,6 +489,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signInWithGoogle,
+    signInAsDemo,
     signOut,
     verifyEmailOtp,
     resendEmailOtp,

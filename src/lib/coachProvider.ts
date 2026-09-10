@@ -298,13 +298,13 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
     const matchesRdl = (query.includes('rdl') || query.includes('romanian')) && slug === 'romanian-deadlift'
 
     if (matchesSlug || matchesName || matchesRdl || (isTechniqueQuery && matchesKeyWords)) {
-      const media = EXERCISE_MEDIA_REGISTRY[slug]
+      const media = EXERCISE_MEDIA_REGISTRY[slug] || EXERCISE_MEDIA_REGISTRY[guide.slug]
       
-      let content = `### 🏋️ Form Guide: ${guide.name}\n\n`
+      let content = `### Form Guide: ${guide.name}\n\n`
       content += `**Target Muscles:**\n${guide.targetMuscles}\n\n`
       
       if (media?.demonstrationUrl) {
-        content += `📸 **Visual Demonstration:** Verified instructional asset available in the Exercise Library.\n\n`
+        content += `**Visual Demonstration:** Verified instructional asset from the Exercise Library.\n\n`
       }
 
       content += `**Proper Setup:**\n`
@@ -313,9 +313,9 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
       guide.execution.forEach((e, idx) => { content += `${idx + 1}. ${e}\n` })
       content += `\n**Breathing Cues:** ${guide.breathing}\n\n`
       content += `**Common Mistakes to Avoid:**\n`
-      guide.commonMistakes.forEach(m => { content += `- ❌ ${m}\n` })
+      guide.commonMistakes.forEach(m => { content += `- ${m}\n` })
       content += `\n**Coach Tips:**\n`
-      guide.tips.forEach(t => { content += `- 💡 ${t}\n` })
+      guide.tips.forEach(t => { content += `- ${t}\n` })
       content += `\n**Suitable Alternatives:** ${guide.alternatives.join(', ')}`
 
       return {
@@ -324,8 +324,75 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
         supportingData: `Verified exercise form guide for ${guide.name} (${media?.attribution || 'Licensed exercise asset'}).`,
         suggestedQuestions: [
           `What should I train today?`,
-          `What exercises target upper chest?`,
+          `What exercises target the chest?`,
           `Should I increase my ${guide.name} weight?`
+        ]
+      }
+    }
+  }
+
+  // ─── Topic: "How many sets should I do?" ──────────────────────────────────
+  if (query.includes('how many sets') || query.includes('number of sets') || query.includes('how many reps')) {
+    return {
+      content: `### Optimal Set & Rep Volume Guidelines\n\n` +
+        `Evidence-based training guidelines for compound and accessory lifts:\n\n` +
+        `- **Hypertrophy (Muscle Growth):** 3–4 working sets per exercise, 8–12 reps per set, resting 60–90 seconds.\n` +
+        `- **Maximum Strength:** 3–5 working sets per compound lift, 3–6 reps per set, resting 2–3 minutes.\n` +
+        `- **Muscular Endurance:** 2–3 sets, 15–20 reps, resting 30–45 seconds.\n\n` +
+        `**Weekly Target:** Aim for **10–20 total working sets** per major muscle group per week for sustainable progressive overload.`,
+      supportingData: 'Hypertrophy and strength volume dose-response guidelines.',
+      suggestedQuestions: [
+        'What should I train today?',
+        'How do I do a bench press?',
+        'What exercises target the chest?'
+      ]
+    }
+  }
+
+  // ─── Topic: "What exercise targets the chest?" ────────────────────────────
+  if (
+    query.includes('target chest') || 
+    query.includes('targets chest') || 
+    query.includes('targets the chest') || 
+    query.includes('target the chest') || 
+    query.includes('exercise targets the chest') || 
+    query.includes('exercises target chest')
+  ) {
+    return {
+      content: `### Targeted Chest Exercises (Pectoralis Major & Minor)\n\n` +
+        `Primary movements from the GYMTrack Exercise Library for chest development:\n\n` +
+        `1. **Barbell Bench Press:** Foundational compound horizontal press targeting the mid-to-lower sternal pectoralis.\n` +
+        `2. **Incline Dumbbell Press:** Emphasizes the upper (clavicular) pectoral head through natural converging movement path.\n` +
+        `3. **Push-Ups:** Fundamental closed-kinetic-chain movement for pectoral and core stability.\n` +
+        `4. **Dips:** Effective lower pectoral exercise with slight forward torso lean.\n` +
+        `5. **Cable Crossover / Chest Fly:** Isolates chest fibers through horizontal adduction with continuous tension.\n\n` +
+        `You can explore each of these in the **Library** tab and add them to today's workout in 1 tap.`,
+      supportingData: 'Biomechanics: pectoral horizontal adduction and press mechanics.',
+      suggestedQuestions: [
+        'How do I do a bench press?',
+        'What should I train today?',
+        'How many sets should I do?'
+      ]
+    }
+  }
+
+  // ─── Topic: "Have I improved my [exercise]?" ──────────────────────────────
+  if (query.includes('have i improved') || query.includes('did i improve') || query.includes('improved my')) {
+    const matchedEx = findExerciseInQuery(query, analysis.exercises)
+    if (matchedEx) {
+      const isUp = (matchedEx.oneRMChangePct || 0) > 0
+      return {
+        content: `### Performance Progression: **${matchedEx.exerciseName}**\n\n` +
+          `- **Current Est. 1RM:** ${matchedEx.current1RM ? `${matchedEx.current1RM} kg` : `${matchedEx.latestWeight || 0} kg`}\n` +
+          `- **Personal Best:** ${matchedEx.best1RM ? `${matchedEx.best1RM} kg` : `${matchedEx.latestWeight || 0} kg`}\n` +
+          `- **Sessions Recorded:** ${matchedEx.totalSessions}\n` +
+          `- **Progression Delta:** ${matchedEx.oneRMChangePct != null ? `${matchedEx.oneRMChangePct >= 0 ? `+${matchedEx.oneRMChangePct}%` : `${matchedEx.oneRMChangePct}%`}` : 'Establishing baseline'}\n\n` +
+          `${isUp ? `You have improved your ${matchedEx.exerciseName} performance by ${matchedEx.oneRMChangePct}% since your first session.` : `Your performance on ${matchedEx.exerciseName} has maintained consistent load across recent sessions.`}`,
+        supportingData: matchedEx.supportingData,
+        suggestedQuestions: [
+          `Should I increase my ${matchedEx.exerciseName} weight?`,
+          `How do I do a ${matchedEx.exerciseName}?`,
+          'What should I train today?'
         ]
       }
     }
@@ -341,7 +408,8 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
     query.includes('my bench press weight') ||
     query.includes('my squat weight') ||
     query.includes('last week') ||
-    query.includes('yesterday')
+    query.includes('yesterday') ||
+    query.includes('what did i do today')
   ) {
     if (analysis.hasData && analysis.recentWorkoutsSummary.length > 0) {
       // Check if querying a specific exercise like bench press
@@ -355,7 +423,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
 
       if (matchedEx) {
         return {
-          content: `### 📊 Your Recorded Performance: **${matchedEx.exerciseName}**\n\n` +
+          content: `### Recorded Performance: **${matchedEx.exerciseName}**\n\n` +
             `- **Current Est. 1RM:** ${matchedEx.current1RM ? `${matchedEx.current1RM} kg` : (matchedEx.latestWeight ? `${matchedEx.latestWeight} kg` : 'Bodyweight')}\n` +
             `- **All-Time Peak 1RM:** ${matchedEx.best1RM ? `${matchedEx.best1RM} kg` : (matchedEx.latestWeight ? `${matchedEx.latestWeight} kg` : 'Bodyweight')}\n` +
             `- **Latest Working Weight:** ${matchedEx.latestWeight ? `${matchedEx.latestWeight} kg` : 'Recorded'}\n` +
@@ -373,13 +441,13 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
 
       // If querying recent workouts / last week
       const sessions = analysis.recentWorkoutsSummary
-      let content = `### 🗓️ Your Recent Workout Records\n\n`
+      let content = `### Recent Workout Records\n\n`
       sessions.slice(0, 4).forEach((s, idx) => {
         content += `${idx + 1}. **${s.name}** (${s.date})\n`
         content += `   - Duration: ${s.durationMins} minutes\n`
         content += `   - Volume: ${s.volume.toLocaleString()} kg across ${s.exercisesCount} exercises\n\n`
       })
-      content += `*You can inspect full set-by-set breakdowns anytime in your **History** tab.*`
+      content += `*You can inspect full set-by-set breakdowns anytime in your **Progress & History** tab.*`
 
       return {
         content,
@@ -406,7 +474,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   // ─── Topic: 30-Minute Express Workout ───────────────────────────────────────
   if (query.includes('30 minutes') || query.includes('half hour') || query.includes('30 min')) {
     return {
-      content: `### ⏱️ Rapid 30-Minute Express Workout\n\n` +
+      content: `### Rapid 30-Minute Express Workout\n\n` +
         `When you only have 30 minutes, utilize **antagonistic supersets** (alternating push and pull) with minimal downtime (~45–60s rest):\n\n` +
         `**Superset 1 (12 mins):**\n` +
         `- **Dumbbell Bench Press:** 3 sets × 8–10 reps\n` +
@@ -416,8 +484,8 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
         `- **Goblet Squat or Bulgarian Split Squat:** 3 sets × 10 reps\n` +
         `- *paired immediately with*\n` +
         `- **Romanian Deadlift or Plank:** 3 sets × 10 reps (or 45s hold)\n\n` +
-        `**Cooldown (3–5 mins):** Deep diaphragmatic breathing and lower body stretch.\n\n` +
-        `💡 *This circuit preserves maximum stimulus density while fitting neatly into 30 minutes.*`,
+        `**Cooldown (3–5 mins):** Deep breathing and lower body stretch.\n\n` +
+        `*This circuit preserves maximum stimulus density while fitting neatly into 30 minutes.*`,
       supportingData: 'Express superset conditioning protocol for compressed time windows.',
       suggestedQuestions: [
         'How do I do a bench press?',
@@ -460,7 +528,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
       }
 
       return {
-        content: `### 🎯 Today's Recommended Session: **${recommendation}**\n\n` +
+        content: `### Today's Recommended Session: **${recommendation}**\n\n` +
           `**Why this workout?**\n` +
           `Your last completed session was **${lastSession.name}** on **${lastSession.date}** (${lastSession.volume.toLocaleString()} kg volume). ` +
           `To allow those muscle groups 48 hours to recover while maintaining momentum, training **${recommendation}** is the most balanced choice today.\n\n` +
@@ -477,7 +545,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
     } else {
       // User has 0 logged sessions
       return {
-        content: `### 🚀 Starter Workout Recommendation: **Full-Body Foundation**\n\n` +
+        content: `### Starter Workout Recommendation: **Full-Body Foundation**\n\n` +
           `Since you are establishing your baseline, I recommend a foundational full-body routine that activates all primary movement patterns:\n\n` +
           `1. **Barbell Squat** (Knee-dominant / Quads & Glutes): 3 × 8–10 reps\n` +
           `2. **Barbell Bench Press** (Horizontal Push / Chest & Triceps): 3 × 8–10 reps\n` +
@@ -498,7 +566,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   // ─── Topic 3: "I haven't trained legs in a week" / Muscle Specific ─────────
   if (query.includes('legs in a week') || query.includes('havent trained legs') || query.includes('missed leg day')) {
     return {
-      content: `### 🦵 Leg Day Re-Entry Strategy\n\n` +
+      content: `### Leg Day Re-Entry Strategy\n\n` +
         `Since you haven't trained legs in over a week, your neuromuscular system will be responsive, but you are also more susceptible to delayed-onset muscle soreness (DOMS).\n\n` +
         `**Recommended Protocol Today:**\n` +
         `1. **Warm-up:** 5 minutes of cycling or bodyweight lunges + hip mobility.\n` +
@@ -506,7 +574,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
         `3. **Romanian Deadlift:** 3 sets of 10 reps focusing on a deep hamstring stretch.\n` +
         `4. **Leg Press or Walking Lunges:** 2 sets of 12 reps.\n` +
         `5. **Calf Raises:** 3 sets of 15 reps.\n\n` +
-        `💡 *Do not test a 1RM today. Re-introduce load progressively to ensure recovery for your next session.*`,
+        `*Note: Do not test a 1RM today. Re-introduce load progressively to ensure recovery for your next session.*`,
       supportingData: 'Deload re-entry guidance for muscle groups rested >7 days.',
       suggestedQuestions: [
         'How do I do a squat?',
@@ -519,13 +587,13 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   // ─── Topic 4: "What exercise targets my upper chest?" ──────────────────────
   if (query.includes('upper chest') || query.includes('clavicular head')) {
     return {
-      content: `### 🎯 Targeted Exercises for Upper Chest (Clavicular Head)\n\n` +
+      content: `### Targeted Exercises for Upper Chest (Clavicular Head)\n\n` +
         `The upper pectoral fibers attach to the clavicle and run diagonally, responding best to incline pressing angles between **30° and 45°**:\n\n` +
         `1. **Incline Barbell Bench Press:** The premier compound builder for upper chest strength and thickness (3–4 sets of 6–10 reps).\n` +
         `2. **Incline Dumbbell Press:** Allows a deeper stretch at the bottom and natural wrist rotation (3 sets of 8–12 reps).\n` +
         `3. **Low-to-High Cable Crossover:** Maintains continuous tension throughout the entire upward arc (3 sets of 12–15 reps).\n` +
         `4. **Decline Push-Ups:** Elevate your feet on a bench to shift bodyweight onto your upper chest.\n\n` +
-        `💡 *Tip: Avoid setting the bench incline too high (above 45°), which shifts the emphasis away from the chest to the front deltoids.*`,
+        `*Tip: Avoid setting the bench incline too high (above 45°), which shifts the emphasis away from the chest to the front deltoids.*`,
       supportingData: 'Biomechanics: clavicular pectoralis line of pull.',
       suggestedQuestions: [
         'How do I do a bench press?',
@@ -538,7 +606,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   // ─── Topic 5: "Difference between lat pulldown and pull-up" ─────────────────
   if (query.includes('lat pulldown') && (query.includes('pull-up') || query.includes('pull up') || query.includes('difference'))) {
     return {
-      content: `### ⚖️ Lat Pulldown vs. Pull-Up: Biomechanical Differences\n\n` +
+      content: `### Lat Pulldown vs. Pull-Up: Biomechanical Differences\n\n` +
         `Both movements target the **Latissimus Dorsi**, but they operate through distinct biomechanical chains:\n\n` +
         `| Characteristic | Pull-Up | Lat Pulldown |\n` +
         `|---|---|---|\n` +
@@ -559,7 +627,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   // ─── Topic 6: "I only have 45 minutes today" ──────────────────────────────
   if (query.includes('45 minutes') || query.includes('short on time') || query.includes('quick workout')) {
     return {
-      content: `### ⏱️ High-Efficiency 45-Minute Workout Protocol\n\n` +
+      content: `### High-Efficiency 45-Minute Workout Protocol\n\n` +
         `When time is constrained, prioritize **multi-joint compound exercises** and cap rest intervals at **75–90 seconds**:\n\n` +
         `**Warm-up (5 mins):** Arm circles, bodyweight squats, banded pull-aparts.\n\n` +
         `**The 45-Min Routine (35 mins):**\n` +
@@ -581,7 +649,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   // ─── Topic 7: "I am a beginner. What should I do?" ────────────────────────
   if (query.includes('beginner') || query.includes('new to the gym') || query.includes('just starting')) {
     return {
-      content: `### 🌟 The Golden Rules for Gym Beginners\n\n` +
+      content: `### The Golden Rules for Gym Beginners\n\n` +
         `Welcome to GYMTrack! Here is your proven blueprint to build strength safely:\n\n` +
         `1. **Master Form Before Weight:** Always leave 2–3 reps in reserve. Never compromise technique to lift heavier.\n` +
         `2. **Focus on the Big 4 Movements:** Squat (legs), Hinge (posterior chain), Push (chest/shoulders), Pull (back).\n` +
@@ -602,7 +670,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
     if (analysis.biggestImprovement && (analysis.biggestImprovement.oneRMChangePct || 0) > 0) {
       const bi = analysis.biggestImprovement
       return {
-        content: `Your biggest improvement is in **${bi.exerciseName}**! 🚀\n\n- **1RM Progression:** ${bi.previous1RM ? `${bi.previous1RM} kg → ` : ''}${bi.current1RM} kg (+${bi.oneRMChangePct}%)\n- **Performance Record:** All-time peak of ${bi.best1RM} kg\n- **Training History:** ${bi.totalSessions} sessions logged\n\nKeep maintaining clean execution and full range of motion.`,
+        content: `Your biggest improvement is in **${bi.exerciseName}**!\n\n- **1RM Progression:** ${bi.previous1RM ? `${bi.previous1RM} kg → ` : ''}${bi.current1RM} kg (+${bi.oneRMChangePct}%)\n- **Performance Record:** All-time peak of ${bi.best1RM} kg\n- **Training History:** ${bi.totalSessions} sessions logged\n\nKeep maintaining clean execution and full range of motion.`,
         supportingData: bi.supportingData,
         suggestedQuestions: [
           `Should I increase my ${bi.exerciseName} weight?`,
@@ -627,7 +695,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
     if (analysis.volumeChangePct != null) {
       const isUp = analysis.volumeChangePct >= 0
       return {
-        content: `Here is your recent training volume breakdown:\n\n- **Last 14 Days:** ${analysis.recentVolume.toLocaleString()} kg\n- **Prior 14 Days:** ${analysis.previousVolume.toLocaleString()} kg\n- **Change:** ${isUp ? `+${analysis.volumeChangePct}%` : `${analysis.volumeChangePct}%`}\n\n${isUp ? '📈 Your progressive overload is progressing nicely. Make sure your recovery matches your output.' : '📉 Your volume has dipped slightly. If you are on a deload week, this is appropriate; otherwise, aim to finish all target sets.'}`,
+        content: `Here is your recent training volume breakdown:\n\n- **Last 14 Days:** ${analysis.recentVolume.toLocaleString()} kg\n- **Prior 14 Days:** ${analysis.previousVolume.toLocaleString()} kg\n- **Change:** ${isUp ? `+${analysis.volumeChangePct}%` : `${analysis.volumeChangePct}%`}\n\n${isUp ? 'Your progressive overload is progressing steadily. Ensure recovery and sleep match your output.' : 'Your volume has dipped slightly. If you are on a deload week, this is appropriate; otherwise, aim to finish all target sets.'}`,
         supportingData: `14-day comparison: ${analysis.recentVolume} kg vs ${analysis.previousVolume} kg.`,
         suggestedQuestions: [
           'Am I training consistently?',
@@ -649,7 +717,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   // ─── Topic 10: Inquire about training consistency / streak ─────────────────
   if (query.includes('consistent') || query.includes('consistency') || query.includes('streak') || query.includes('often') || query.includes('frequency')) {
     return {
-      content: `Here is your consistency scorecard:\n\n- **Workouts (Last 14 Days):** ${analysis.recentSessionsCount} sessions\n- **Current Streak:** ${analysis.currentStreakDays} day(s)\n- **Best Streak:** ${analysis.longestStreakDays} day(s)\n- **Total Training Time:** ~${analysis.totalTrainingHours} hours\n\n${analysis.recentSessionsCount >= 4 ? '🔥 Excellent discipline! Consistency is the number one predictor of long-term strength gains.' : '💡 Aim for 3–4 sessions per week for balanced frequency and recovery.'}`,
+      content: `Here is your consistency scorecard:\n\n- **Workouts (Last 14 Days):** ${analysis.recentSessionsCount} sessions\n- **Current Streak:** ${analysis.currentStreakDays} day(s)\n- **Best Streak:** ${analysis.longestStreakDays} day(s)\n- **Total Training Time:** ~${analysis.totalTrainingHours} hours\n\n${analysis.recentSessionsCount >= 4 ? 'Excellent discipline. Consistency is the number one predictor of long-term strength gains.' : 'Aim for 3–4 sessions per week for balanced frequency and recovery.'}`,
       supportingData: `${analysis.recentSessionsCount} workouts in 14 days; streak: ${analysis.currentStreakDays} days.`,
       suggestedQuestions: [
         'How has my training volume changed?',
@@ -688,7 +756,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
     const ex = matchedExercise
     if (ex.trend === 'improving' && (ex.oneRMChangePct || 0) >= 3) {
       return {
-        content: `**Yes, a small increase is appropriate for ${ex.exerciseName}!** ✅\n\n- **Current Est. 1RM:** ${ex.current1RM} kg\n- **Recent Trend:** +${ex.oneRMChangePct}% improvement over ${ex.totalSessions} sessions\n- **Recommendation:** Add a conservative **1.0 kg to 2.5 kg** in your next session. Ensure your repetition cadence and range of motion remain strict.`,
+        content: `**Yes, a small increase is appropriate for ${ex.exerciseName}.**\n\n- **Current Est. 1RM:** ${ex.current1RM} kg\n- **Recent Trend:** +${ex.oneRMChangePct}% improvement over ${ex.totalSessions} sessions\n- **Recommendation:** Add a conservative **1.0 kg to 2.5 kg** in your next session. Ensure your repetition cadence and range of motion remain strict.`,
         supportingData: ex.supportingData,
         suggestedQuestions: [
           'How has my training volume changed?',
@@ -697,7 +765,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
       }
     } else if (ex.isPlateau) {
       return {
-        content: `**Hold off on increasing weight for ${ex.exerciseName} right now.** ⏸️\n\n- **Observation:** ${ex.plateauReason || 'Load has flattened across recent sessions.'}\n- **Recommendation:** Rather than jumping in weight, focus on adding 1–2 repetitions with your current weight (${ex.latestWeight || ex.current1RM} kg), or improve time under tension before overloading.`,
+        content: `**Hold off on increasing weight for ${ex.exerciseName} right now.**\n\n- **Observation:** ${ex.plateauReason || 'Load has flattened across recent sessions.'}\n- **Recommendation:** Rather than jumping in weight, focus on adding 1–2 repetitions with your current weight (${ex.latestWeight || ex.current1RM} kg), or improve time under tension before overloading.`,
         supportingData: ex.supportingData,
         suggestedQuestions: [
           `Why has my ${ex.exerciseName} progress slowed?`,
@@ -706,7 +774,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
       }
     } else {
       return {
-        content: `Here is your current performance on **${ex.exerciseName}**:\n\n- **Current Est. 1RM:** ${ex.current1RM ? `${ex.current1RM} kg` : 'Bodyweight / Reps'}\n- **Personal Best:** ${ex.best1RM ? `${ex.best1RM} kg` : `${ex.latestWeight || 0} kg`}\n- **Sessions Logged:** ${ex.totalSessions}\n\n${ex.totalSessions < 2 ? '⚠️ Complete at least 2 sessions with this exercise to establish a verified baseline trend.' : 'If you easily completed all target reps in your last set with reserve, consider a small 1–2 kg increase.'}`,
+        content: `Here is your current performance on **${ex.exerciseName}**:\n\n- **Current Est. 1RM:** ${ex.current1RM ? `${ex.current1RM} kg` : 'Bodyweight / Reps'}\n- **Personal Best:** ${ex.best1RM ? `${ex.best1RM} kg` : `${ex.latestWeight || 0} kg`}\n- **Sessions Logged:** ${ex.totalSessions}\n\n${ex.totalSessions < 2 ? 'Complete at least 2 sessions with this exercise to establish a verified baseline trend.' : 'If you easily completed all target reps in your last set with reserve, consider a small 1–2 kg increase.'}`,
         supportingData: ex.supportingData,
         suggestedQuestions: [
           'Which exercise improved the most?',
@@ -730,7 +798,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   }
 
   return {
-    content: `Welcome to GYMTrack AI Coach! 🏋️\n\nI am your personalized fitness assistant. I can guide your **exercise form & technique**, help you **plan today's workout**, or explain **strength principles**.\n\nOnce you log and complete workouts in the app, I will automatically analyze your 1RM progression and volume overload!`,
+    content: `Welcome to GYMTrack AI Coach.\n\nI am your personalized fitness assistant. I can guide your **exercise form & technique**, help you **plan today's workout**, or explain **strength principles**.\n\nOnce you log and complete workouts in the app, I will automatically analyze your 1RM progression and volume overload!`,
     supportingData: 'Ready for baseline workout logging.',
     suggestedQuestions: [
       'What should I train today?',

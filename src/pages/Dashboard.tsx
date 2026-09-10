@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronRight, BookOpen, TrendingUp, CheckCircle2, Play, Activity } from 'lucide-react'
+import { Plus, ChevronRight, Play, CheckCircle2, Dumbbell, Flame, Clock, Sparkles, BarChart2, Info } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProgress } from '@/hooks/useProgress'
 import { useWorkouts } from '@/hooks/useWorkouts'
@@ -25,21 +25,22 @@ function isSameDay(d1: Date, d2: Date): boolean {
 export default function Dashboard() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
-  
+
   const { workouts, activePlan } = useWorkouts()
   const { history, loading, refresh } = useProgress()
 
   const firstName = profile?.first_name || user?.email?.split('@')[0] || 'Athlete'
   const today = new Date()
 
-  // Refetch when returning to the dashboard / window focus
+  // Always refresh on mount and window focus
   useEffect(() => {
+    refresh()
     const onFocus = () => refresh()
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [refresh])
 
-  // ── Scoped Strictly to TODAY ONLY ──
+  // ── Scoped Strictly to TODAY ONLY (resets at local midnight) ──
   const todaySessions = useMemo(() => {
     return history.filter(s => isSameDay(new Date(s.started_at), today))
   }, [history])
@@ -56,14 +57,20 @@ export default function Dashboard() {
   const todayExercises = todaySessions.reduce((acc, s) => acc + (s.total_exercises || 0), 0)
   const todaySets = todaySessions.reduce((acc, s) => acc + (s.completed_sets || 0), 0)
   const todayVolume = todaySessions.reduce((acc, s) => acc + (s.total_volume || 0), 0)
+  const todayDurationMins = todaySessions.reduce(
+    (acc, s) => acc + Math.round((s.duration_seconds || 0) / 60),
+    0
+  )
 
-  // Next planned workout if user has a custom plan
+  // Next planned workout if user has an active plan
   const planWorkouts = activePlan
-    ? workouts.filter(w => w.plan_id === activePlan.id).sort((a, b) => (a.day_number || 0) - (b.day_number || 0))
+    ? workouts
+        .filter(w => w.plan_id === activePlan.id)
+        .sort((a, b) => (a.day_number || 0) - (b.day_number || 0))
     : []
   const todaysWorkout = planWorkouts.length > 0 ? planWorkouts[0] : null
 
-  // Activity breakdown for today's completed session
+  // Activity breakdown for today's completed session(s)
   const todayExercisesBreakdown = useMemo(() => {
     if (!completedTodaySession?.workout_session_sets) return []
     const map = new Map<string, { name: string; sets: number; maxWeight: number }>()
@@ -79,251 +86,336 @@ export default function Dashboard() {
     return Array.from(map.values())
   }, [completedTodaySession])
 
+  // Contextual Banner logic (Strictly based on REAL user data, no fabricated info)
+  const contextualBanner = useMemo(() => {
+    if (history.length === 0) {
+      return 'Ready to record your first workout in GYMTrack? Start your baseline session today.'
+    }
+
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const workedOutYesterday = history.some(s => s.status === 'completed' && isSameDay(new Date(s.started_at), yesterday))
+
+    if (todayStatus === 'Not started') {
+      if (workedOutYesterday) {
+        return "Your last workout was yesterday. Ready to record today's training?"
+      }
+      return 'You have not logged a workout today.'
+    }
+
+    if (todayStatus === 'Completed' && todayExercisesBreakdown.length > 0) {
+      const topEx = [...todayExercisesBreakdown].sort((a, b) => b.maxWeight - a.maxWeight)[0]
+      if (topEx && topEx.maxWeight > 0) {
+        return `Your highest ${topEx.name} today was ${topEx.maxWeight} kg across ${topEx.sets} sets.`
+      }
+      return `Today's session completed: ${todayExercises} exercises recorded.`
+    }
+
+    return null
+  }, [history, todayStatus, todayExercisesBreakdown, todayExercises])
+
+  // Real-data secondary insights (derives strictly from actual data)
+  const secondaryInsights = useMemo(() => {
+    const list: string[] = []
+    
+    // 1. Training sessions in the last 7 days
+    const sevenDaysAgo = new Date(today)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const sessionsLast7Days = history.filter(
+      s => s.status === 'completed' && new Date(s.started_at) >= sevenDaysAgo
+    ).length
+
+    if (sessionsLast7Days > 0) {
+      list.push(`You trained ${sessionsLast7Days} time${sessionsLast7Days !== 1 ? 's' : ''} in the last 7 days.`)
+    }
+
+    // 2. Today's duration if workout completed
+    if (todayStatus === 'Completed' && todayDurationMins > 0) {
+      list.push(`Your workout lasted ${todayDurationMins} minutes.`)
+    }
+
+    // 3. Exercise count today
+    if (todayStatus === 'Completed' && todayExercises > 0) {
+      list.push(`You completed ${todayExercises} exercise${todayExercises !== 1 ? 's' : ''} today.`)
+    }
+
+    return list
+  }, [history, todayStatus, todayDurationMins, todayExercises])
+
   if (loading && history.length === 0) {
     return (
-      <div className="p-12 text-center text-surface-500 text-sm font-medium animate-pulse">
-        Loading today's training status...
+      <div className="py-20 text-center text-surface-500 text-sm font-medium animate-pulse space-y-2">
+        <Dumbbell className="w-8 h-8 text-brand-500 mx-auto animate-bounce" />
+        <p>Loading your training status...</p>
       </div>
     )
   }
 
   return (
-    <div className="animate-fade-in space-y-6 pb-24 max-w-4xl mx-auto">
-      {/* ── Header: Greeting + Local Date ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1 border-b border-surface-100">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 tracking-tight">
-            {getLocalGreeting()}, {firstName}
-          </h1>
-          <p className="text-xs sm:text-sm text-surface-500 font-medium mt-0.5">
-            {today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            className="btn-primary text-xs sm:text-sm py-2.5 px-4 shadow-sm flex items-center gap-1.5 flex-shrink-0"
-            onClick={() => navigate(todaysWorkout ? `/workouts/${todaysWorkout.id}/run` : '/workouts/quick')}
-            id="dashboard-start-workout"
-            aria-label="Start workout"
-          >
-            <Plus size={16} />
-            Start Workout
-          </button>
-        </div>
-      </div>
-
-      {/* ── TODAY ONLY PERFORMANCE SUMMARY ── */}
-      <section aria-label="Today's Performance Overview">
-        <div className="flex items-center justify-between mb-2.5">
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-surface-400">
-            Today
-          </h2>
-          <span className="text-[10px] text-surface-400">
-            Resets at midnight
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* 1. Workout Status */}
-          <div className="card p-3.5 sm:p-4 bg-white border border-surface-200">
-            <span className="text-[11px] font-semibold text-surface-400 uppercase tracking-wider">Status</span>
-            <p className={cn(
-              "text-base sm:text-lg font-bold mt-0.5",
-              todayStatus === 'Completed' ? 'text-emerald-600' :
-              todayStatus === 'In progress' ? 'text-brand-600' : 'text-surface-700'
-            )}>
-              {todayStatus}
-            </p>
-          </div>
-
-          {/* 2. Exercises Count */}
-          <div className="card p-3.5 sm:p-4 bg-white border border-surface-200">
-            <span className="text-[11px] font-semibold text-surface-400 uppercase tracking-wider">Exercises</span>
-            <p className="text-base sm:text-lg font-bold text-surface-900 mt-0.5">
-              {todayExercises}
-            </p>
-          </div>
-
-          {/* 3. Sets Count */}
-          <div className="card p-3.5 sm:p-4 bg-white border border-surface-200">
-            <span className="text-[11px] font-semibold text-surface-400 uppercase tracking-wider">Sets</span>
-            <p className="text-base sm:text-lg font-bold text-surface-900 mt-0.5">
-              {todaySets}
-            </p>
-          </div>
-
-          {/* 4. Volume Lifted */}
-          <div className="card p-3.5 sm:p-4 bg-white border border-surface-200">
-            <span className="text-[11px] font-semibold text-surface-400 uppercase tracking-wider">Volume</span>
-            <p className="text-base sm:text-lg font-bold text-surface-900 mt-0.5">
-              {todayVolume.toLocaleString()} <span className="text-xs font-normal text-surface-400">kg</span>
-            </p>
-          </div>
-        </div>
+    <div className="animate-fade-in space-y-6 pb-20 max-w-4xl mx-auto">
+      {/* ── 1. GREETING + LOCAL DATE ── */}
+      <section className="space-y-1">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight leading-tight">
+          {getLocalGreeting()}, {firstName}
+        </h1>
+        <p className="text-xs sm:text-sm text-surface-500 font-medium capitalize">
+          {today.toLocaleDateString(undefined, {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          })}
+        </p>
       </section>
 
-      {/* ── TODAY'S WORKOUT PRIMARY CARD ── */}
-      <section aria-label="Today's workout session">
-        <div className="flex items-center justify-between mb-2.5">
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-surface-400">
-            Today's Training
-          </h2>
-        </div>
-
-        {todayStatus === 'Completed' && completedTodaySession ? (
-          <div className="card p-6 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white rounded-2xl shadow-sm border-0">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 size={18} className="text-emerald-300" />
-              <span className="text-emerald-200 text-xs font-bold uppercase tracking-wider">
-                Workout Completed Today
-              </span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-bold mb-1">
-              {completedTodaySession.workout_name}
-            </h3>
-            <p className="text-emerald-100 text-xs sm:text-sm mb-4">
-              {completedTodaySession.total_exercises} exercises · {completedTodaySession.completed_sets} sets logged · {completedTodaySession.total_volume.toLocaleString()} kg total volume · {Math.round((completedTodaySession.duration_seconds || 0) / 60)} min
-            </p>
-
-            {/* Concise activity breakdown */}
-            {todayExercisesBreakdown.length > 0 && (
-              <div className="bg-white/10 rounded-xl p-3 mb-4 backdrop-blur-xs space-y-1.5 border border-white/10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 block mb-1">
-                  Today's Activity
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {todayExercisesBreakdown.map((ex, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-black/10">
-                      <span className="font-semibold text-white truncate max-w-[180px]">{ex.name}</span>
-                      <span className="text-emerald-200 font-medium">
-                        {ex.sets} sets {ex.maxWeight > 0 ? `· ${ex.maxWeight} kg` : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2.5">
-              <button
-                onClick={() => navigate(`/history/${completedTodaySession.id}`)}
-                className="bg-white text-emerald-900 font-bold text-xs px-4 py-2.5 rounded-lg hover:bg-emerald-50 transition-colors shadow-sm inline-flex items-center gap-1.5"
-              >
-                View Today's Record
-                <ChevronRight size={14} />
-              </button>
-              <button
-                onClick={() => navigate('/workouts/quick')}
-                className="bg-emerald-800/60 hover:bg-emerald-800 text-white font-semibold text-xs px-4 py-2.5 rounded-lg transition-colors border border-emerald-500/30 inline-flex items-center gap-1.5"
-              >
-                <Plus size={14} />
-                Start Another Session
-              </button>
-            </div>
+      {/* ── 2. OPTIONAL CONTEXTUAL BANNER ── */}
+      {contextualBanner && (
+        <section aria-label="Contextual notice" className="animate-fade-in">
+          <div className="flex items-center gap-3 p-3.5 sm:p-4 rounded-xl bg-surface-100/90 border border-surface-200 text-surface-800 text-xs sm:text-sm leading-relaxed">
+            <Info size={16} className="text-brand-600 flex-shrink-0" />
+            <p className="font-medium flex-1">{contextualBanner}</p>
           </div>
-        ) : todayStatus === 'In progress' && activeTodaySession ? (
-          <div className="card p-6 bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl shadow-sm border-0">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-brand-200 text-xs font-bold uppercase tracking-wider">
-                Workout In Progress
-              </span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-bold mb-1">
-              {activeTodaySession.workout_name}
-            </h3>
-            <p className="text-brand-100 text-xs sm:text-sm mb-4">
-              {todayExercises} exercises · {todaySets} sets logged · {todayVolume.toLocaleString()} kg volume
-            </p>
-            <button
-              onClick={() => navigate(`/workouts/${activeTodaySession.workout_id || 'quick'}/run`)}
-              className="bg-white text-brand-700 font-bold text-xs px-5 py-2.5 rounded-lg hover:bg-brand-50 transition-colors shadow-sm inline-flex items-center gap-2"
+        </section>
+      )}
+
+      {/* ── 3. PRIMARY DAILY INSIGHT / TODAY'S TRAINING CARD (PRIMARY CTA) ── */}
+      <section aria-label="Today's training session">
+        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-surface-400">
+              Today's Training
+            </span>
+            <span
+              className={cn(
+                "badge text-[11px] font-bold px-2.5 py-0.5 rounded-full",
+                todayStatus === 'Completed'
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : todayStatus === 'In progress'
+                  ? "bg-brand-50 text-brand-700 border border-brand-200"
+                  : "bg-surface-100 text-surface-600 border border-surface-200"
+              )}
             >
-              <Play size={14} className="fill-brand-700" />
-              Continue Workout
-            </button>
+              {todayStatus}
+            </span>
           </div>
-        ) : (
-          <div className="card p-6 bg-gradient-to-br from-surface-900 via-surface-850 to-surface-800 text-white rounded-2xl shadow-sm border-0">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity size={16} className="text-brand-400" />
-              <span className="text-surface-400 text-xs font-bold uppercase tracking-wider">
-                Today's Session
-              </span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-bold mb-1">
-              {todaysWorkout ? todaysWorkout.name : "Ready to Train"}
-            </h3>
-            <p className="text-surface-300 text-xs sm:text-sm mb-5 max-w-lg leading-relaxed">
-              Log your exercises, weight, reps, and sets cleanly. Zero questionnaires or distractions.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => navigate(todaysWorkout ? `/workouts/${todaysWorkout.id}/run` : '/workouts/quick')}
-                className="btn-primary text-xs sm:text-sm py-2.5 px-5 font-bold shadow-md inline-flex items-center gap-2"
-              >
-                <Play size={15} className="fill-white" />
-                Start Workout
-              </button>
-              <button
-                onClick={() => navigate('/exercises')}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
-              >
-                <BookOpen size={14} />
-                Explore Exercises
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
 
-      {/* ── SECONDARY EXPLORATION & REVIEW ── */}
-      <section aria-label="Explore and Review">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button
-            onClick={() => navigate('/exercises')}
-            className="card p-5 text-left hover:border-brand-300 transition-colors group flex flex-col justify-between bg-white border border-surface-200"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center mb-3">
-                <BookOpen size={18} />
+          {todayStatus === 'In progress' && activeTodaySession ? (
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-surface-900">
+                  {activeTodaySession.workout_name || 'Quick Workout'}
+                </h2>
+                <p className="text-xs sm:text-sm text-surface-500 mt-0.5">
+                  Workout in progress · {todayExercises} exercises · {todaySets} sets · {todayVolume.toLocaleString()} kg
+                </p>
               </div>
-              <p className="text-sm font-bold text-surface-900 group-hover:text-brand-600 transition-colors">
-                Exercise Library
-              </p>
-              <p className="text-xs text-surface-500 mt-1 leading-relaxed">
-                Visual demonstrations, execution form cues, and instant 1-tap addition to today's workout.
-              </p>
+              <div>
+                <button
+                  onClick={() => navigate(`/workouts/${activeTodaySession.workout_id || 'quick'}/run`)}
+                  id="dashboard-continue-workout-btn"
+                  className="btn-primary py-2.5 px-5 text-xs sm:text-sm font-bold shadow-sm inline-flex items-center gap-2"
+                >
+                  <Play size={14} className="fill-white" />
+                  Continue Workout
+                </button>
+              </div>
             </div>
-            <div className="mt-4 flex items-center justify-between text-xs font-semibold text-brand-600">
-              <span>Browse movements</span>
-              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </button>
+          ) : todayStatus === 'Completed' && completedTodaySession ? (
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center gap-1.5 text-emerald-600 mb-1">
+                  <CheckCircle2 size={16} />
+                  <span className="text-xs font-bold">Workout completed</span>
+                </div>
+                <h2 className="text-lg sm:text-xl font-bold text-surface-900">
+                  {completedTodaySession.workout_name || 'Workout Session'}
+                </h2>
+                <p className="text-xs sm:text-sm text-surface-500 mt-0.5">
+                  {todayExercises} exercises · {todaySets} sets logged · {todayVolume.toLocaleString()} kg volume · {todayDurationMins} min
+                </p>
+              </div>
 
-          <button
-            onClick={() => navigate('/progress')}
-            className="card p-5 text-left hover:border-brand-300 transition-colors group flex flex-col justify-between bg-white border border-surface-200"
-          >
-            <div>
-              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
-                <TrendingUp size={18} />
+              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                <button
+                  onClick={() => navigate(`/history/${completedTodaySession.id}`)}
+                  id="dashboard-view-record-btn"
+                  className="btn-secondary py-2 px-4 text-xs font-bold inline-flex items-center gap-1.5"
+                >
+                  View Today's Record
+                  <ChevronRight size={14} />
+                </button>
+                <button
+                  onClick={() => navigate('/workouts/quick')}
+                  className="py-2 px-3 text-xs font-semibold text-surface-600 hover:text-surface-900 transition-colors inline-flex items-center gap-1"
+                >
+                  <Plus size={13} />
+                  Record Another Workout
+                </button>
               </div>
-              <p className="text-sm font-bold text-surface-900 group-hover:text-brand-600 transition-colors">
-                Progress & History
-              </p>
-              <p className="text-xs text-surface-500 mt-1 leading-relaxed">
-                Review your 14-day training calendar, historical workout records, volume metrics, and 1RM progress.
-              </p>
             </div>
-            <div className="mt-4 flex items-center justify-between text-xs font-semibold text-brand-600">
-              <span>View analytics</span>
-              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-surface-900">
+                  Ready to record your workout?
+                </h2>
+                <p className="text-xs sm:text-sm text-surface-500 mt-0.5 max-w-lg">
+                  Log your movements, weights, and sets in real time. Zero questionnaires or distractions.
+                </p>
+              </div>
+              <div>
+                <button
+                  onClick={() => navigate(todaysWorkout ? `/workouts/${todaysWorkout.id}/run` : '/workouts/quick')}
+                  id="dashboard-start-workout-btn"
+                  className="btn-primary py-2.5 px-5 text-xs sm:text-sm font-bold shadow-sm inline-flex items-center gap-2"
+                >
+                  <Play size={14} className="fill-white" />
+                  Start Workout
+                </button>
+              </div>
             </div>
-          </button>
+          )}
         </div>
       </section>
+
+      {/* ── 4. TODAY'S PROGRESS (POLISHED PROGRESS BARS) ── */}
+      <section aria-label="Today's progress summary">
+        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-bold text-surface-900 uppercase tracking-wide">
+                Today's Progress
+              </h2>
+              <p className="text-[11px] text-surface-400 mt-0.5">
+                Activity strictly scoped to {today.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              </p>
+            </div>
+            <span className="text-[11px] font-mono text-surface-400">
+              Resets at midnight
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {/* Metric 1: Exercises */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-surface-700">Exercises</span>
+                <span className="text-surface-900 font-bold font-mono">
+                  {todayExercises}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-surface-100 overflow-hidden">
+                <div
+                  className="h-full bg-brand-600 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${Math.min(100, todayExercises > 0 ? Math.max(15, todayExercises * 20) : 0)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Metric 2: Sets */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-surface-700">Sets</span>
+                <span className="text-surface-900 font-bold font-mono">
+                  {todaySets}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-surface-100 overflow-hidden">
+                <div
+                  className="h-full bg-brand-500 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${Math.min(100, todaySets > 0 ? Math.max(15, todaySets * 6.6) : 0)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Metric 3: Volume */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-surface-700">Volume</span>
+                <span className="text-surface-900 font-bold font-mono">
+                  {todayVolume.toLocaleString()} <span className="text-[11px] font-normal text-surface-400">kg</span>
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-surface-100 overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${Math.min(100, todayVolume > 0 ? Math.max(15, (todayVolume / 3000) * 100) : 0)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Metric 4: Training Duration */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-surface-700">Training Duration</span>
+                <span className="text-surface-900 font-bold font-mono">
+                  {todayDurationMins} <span className="text-[11px] font-normal text-surface-400">min</span>
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-surface-100 overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${Math.min(100, todayDurationMins > 0 ? Math.max(15, (todayDurationMins / 45) * 100) : 0)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 5. TODAY'S ACTIVITY (CONCISE RECORD) ── */}
+      {todayExercisesBreakdown.length > 0 && (
+        <section aria-label="Today's activity" className="animate-fade-in">
+          <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">
+                Today's Activity
+              </h2>
+              {completedTodaySession && (
+                <button
+                  onClick={() => navigate(`/history/${completedTodaySession.id}`)}
+                  className="text-xs font-semibold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1"
+                >
+                  View Today's Record
+                  <ChevronRight size={13} />
+                </button>
+              )}
+            </div>
+
+            <div className="divide-y divide-surface-100">
+              {todayExercisesBreakdown.map((ex, idx) => (
+                <div key={idx} className="py-2.5 flex items-center justify-between text-xs sm:text-sm">
+                  <span className="font-semibold text-surface-900 truncate pr-2">
+                    {ex.name}
+                  </span>
+                  <span className="text-surface-500 font-mono flex-shrink-0 text-xs font-medium">
+                    {ex.sets} sets {ex.maxWeight > 0 ? `· ${ex.maxWeight} kg max` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── 6. DASHBOARD INSIGHTS (REAL DATA ONLY) ── */}
+      {secondaryInsights.length > 0 && (
+        <section aria-label="Secondary insights" className="animate-fade-in">
+          <div className="card p-4 sm:p-5 bg-surface-50/70 border border-surface-200 rounded-2xl space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-surface-400 block">
+              Training Insights
+            </span>
+            <ul className="space-y-1.5" role="list">
+              {secondaryInsights.map((insight, idx) => (
+                <li key={idx} className="text-xs sm:text-sm text-surface-700 font-medium flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-500 flex-shrink-0" />
+                  <span>{insight}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

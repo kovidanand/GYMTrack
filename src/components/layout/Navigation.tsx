@@ -1,107 +1,128 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Dumbbell, BookOpen, Calendar, TrendingUp, User, LogOut, Plus, Timer } from 'lucide-react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { LayoutDashboard, BookOpen, TrendingUp, User, LogOut, Timer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { GYMTrackLogo, Avatar } from '@/components/shared'
 import { ConnectionStatusBadge } from '@/components/shared/ConnectionStatusBadge'
 
-const navItems = [
+interface TopNavigationProps {
+  onOpenTimer?: () => void
+}
+
+const primaryNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
   { to: '/exercises', label: 'Library', icon: BookOpen },
-  { to: '/profile', label: 'Profile', icon: User },
 ]
 
-export function Sidebar({ onOpenTimer }: { onOpenTimer?: () => void }) {
+// ─── Desktop Top Navigation ──────────────────────────────────────────────────
+export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
   const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleLogout = async () => {
     if (signOut) await signOut()
     navigate('/')
   }
 
-  const fullName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : (user?.email?.split('@')[0] || 'Athlete')
+  const fullName = profile
+    ? `${profile.first_name} ${profile.last_name}`.trim()
+    : (user?.email?.split('@')[0] || 'Athlete')
+
+  const isProfileActive = location.pathname === '/profile'
 
   return (
-    <aside className="hidden lg:flex flex-col w-60 xl:w-64 min-h-screen bg-white border-r border-surface-200 fixed top-0 left-0 z-30">
-      {/* Logo & Connection Status */}
-      <div className="px-5 py-4 border-b border-surface-100 flex items-center justify-between">
-        <GYMTrackLogo size="md" />
-        <div className="flex items-center gap-1.5">
+    <header className="hidden lg:block fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-surface-200 shadow-2xs">
+      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* LEFT: Logo + Brand */}
+        <div className="flex items-center gap-8">
+          <GYMTrackLogo size="md" />
+        </div>
+
+        {/* CENTER: Clean Navigation Links (Home, Progress, Library) */}
+        <nav aria-label="Desktop primary navigation">
+          <ul className="flex items-center gap-1.5" role="list">
+            {primaryNavItems.map(item => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  id={`top-nav-${item.label.toLowerCase()}`}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-surface-100 text-surface-900 font-semibold shadow-2xs'
+                        : 'text-surface-600 hover:text-surface-900 hover:bg-surface-50'
+                    )
+                  }
+                >
+                  <item.icon size={17} aria-hidden="true" className="text-surface-500" />
+                  <span>{item.label}</span>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* RIGHT: Timer Utility + Profile / Avatar */}
+        <div className="flex items-center gap-3">
+          {/* Primary Top Nav Timer Utility */}
           {onOpenTimer && (
             <button
               onClick={onOpenTimer}
-              className="p-1.5 rounded-lg text-surface-500 hover:text-brand-600 hover:bg-surface-100 transition-colors"
+              id="top-nav-timer"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-surface-100 hover:text-brand-600 border border-surface-200 transition-colors shadow-2xs"
               title="Open Workout Timer / Stopwatch"
               aria-label="Open Workout Timer"
             >
-              <Timer size={17} />
+              <Timer size={16} className="text-brand-600" />
+              <span>Timer</span>
             </button>
           )}
+
           <ConnectionStatusBadge />
-        </div>
-      </div>
 
-      {/* Start Workout CTA */}
-      <div className="px-4 pt-5 pb-2">
-        <button
-          onClick={() => navigate('/workouts/quick')}
-          className="btn-primary w-full text-sm py-2.5 shadow-sm hover:shadow-brand-500/20"
-          id="sidebar-start-workout"
-          aria-label="Start today's workout"
-        >
-          <Plus size={15} />
-          Start Workout
-        </button>
-      </div>
+          <div className="h-5 w-px bg-surface-200 mx-1" aria-hidden="true" />
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 overflow-y-auto" aria-label="Main navigation">
-        <ul className="space-y-0.5" role="list">
-          {navItems.map(item => (
-            <li key={item.to}>
+          {/* Profile & Avatar */}
+          {user && (
+            <div className="flex items-center gap-2">
               <NavLink
-                to={item.to}
-                id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
-                className={({ isActive }) =>
-                  cn(isActive ? 'nav-link-active' : 'nav-link', 'w-full')
-                }
+                to="/profile"
+                id="top-nav-profile"
+                className={cn(
+                  'flex items-center gap-2 px-2.5 py-1 rounded-lg transition-colors',
+                  isProfileActive
+                    ? 'bg-surface-100 text-surface-900 ring-1 ring-surface-300'
+                    : 'text-surface-700 hover:bg-surface-50'
+                )}
+                title={`Profile: ${fullName}`}
+                aria-label={`View profile for ${fullName}`}
               >
-                <item.icon size={18} aria-hidden="true" />
-                <span>{item.label}</span>
+                <Avatar name={fullName} size="sm" />
+                <span className="text-xs font-semibold max-w-[110px] truncate">
+                  {fullName}
+                </span>
               </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
 
-      {/* User profile at bottom */}
-      {user && (
-        <div className="border-t border-surface-100 p-4">
-          <div className="flex items-center gap-3">
-            <Avatar name={fullName} size="sm" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-surface-900 truncate">{fullName}</p>
-              <p className="text-xs text-surface-500 truncate">{user.email}</p>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors"
+                aria-label="Log out"
+                title="Log out"
+              >
+                <LogOut size={16} />
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="btn-ghost p-1.5 rounded-md text-surface-400 hover:text-surface-700"
-              aria-label="Log out"
-              title="Log out"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
+          )}
         </div>
-      )}
-    </aside>
+      </div>
+    </header>
   )
 }
 
 // ─── Mobile Bottom Navigation ──────────────────────────────────────────────────
-
 const mobileNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
@@ -112,10 +133,10 @@ const mobileNavItems = [
 export function MobileNav() {
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-surface-200 safe-area-inset-bottom shadow-[0_-4px_12px_rgba(0,0,0,0.04)]"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-surface-200 safe-area-inset-bottom shadow-[0_-4px_16px_rgba(0,0,0,0.05)]"
       aria-label="Mobile navigation"
     >
-      <ul className="flex items-center" role="list">
+      <ul className="flex items-center h-14" role="list">
         {mobileNavItems.map(item => (
           <li key={item.to} className="flex-1">
             <NavLink
@@ -123,14 +144,16 @@ export function MobileNav() {
               id={`mobile-nav-${item.label.toLowerCase()}`}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center gap-0.5 py-2.5 px-1 text-xs font-medium transition-colors w-full',
-                  isActive ? 'text-brand-600 font-bold' : 'text-surface-500 hover:text-surface-800'
+                  'flex flex-col items-center justify-center gap-1 py-1 text-xs font-medium transition-colors w-full',
+                  isActive
+                    ? 'text-brand-600 font-bold'
+                    : 'text-surface-500 hover:text-surface-800'
                 )
               }
               aria-label={item.label}
             >
-              <item.icon size={20} aria-hidden="true" />
-              <span className="text-[10px]">{item.label}</span>
+              <item.icon size={19} aria-hidden="true" />
+              <span className="text-[10px] tracking-tight">{item.label}</span>
             </NavLink>
           </li>
         ))}
@@ -140,25 +163,43 @@ export function MobileNav() {
 }
 
 // ─── Mobile Top Bar ────────────────────────────────────────────────────────────
+export function MobileTopBar({ onOpenTimer }: TopNavigationProps) {
+  const { user, profile } = useAuth()
+  const fullName = profile
+    ? `${profile.first_name} ${profile.last_name}`.trim()
+    : (user?.email?.split('@')[0] || 'Athlete')
 
-export function MobileTopBar({ onOpenTimer }: { onOpenTimer?: () => void }) {
   return (
-    <div className="lg:hidden fixed top-0 left-0 right-0 z-20 bg-white border-b border-surface-200 px-4 py-2.5 flex items-center justify-between shadow-xs">
+    <header className="lg:hidden fixed top-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-b border-surface-200 px-4 h-14 flex items-center justify-between shadow-2xs">
       <GYMTrackLogo size="sm" />
+
       <div className="flex items-center gap-2">
         {onOpenTimer && (
           <button
             onClick={onOpenTimer}
-            className="p-1.5 rounded-lg text-surface-600 hover:text-brand-600 hover:bg-surface-100 transition-colors"
+            id="mobile-header-timer"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-surface-700 bg-surface-100 hover:bg-surface-200 transition-colors border border-surface-200"
             title="Open Workout Timer / Stopwatch"
             aria-label="Open Workout Timer"
           >
-            <Timer size={18} />
+            <Timer size={15} className="text-brand-600" />
+            <span>Timer</span>
           </button>
         )}
+
         <ConnectionStatusBadge />
+
+        {user && (
+          <NavLink
+            to="/profile"
+            className="p-1 rounded-full hover:ring-2 hover:ring-brand-500 transition-all"
+            aria-label="View profile"
+          >
+            <Avatar name={fullName} size="sm" />
+          </NavLink>
+        )}
       </div>
-    </div>
+    </header>
   )
 }
 

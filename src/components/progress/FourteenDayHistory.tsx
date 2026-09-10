@@ -185,17 +185,9 @@ export function FourteenDayHistory({
             isPR: exSets.some(s => s.is_personal_record)
           }
         })
-      } else if (activePlan) {
-        // Evaluate planned or rest day based on plan frequency
-        const dayIdx = (targetDate.getDay() + 6) % 7 // 0 = Mon, 6 = Sun
-        const plannedWorkout = workouts.find(w => w.plan_id === activePlan.id && w.day_number === (dayIdx + 1))
-
-        if (plannedWorkout) {
-          status = isFuture || isToday ? 'PLANNED' : 'NO_ACTIVITY'
-        } else if (activePlan.days_per_week && activePlan.days_per_week < 7) {
-          // If unassigned in active plan, designate as Rest Day
-          status = 'REST_DAY'
-        }
+      } else {
+        // No session completed on this day
+        status = 'NO_ACTIVITY'
       }
 
       records.push({
@@ -212,7 +204,7 @@ export function FourteenDayHistory({
     }
 
     return records
-  }, [sessions, activePlan, workouts, offset14, sessionSetsMap])
+  }, [sessions, offset14, sessionSetsMap])
 
   // Aggregate statistics for this 14-day slice
   const summary = useMemo(() => {
@@ -366,7 +358,7 @@ export function FourteenDayHistory({
                       </div>
                     ) : (
                       <p className="text-xs text-surface-400 font-medium">
-                        Rest / No workout
+                        No workout recorded
                       </p>
                     )}
                   </div>
@@ -396,7 +388,7 @@ export function FourteenDayHistory({
                     </div>
                   ) : (
                     <span className="text-xs text-surface-400 font-medium px-2 py-0.5 bg-surface-100 rounded-md">
-                      Rest / No workout
+                      No workout recorded
                     </span>
                   )}
                 </div>

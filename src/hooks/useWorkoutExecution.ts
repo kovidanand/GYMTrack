@@ -45,12 +45,50 @@ export function useWorkoutExecution(workoutId: string) {
 
       if (workoutId === 'quick' || !workoutId) {
         const queued = getQueuedExercisesForTodayWorkout()
+        let initialExercises = queued
+        if (initialExercises.length === 0) {
+          initialExercises = [
+            {
+              id: 'starter-1',
+              workout_id: 'quick',
+              exercise_id: 'barbell-bench-press',
+              exercise_order: 1,
+              sets: 3,
+              reps: '10',
+              weight: 60,
+              rest_seconds: 90,
+              notes: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              exercise: {
+                id: 'barbell-bench-press',
+                name: 'Barbell Bench Press',
+                slug: 'barbell-bench-press',
+                description: 'Classic upper body horizontal push compound movement targeting chest, front delts, and triceps.',
+                instructions: ['Lie back on a flat bench', 'Grip bar slightly wider than shoulder width', 'Lower bar to chest and press up'],
+                tips: ['Keep feet planted flat on floor'],
+                common_mistakes: ['Bouncing bar off ribcage'],
+                primary_muscle: 'chest',
+                secondary_muscles: ['triceps', 'shoulders'],
+                muscle_group: 'chest',
+                equipment: ['barbell'],
+                difficulty: 'intermediate',
+                exercise_type: 'strength',
+                movement_pattern: 'horizontal_push',
+                is_compound: true,
+                is_unilateral: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              } as Exercise
+            } as WorkoutExercise
+          ]
+        }
         loadedWorkout = {
           id: 'quick',
           user_id: user?.id || '',
           name: 'Quick Workout',
           description: 'Quick workout session',
-          workout_exercises: queued,
+          workout_exercises: initialExercises,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         } as unknown as Workout

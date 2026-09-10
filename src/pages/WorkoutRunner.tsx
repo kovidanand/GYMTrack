@@ -110,10 +110,10 @@ export default function WorkoutRunner() {
     )
   }
 
-  // ── WORKOUT COMPLETED SCREEN (Phase 8) ──
+  // ── WORKOUT COMPLETED SCREEN ──
   if (isFinished && finishedSummary) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 bg-surface-50 animate-fade-in">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 bg-surface-50 animate-fade-in select-none">
         <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-surface-200 text-center space-y-6">
           <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
             <CheckCircle2 size={36} />
@@ -121,7 +121,7 @@ export default function WorkoutRunner() {
 
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight">
-              Workout Completed
+              WORKOUT COMPLETE
             </h1>
             <p className="text-xs sm:text-sm text-surface-500 font-medium mt-1">
               {finishedSummary.dateStr}
@@ -140,24 +140,37 @@ export default function WorkoutRunner() {
             </div>
             <div>
               <p className="text-base sm:text-lg font-extrabold text-surface-900">{finishedSummary.totalVolume.toLocaleString()}</p>
-              <p className="text-[10px] uppercase font-bold text-surface-400">kg Volume</p>
+              <p className="text-[10px] uppercase font-bold text-surface-400">kg</p>
             </div>
             <div>
               <p className="text-base sm:text-lg font-extrabold text-surface-900">{finishedSummary.durationMins}</p>
-              <p className="text-[10px] uppercase font-bold text-surface-400">Minutes</p>
+              <p className="text-[10px] uppercase font-bold text-surface-400">min</p>
+            </div>
+          </div>
+
+          {/* Today's Training Progress Bar 100% */}
+          <div className="space-y-1.5 text-left bg-surface-50/90 p-4 rounded-2xl border border-surface-200">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-surface-800">Today's training</span>
+              <span className="text-emerald-600 font-mono">100%</span>
+            </div>
+            <div className="w-full h-2.5 rounded-full bg-surface-200 overflow-hidden">
+              <div className="h-full bg-emerald-500 rounded-full w-full transition-all duration-1000" />
             </div>
           </div>
 
           {/* Exercise Sets Breakdown */}
-          <div className="text-left space-y-2.5 max-h-52 overflow-y-auto pr-1">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">Session Breakdown</h3>
-            {finishedSummary.exerciseBreakdown.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-surface-50 border border-surface-100 text-xs">
-                <span className="font-bold text-surface-900">{item.name}</span>
-                <span className="font-mono text-brand-600 font-semibold">{item.summary}</span>
-              </div>
-            ))}
-          </div>
+          {finishedSummary.exerciseBreakdown.length > 0 && (
+            <div className="text-left space-y-2 max-h-44 overflow-y-auto pr-1">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">Session Breakdown</h3>
+              {finishedSummary.exerciseBreakdown.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-surface-50 border border-surface-100 text-xs">
+                  <span className="font-bold text-surface-900 truncate max-w-[190px]">{item.name}</span>
+                  <span className="font-mono text-brand-600 font-semibold">{item.summary}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {isOfflineCompleted && (
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-center gap-2 text-left">
@@ -168,20 +181,15 @@ export default function WorkoutRunner() {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2.5 pt-2">
-            <button 
-              onClick={() => navigate('/progress')} 
-              className="btn-primary w-full py-3 text-sm font-bold shadow-sm flex items-center justify-center gap-1.5"
-            >
-              <span>View in Progress & History</span>
-              <ArrowRight size={15} />
-            </button>
+          {/* Primary Done Action */}
+          <div className="pt-2">
             <button 
               onClick={() => navigate('/dashboard')} 
-              className="btn-secondary w-full py-2.5 text-xs text-surface-600 hover:text-surface-900"
+              id="workout-completed-done-btn"
+              className="btn-primary w-full py-3.5 text-sm font-bold shadow-md flex items-center justify-center gap-2"
             >
-              Back to Home
+              <span>Done</span>
+              <Check size={16} />
             </button>
           </div>
         </div>
@@ -190,58 +198,54 @@ export default function WorkoutRunner() {
   }
 
   const handleFinish = async () => {
-    if (confirm('Finish and record this workout?')) {
-      setIsSaving(true)
-      
-      // Calculate summary metrics
-      const now = new Date()
-      const durationMins = Math.max(1, Math.round((Date.now() - sessionStartTime) / 60000))
-      
-      let totalVol = 0
-      const exMap: Record<string, { name: string; sets: Array<{ weight: number | null; reps: number | null }> }> = {}
+    setIsSaving(true)
+    
+    // Calculate summary metrics
+    const now = new Date()
+    const durationMins = Math.max(1, Math.round((Date.now() - sessionStartTime) / 60000))
+    
+    let totalVol = 0
+    const exMap: Record<string, { name: string; sets: Array<{ weight: number | null; reps: number | null }> }> = {}
 
-      sessionSetsData.forEach(s => {
-        if (s.weight && s.reps) {
-          totalVol += (s.weight * s.reps)
-        }
-        const name = s.exercise_name || 'Exercise'
-        if (!exMap[name]) {
-          exMap[name] = { name, sets: [] }
-        }
-        exMap[name].sets.push({ weight: s.weight ?? null, reps: s.reps ?? null })
-      })
-
-      const breakdown = Object.values(exMap).map(ex => {
-        const count = ex.sets.length
-        const avgReps = ex.sets[0]?.reps || 10
-        const avgWeight = ex.sets[0]?.weight != null ? `@ ${ex.sets[0].weight} kg` : ''
-        return {
-          name: ex.name,
-          summary: `${count} × ${avgReps} ${avgWeight}`.trim()
-        }
-      })
-
-      const summary = {
-        dateStr: now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-        durationMins,
-        exercisesCount: Object.keys(exMap).length || workout.workout_exercises?.length || 0,
-        setsCount: sessionSetsData.length,
-        totalVolume: totalVol,
-        exerciseBreakdown: breakdown.length > 0 ? breakdown : (workout.workout_exercises?.map(we => ({
-          name: we.exercise?.name || 'Exercise',
-          summary: `${we.sets} sets`
-        })) || [])
+    sessionSetsData.forEach(s => {
+      if (s.weight && s.reps) {
+        totalVol += (s.weight * s.reps)
       }
-
-      const result = await finishWorkout()
-      setIsSaving(false)
-      if (result.success) {
-        setFinishedSummary(summary)
-        setIsOfflineCompleted(result.isOffline)
-        setIsFinished(true)
-      } else {
-        alert("Failed to save workout session. Please try again.")
+      const name = s.exercise_name || 'Exercise'
+      if (!exMap[name]) {
+        exMap[name] = { name, sets: [] }
       }
+      exMap[name].sets.push({ weight: s.weight ?? null, reps: s.reps ?? null })
+    })
+
+    const breakdown = Object.values(exMap).map(ex => {
+      const count = ex.sets.length
+      const avgReps = ex.sets[0]?.reps || 10
+      const avgWeight = ex.sets[0]?.weight != null ? `@ ${ex.sets[0].weight} kg` : ''
+      return {
+        name: ex.name,
+        summary: `${count} × ${avgReps} ${avgWeight}`.trim()
+      }
+    })
+
+    const summary = {
+      dateStr: now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+      durationMins,
+      exercisesCount: Object.keys(exMap).length || workout.workout_exercises?.length || 0,
+      setsCount: sessionSetsData.length,
+      totalVolume: totalVol,
+      exerciseBreakdown: breakdown.length > 0 ? breakdown : (workout.workout_exercises?.map(we => ({
+        name: we.exercise?.name || 'Exercise',
+        summary: `${we.sets} sets`
+      })) || [])
+    }
+
+    const result = await finishWorkout()
+    setIsSaving(false)
+    if (result.success) {
+      setFinishedSummary(summary)
+      setIsOfflineCompleted(result.isOffline)
+      setIsFinished(true)
     }
   }
 
@@ -255,11 +259,7 @@ export default function WorkoutRunner() {
       <header className="bg-white px-4 py-3 flex items-center justify-between border-b border-surface-200 flex-shrink-0 z-10 shadow-xs">
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => {
-              if (confirm('Exit workout runner? Your progress is saved in this active session.')) {
-                navigate(-1)
-              }
-            }}
+            onClick={() => navigate('/dashboard')}
             className="p-1.5 -ml-1 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg transition-colors"
             aria-label="Exit runner"
           >
@@ -314,6 +314,26 @@ export default function WorkoutRunner() {
 
       {/* ── Main Workout Logging Area ── */}
       <main className="flex-1 overflow-y-auto p-4 max-w-lg mx-auto w-full pb-28 space-y-4">
+        {/* Compact Workout Progress Indicator */}
+        {exerciseCount > 0 && (
+          <div className="card p-3 sm:p-3.5 bg-white border border-surface-200 rounded-xl space-y-1.5 shadow-2xs">
+            <div className="flex items-center justify-between text-xs font-semibold">
+              <span className="text-surface-700">
+                {currentExerciseIndex + 1} / {exerciseCount} exercises
+              </span>
+              <span className="text-brand-600 font-bold font-mono">
+                {sessionSetsData.length} sets completed
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-surface-100 overflow-hidden">
+              <div
+                className="h-full bg-brand-600 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.round(((currentExerciseIndex + 1) / exerciseCount) * 100))}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {exerciseCount === 0 ? (
           /* Empty Session State */
           <div className="card p-8 text-center bg-white border border-surface-200 mt-12 space-y-4">
@@ -383,11 +403,7 @@ export default function WorkoutRunner() {
                 </div>
 
                 <button
-                  onClick={() => {
-                    if (confirm(`Remove ${currentExercise.exercise?.name} from this workout?`)) {
-                      removeExerciseFromWorkout(currentExercise.id)
-                    }
-                  }}
+                  onClick={() => removeExerciseFromWorkout(currentExercise.id)}
                   className="text-surface-400 hover:text-red-500 p-1 rounded transition-colors"
                   title="Remove exercise"
                   aria-label="Remove exercise"
@@ -414,7 +430,9 @@ export default function WorkoutRunner() {
                 <div className="col-span-2">Set</div>
                 <div className="col-span-5">Weight (kg)</div>
                 <div className="col-span-3">Reps</div>
-                <div className="col-span-2">✓</div>
+                <div className="col-span-2 flex items-center justify-center">
+                  <Check size={14} className="text-surface-500" />
+                </div>
               </div>
 
               <div className="divide-y divide-surface-100">
