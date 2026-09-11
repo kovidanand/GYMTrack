@@ -1,7 +1,9 @@
 import type { Exercise } from '@/types'
 
 export const DEFAULT_EXERCISES: Exercise[] = [
-  // ── CHEST ──
+  // ═════════════════════════════════════════════════════════════════════════════
+  // CHEST (10)
+  // ═════════════════════════════════════════════════════════════════════════════
   {
     id: 'ex-bench-press',
     name: 'Bench Press',
@@ -41,12 +43,12 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     id: 'ex-incline-bench-press',
     name: 'Incline Bench Press',
     slug: 'incline-bench-press',
-    description: 'A variation of the bench press performed on a 30-45 degree incline bench, emphasizing the clavicular head of the chest.',
+    description: 'A variation of the bench press performed on an incline bench, emphasizing the clavicular head of the chest.',
     instructions: [
       'Set an incline bench to 30–45 degrees.',
       'Grip the bar slightly wider than shoulder-width.',
       'Lower the bar smoothly to your upper chest.',
-      'Press back up in a straight line to lockout.'
+      'Press back up in a straight vertical path to lockout.'
     ],
     tips: [
       'Avoid setting the incline too high (above 45 degrees) to prevent shoulder takeover.',
@@ -54,10 +56,43 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     ],
     common_mistakes: [
       'Arching excessively to flatten the chest angle.',
-      'Bouncing the bar.'
+      'Bouncing the bar off the upper sternum.'
     ],
     primary_muscle: 'Upper Pectoralis Major',
-    secondary_muscles: ['Anterior Deltoid', 'Triceps'],
+    secondary_muscles: ['Anterior Deltoid', 'Triceps Brachii'],
+    muscle_group: 'chest',
+    equipment: ['barbell'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'horizontal_push',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-decline-bench-press',
+    name: 'Decline Bench Press',
+    slug: 'decline-bench-press',
+    description: 'A bench press performed on a decline angle, emphasizing the lower pectoral muscle fibers.',
+    instructions: [
+      'Secure your legs in the decline bench supports and lie back.',
+      'Grip the barbell with an overhand medium grip.',
+      'Lower the bar with control to your lower chest.',
+      'Press up powerfully to full arm extension.'
+    ],
+    tips: [
+      'Have a spotter assist with the unrack.',
+      'Keep shoulder blades packed against the pad.'
+    ],
+    common_mistakes: [
+      'Lifting your head off the bench.',
+      'Dropping the weight too fast.'
+    ],
+    primary_muscle: 'Lower Pectoralis Major',
+    secondary_muscles: ['Triceps Brachii', 'Anterior Deltoid'],
     muscle_group: 'chest',
     equipment: ['barbell'],
     difficulty: 'intermediate',
@@ -72,14 +107,14 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   },
   {
     id: 'ex-dumbbell-bench-press',
-    name: 'Dumbbell Bench Press',
-    slug: 'dumbbell-bench-press',
-    description: 'A chest press using dumbbells, allowing for a deeper stretch and independent arm control.',
+    name: 'Dumbbell Press',
+    slug: 'dumbbell-press',
+    description: 'A dumbbell chest press allowing greater range of motion and unilateral muscle balance.',
     instructions: [
-      'Sit on a bench with dumbbells on your thighs.',
-      'Kick the weights up as you lie back on the bench.',
+      'Sit on a flat bench with dumbbells resting on your thighs.',
+      'Kick the dumbbells up as you lie back on the bench.',
       'Press the dumbbells up until arms are fully extended.',
-      'Lower them with control until you feel a comfortable pectoral stretch.'
+      'Lower with control until you feel a comfortable chest stretch.'
     ],
     tips: [
       'Keep wrists stacked directly over elbows.',
@@ -90,7 +125,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Clanking the weights together at the top.'
     ],
     primary_muscle: 'Pectoralis Major',
-    secondary_muscles: ['Anterior Deltoid', 'Triceps'],
+    secondary_muscles: ['Anterior Deltoid', 'Triceps Brachii'],
     muscle_group: 'chest',
     equipment: ['dumbbell'],
     difficulty: 'intermediate',
@@ -104,8 +139,104 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updated_at: '2026-01-01T00:00:00.000Z'
   },
   {
+    id: 'ex-incline-dumbbell-press',
+    name: 'Incline Dumbbell Press',
+    slug: 'incline-dumbbell-press',
+    description: 'Incline press with dumbbells that targets the upper chest while accommodating natural wrist rotation.',
+    instructions: [
+      'Set bench to 30-45 degrees. Kick dumbbells up to shoulder level.',
+      'Press both dumbbells upward along a slight converging arc.',
+      'Lower under control to deep pectoral stretch.'
+    ],
+    tips: [
+      'Maintain continuous tension by avoiding resting at lockout.',
+      'Drive your heels into the ground for stability.'
+    ],
+    common_mistakes: [
+      'Flaring elbows out to 90 degrees.',
+      'Setting the bench too steep.'
+    ],
+    primary_muscle: 'Upper Pectoralis Major',
+    secondary_muscles: ['Anterior Deltoid', 'Triceps Brachii'],
+    muscle_group: 'chest',
+    equipment: ['dumbbell'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'horizontal_push',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-cable-crossover',
+    name: 'Cable Fly',
+    slug: 'cable-fly',
+    description: 'An isolation exercise providing constant tension throughout horizontal pectoral adduction.',
+    instructions: [
+      'Set pulleys at chest or shoulder height and step forward in a staggered stance.',
+      'With elbows slightly bent, sweep hands forward in a wide hugging arc.',
+      'Squeeze the chest hard at peak contraction, then reverse smoothly.'
+    ],
+    tips: [
+      'Lock your elbow angle throughout the entire movement.',
+      'Focus on bringing bicep to chest.'
+    ],
+    common_mistakes: [
+      'Pressing with triceps instead of flying.',
+      'Using torso momentum to rock back and forth.'
+    ],
+    primary_muscle: 'Pectoralis Major',
+    secondary_muscles: ['Anterior Deltoid'],
+    muscle_group: 'chest',
+    equipment: ['cable'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'horizontal_fly',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-dumbbell-fly',
+    name: 'Dumbbell Fly',
+    slug: 'dumbbell-fly',
+    description: 'Free weight isolation exercise creating a deep pectoral stretch across a flat bench.',
+    instructions: [
+      'Lie flat holding dumbbells extended above your chest with palms facing each other.',
+      'Lower weights out to the sides in a wide arc until chest is stretched.',
+      'Contract chest to pull weights back to the start.'
+    ],
+    tips: [
+      'Imagine hugging a large barrel.',
+      'Do not overstretch past comfortable shoulder mobility.'
+    ],
+    common_mistakes: [
+      'Bending elbows too much and turning it into a press.',
+      'Using excessively heavy weights.'
+    ],
+    primary_muscle: 'Pectoralis Major',
+    secondary_muscles: ['Anterior Deltoid'],
+    muscle_group: 'chest',
+    equipment: ['dumbbell'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'horizontal_fly',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
     id: 'ex-push-up',
-    name: 'Push-Up',
+    name: 'Push Up',
     slug: 'push-up',
     description: 'A fundamental bodyweight movement strengthening the chest, anterior delts, and core.',
     instructions: [
@@ -122,7 +253,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Flaring elbows out sideways.'
     ],
     primary_muscle: 'Pectoralis Major',
-    secondary_muscles: ['Anterior Deltoid', 'Triceps', 'Core'],
+    secondary_muscles: ['Anterior Deltoid', 'Triceps Brachii', 'Core'],
     muscle_group: 'chest',
     equipment: ['bodyweight'],
     difficulty: 'beginner',
@@ -136,43 +267,76 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updated_at: '2026-01-01T00:00:00.000Z'
   },
   {
-    id: 'ex-cable-crossover',
-    name: 'Cable Crossover',
-    slug: 'cable-crossover',
-    description: 'An isolation exercise that provides constant tension throughout horizontal pectoral adduction.',
+    id: 'ex-chest-press',
+    name: 'Chest Press',
+    slug: 'chest-press',
+    description: 'Guided machine horizontal press allowing high intensity pectoral overload with minimal joint shear.',
     instructions: [
-      'Set pulleys at shoulder or high height.',
-      'Step forward into a split stance with a slight forward torso lean.',
-      'Bring handles together in a hugging motion.',
-      'Slowly reverse the arc back to the starting stretch.'
+      'Adjust seat height so handles align with mid-chest.',
+      'Plant feet flat and press handles forward to lockout.',
+      'Lower under control until handles return to chest depth.'
     ],
     tips: [
-      'Keep a slight bend in the elbows.',
-      'Squeeze chest hard at peak contraction.'
+      'Keep back flat against the pad throughout.',
+      'Focus on mind-muscle connection with the chest.'
     ],
     common_mistakes: [
-      'Pressing with triceps instead of flying.',
-      'Swinging the torso for momentum.'
+      'Shrugging shoulders forward at full extension.',
+      'Bouncing weight off the stack.'
     ],
     primary_muscle: 'Pectoralis Major',
-    secondary_muscles: ['Anterior Deltoid'],
+    secondary_muscles: ['Anterior Deltoid', 'Triceps Brachii'],
     muscle_group: 'chest',
-    equipment: ['cable'],
-    difficulty: 'intermediate',
+    equipment: ['machine'],
+    difficulty: 'beginner',
     exercise_type: 'strength',
-    movement_pattern: 'horizontal_fly',
+    movement_pattern: 'horizontal_push',
     image_url: null,
     video_url: null,
-    is_compound: false,
+    is_compound: true,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-dips-chest',
+    name: 'Dips',
+    slug: 'dips',
+    description: 'Bodyweight compound movement emphasizing the lower pectoral fibers and triceps.',
+    instructions: [
+      'Mount dip bars and lean torso slightly forward (~15-30 degrees).',
+      'Lower until elbows form a 90-degree angle.',
+      'Press back up to lock out arms.'
+    ],
+    tips: [
+      'Leaning forward shifts emphasis to chest; staying upright targets triceps.',
+      'Control the descent to protect the shoulders.'
+    ],
+    common_mistakes: [
+      'Descending too deep without adequate shoulder mobility.',
+      'Swinging the legs.'
+    ],
+    primary_muscle: 'Lower Pectoralis Major',
+    secondary_muscles: ['Triceps Brachii', 'Anterior Deltoid'],
+    muscle_group: 'chest',
+    equipment: ['bodyweight'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'vertical_push',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
     is_unilateral: false,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z'
   },
 
-  // ── BACK ──
+  // ═════════════════════════════════════════════════════════════════════════════
+  // BACK (8)
+  // ═════════════════════════════════════════════════════════════════════════════
   {
     id: 'ex-pull-up',
-    name: 'Pull-Up',
+    name: 'Pull Up',
     slug: 'pull-up',
     description: 'A premier bodyweight compound exercise that builds back width, lats, rhomboids, and biceps.',
     instructions: [
@@ -223,7 +387,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Leaning back excessively to heave the weight.'
     ],
     primary_muscle: 'Latissimus Dorsi',
-    secondary_muscles: ['Biceps', 'Rhomboids', 'Rear Deltoids'],
+    secondary_muscles: ['Biceps Brachii', 'Rhomboids', 'Rear Deltoids'],
     muscle_group: 'back',
     equipment: ['cable', 'machine'],
     difficulty: 'beginner',
@@ -256,7 +420,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Using aggressive hip jerks to move the weight.'
     ],
     primary_muscle: 'Latissimus Dorsi',
-    secondary_muscles: ['Rhomboids', 'Trapezius', 'Biceps', 'Erector Spinae'],
+    secondary_muscles: ['Rhomboids', 'Trapezius', 'Biceps Brachii', 'Erector Spinae'],
     muscle_group: 'back',
     equipment: ['barbell'],
     difficulty: 'intermediate',
@@ -270,40 +434,171 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updated_at: '2026-01-01T00:00:00.000Z'
   },
   {
-    id: 'ex-deadlift',
-    name: 'Deadlift',
-    slug: 'deadlift',
-    description: 'The premier full posterior chain compound lift targeting erectors, glutes, hamstrings, and upper back.',
+    id: 'ex-dumbbell-row',
+    name: 'Dumbbell Row',
+    slug: 'dumbbell-row',
+    description: 'Unilateral single-arm row building thick lats, rhomboids, and correcting muscular asymmetries.',
     instructions: [
-      'Stand with feet hip-width apart, barbell over mid-foot (1 inch from shins).',
-      'Hinge hips back and grip bar just outside shins.',
-      'Pull chest proud, take the slack out of the barbell, and pack lats.',
-      'Drive floor away with your legs to stand up tall without hyperextending.'
+      'Place one knee and one hand on a flat bench, holding a dumbbell in opposite hand.',
+      'Pull dumbbell up toward your hip pocket, keeping elbow tight.',
+      'Lower slowly to full lat stretch.'
     ],
     tips: [
-      'Keep the bar in contact with legs throughout the pull.',
-      'Think of it as leg pressing the floor away.'
+      'Pull through the elbow, not the hand.',
+      'Avoid rotating torso.'
     ],
     common_mistakes: [
-      'Rounding lower back.',
-      'Squatting the bar instead of hinging.'
+      'Yanking with shoulder and rotating spine.',
+      'Short-changing the bottom stretch.'
     ],
-    primary_muscle: 'Erector Spinae',
-    secondary_muscles: ['Gluteus Maximus', 'Hamstrings', 'Trapezius', 'Core'],
+    primary_muscle: 'Latissimus Dorsi',
+    secondary_muscles: ['Rhomboids', 'Biceps Brachii', 'Rear Deltoids'],
     muscle_group: 'back',
-    equipment: ['barbell'],
-    difficulty: 'advanced',
+    equipment: ['dumbbell'],
+    difficulty: 'beginner',
     exercise_type: 'strength',
-    movement_pattern: 'hinge',
-    image_url: '/exercises/deadlift.png',
+    movement_pattern: 'horizontal_pull',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-seated-cable-row',
+    name: 'Seated Cable Row',
+    slug: 'seated-cable-row',
+    description: 'Horizontal cable row targeting the middle back, rhomboids, and latissimus dorsi.',
+    instructions: [
+      'Sit facing low pulley with knees softly bent and feet braced.',
+      'Grip the handle, sit upright with shoulders back.',
+      'Pull handle to lower abdomen while driving elbows back.',
+      'Extend arms forward under control.'
+    ],
+    tips: [
+      'Keep chest tall and maintain neutral spine.',
+      'Pause for a beat at peak contraction.'
+    ],
+    common_mistakes: [
+      'Leaning excessively forward and back.',
+      'Rounding the shoulders.'
+    ],
+    primary_muscle: 'Rhomboids',
+    secondary_muscles: ['Latissimus Dorsi', 'Trapezius', 'Biceps Brachii'],
+    muscle_group: 'back',
+    equipment: ['cable', 'machine'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'horizontal_pull',
+    image_url: null,
     video_url: null,
     is_compound: true,
     is_unilateral: false,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z'
   },
+  {
+    id: 'ex-t-bar-row',
+    name: 'T-Bar Row',
+    slug: 't-bar-row',
+    description: 'Heavy compound rowing movement supporting massive mid-back thickness and grip strength.',
+    instructions: [
+      'Straddle the T-bar apparatus, hinge hips at 45 degrees, and grip handles.',
+      'Pull the weight towards your sternum while retracting shoulder blades.',
+      'Lower smoothly to full extension.'
+    ],
+    tips: [
+      'Brace abs firmly to protect the lower back.',
+      'Do not jerk the weight with your legs.'
+    ],
+    common_mistakes: [
+      'Standing too upright.',
+      'Rounding the spine under heavy load.'
+    ],
+    primary_muscle: 'Latissimus Dorsi',
+    secondary_muscles: ['Rhomboids', 'Trapezius', 'Biceps Brachii'],
+    muscle_group: 'back',
+    equipment: ['barbell', 'machine'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'horizontal_pull',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-face-pull',
+    name: 'Face Pull',
+    slug: 'face-pull',
+    description: 'Vital movement for rear deltoids, external rotators, and upper back postural strength.',
+    instructions: [
+      'Set cable with rope attachment at eye height.',
+      'Grip rope thumbs-back and step into balance.',
+      'Pull rope towards face while separating hands and rotating forearms up.',
+      'Squeeze rear delts and slowly return.'
+    ],
+    tips: [
+      'Think of making a double-biceps flex at the end of each rep.',
+      'Keep chest tall and elbows high.'
+    ],
+    common_mistakes: [
+      'Loading too heavy and leaning backward.',
+      'Pulling to neck rather than face.'
+    ],
+    primary_muscle: 'Posterior Deltoid',
+    secondary_muscles: ['Rhomboids', 'Trapezius', 'Rotator Cuff'],
+    muscle_group: 'back',
+    equipment: ['cable'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'horizontal_pull',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-straight-arm-pulldown',
+    name: 'Straight Arm Pulldown',
+    slug: 'straight-arm-pulldown',
+    description: 'Lat isolation exercise providing intense stretch and contraction without bicep fatigue.',
+    instructions: [
+      'Stand facing high cable with a straight or lat bar.',
+      'With arms almost straight, push bar downward in a wide arc until it touches your thighs.',
+      'Pause and squeeze lats, then let bar return to eye level.'
+    ],
+    tips: [
+      'Lock elbows with just a soft micro-bend.',
+      'Hinge hips slightly for optimal lat stretch.'
+    ],
+    common_mistakes: [
+      'Bending elbows into a tricep pushdown.',
+      'Swinging the torso for momentum.'
+    ],
+    primary_muscle: 'Latissimus Dorsi',
+    secondary_muscles: ['Teres Major', 'Core'],
+    muscle_group: 'back',
+    equipment: ['cable'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
 
-  // ── SHOULDERS ──
+  // ═════════════════════════════════════════════════════════════════════════════
+  // SHOULDERS (7)
+  // ═════════════════════════════════════════════════════════════════════════════
   {
     id: 'ex-overhead-press',
     name: 'Overhead Press',
@@ -324,7 +619,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Using leg drive (which makes it a push press).'
     ],
     primary_muscle: 'Anterior Deltoid',
-    secondary_muscles: ['Lateral Deltoid', 'Triceps', 'Upper Trapezius'],
+    secondary_muscles: ['Lateral Deltoid', 'Triceps Brachii', 'Upper Trapezius'],
     muscle_group: 'shoulders',
     equipment: ['barbell'],
     difficulty: 'intermediate',
@@ -334,6 +629,70 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     video_url: null,
     is_compound: true,
     is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-dumbbell-shoulder-press',
+    name: 'Dumbbell Shoulder Press',
+    slug: 'dumbbell-shoulder-press',
+    description: 'Seated or standing overhead press utilizing dumbbells for independent arm overload and rotator cuff freedom.',
+    instructions: [
+      'Hold dumbbells at shoulder height with palms forward or neutral.',
+      'Press both weights smoothly overhead until arms extend.',
+      'Lower weights under control back to ear level.'
+    ],
+    tips: [
+      'Keep back flat against the bench pad.',
+      'Avoid clanking dumbbells at the top.'
+    ],
+    common_mistakes: [
+      'Arching lower back off the bench.',
+      'Flaring elbows out too far backward.'
+    ],
+    primary_muscle: 'Anterior Deltoid',
+    secondary_muscles: ['Lateral Deltoid', 'Triceps Brachii'],
+    muscle_group: 'shoulders',
+    equipment: ['dumbbell'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'vertical_push',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-arnold-press',
+    name: 'Arnold Press',
+    slug: 'arnold-press',
+    description: 'Rotational dumbbell press invented by Arnold Schwarzenegger to recruit all three deltoid heads.',
+    instructions: [
+      'Start with dumbbells at chin level, palms facing your face.',
+      'As you press upward, rotate wrists so palms face forward at the top.',
+      'Reverse rotation as you lower back to starting position.'
+    ],
+    tips: [
+      'Keep the rotation continuous and fluid throughout the press.',
+      'Use slightly lighter weight than standard dumbbell press.'
+    ],
+    common_mistakes: [
+      'Rushing the wrist rotation at the bottom.',
+      'Leaning back into the bench.'
+    ],
+    primary_muscle: 'Anterior Deltoid',
+    secondary_muscles: ['Lateral Deltoid', 'Triceps Brachii'],
+    muscle_group: 'shoulders',
+    equipment: ['dumbbell'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'vertical_push',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: true,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z'
   },
@@ -370,44 +729,110 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updated_at: '2026-01-01T00:00:00.000Z'
   },
   {
-    id: 'ex-face-pull',
-    name: 'Face Pull',
-    slug: 'face-pull',
-    description: 'Vital movement for rear deltoids, external rotators, and scapular health.',
+    id: 'ex-front-raise',
+    name: 'Front Raise',
+    slug: 'front-raise',
+    description: 'Isolation movement targeting the anterior deltoid head.',
     instructions: [
-      'Set cable with rope attachment at eye height.',
-      'Grip rope thumbs-back and step into balance.',
-      'Pull rope towards face while separating hands and rotating forearms up.',
-      'Squeeze rear delts and slowly return.'
+      'Stand holding dumbbells against front of thighs.',
+      'Raise one or both arms straight forward to shoulder height.',
+      'Pause briefly, then lower with control.'
     ],
     tips: [
-      'Think of making a double-biceps flex at the end of each rep.',
-      'Keep chest tall and elbows high.'
+      'Keep wrists firm and elbows slightly soft.',
+      'Do not lean back to elevate the weight.'
     ],
     common_mistakes: [
-      'Loading too heavy and leaning backward.',
-      'Pulling to neck rather than face.'
+      'Swinging weights up using lower back.',
+      'Lifting way above eye level.'
     ],
-    primary_muscle: 'Posterior Deltoid',
-    secondary_muscles: ['Rhomboids', 'Rotator Cuff', 'Trapezius'],
+    primary_muscle: 'Anterior Deltoid',
+    secondary_muscles: ['Lateral Deltoid', 'Upper Pectoralis Major'],
     muscle_group: 'shoulders',
-    equipment: ['cable'],
+    equipment: ['dumbbell'],
     difficulty: 'beginner',
     exercise_type: 'strength',
-    movement_pattern: 'horizontal_pull',
+    movement_pattern: 'isolation',
     image_url: null,
     video_url: null,
-    is_compound: true,
+    is_compound: false,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-rear-delt-fly',
+    name: 'Rear Delt Fly',
+    slug: 'rear-delt-fly',
+    description: 'Bent-over dumbbell fly isolating the posterior deltoid and scapular retractors.',
+    instructions: [
+      'Hinge at hips until torso is nearly parallel to floor.',
+      'Raise dumbbells out to sides, leading with rear delts.',
+      'Squeeze shoulder blades and lower smoothly.'
+    ],
+    tips: [
+      'Keep your gaze directed at the floor to maintain neutral neck.',
+      'Focus on pulling weights outward rather than straight up.'
+    ],
+    common_mistakes: [
+      'Using momentum by standing up during the rep.',
+      'Bending elbows into a row.'
+    ],
+    primary_muscle: 'Posterior Deltoid',
+    secondary_muscles: ['Rhomboids', 'Trapezius'],
+    muscle_group: 'shoulders',
+    equipment: ['dumbbell'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-reverse-pec-deck',
+    name: 'Reverse Pec Deck',
+    slug: 'reverse-pec-deck',
+    description: 'Machine isolation exercise targeting rear deltoids and mid-back with fixed trajectory.',
+    instructions: [
+      'Sit facing the machine pad with chest supported.',
+      'Grip vertical handles with arms parallel to floor.',
+      'Sweep arms backward until rear delts contract fully.',
+      'Return slowly to the starting position.'
+    ],
+    tips: [
+      'Keep chest firmly pressed against pad.',
+      'Lead movement through elbows.'
+    ],
+    common_mistakes: [
+      'Shrugging traps up toward ears.',
+      'Letting the weight stack slam.'
+    ],
+    primary_muscle: 'Posterior Deltoid',
+    secondary_muscles: ['Rhomboids', 'Trapezius'],
+    muscle_group: 'shoulders',
+    equipment: ['machine'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
     is_unilateral: false,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z'
   },
 
-  // ── LEGS ──
+  // ═════════════════════════════════════════════════════════════════════════════
+  // LEGS (10)
+  // ═════════════════════════════════════════════════════════════════════════════
   {
     id: 'ex-barbell-squat',
-    name: 'Barbell Squat',
-    slug: 'barbell-squat',
+    name: 'Squat',
+    slug: 'squat',
     description: 'The king of lower body exercises, building massive quad, glute, and core strength.',
     instructions: [
       'Rest barbell securely across upper traps with hands gripping bar firmly.',
@@ -438,31 +863,31 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updated_at: '2026-01-01T00:00:00.000Z'
   },
   {
-    id: 'ex-romanian-deadlift',
-    name: 'Romanian Deadlift',
-    slug: 'romanian-deadlift',
-    description: 'Hip hinge movement emphasizing hamstring and glute elongation under tension.',
+    id: 'ex-front-squat',
+    name: 'Front Squat',
+    slug: 'front-squat',
+    description: 'Barbell squat with anterior bar placement, emphasizing quadriceps development and upright torso posture.',
     instructions: [
-      'Hold bar at hip height with knees slightly unlocked.',
-      'Push hips backward as if touching a wall behind you.',
-      'Lower bar along thighs until you feel a deep hamstring stretch.',
-      'Drive hips forward to return to standing.'
+      'Rest barbell across anterior deltoids in clean grip or cross-arm grip.',
+      'Keep elbows elevated high and chest tall.',
+      'Squat down deeply between your hips.',
+      'Drive upward through heels and mid-foot.'
     ],
     tips: [
-      'Movement comes from hip hinge, not knee bending.',
-      'Keep spine rigid throughout.'
+      'Keep elbows pointing forward to prevent bar rolling.',
+      'Requires strong upper thoracic extension.'
     ],
     common_mistakes: [
-      'Squatting the weight down.',
-      'Allowing lower back to round.'
+      'Dropping elbows, causing bar to roll forward.',
+      'Rounding upper back.'
     ],
-    primary_muscle: 'Hamstrings',
-    secondary_muscles: ['Gluteus Maximus', 'Erector Spinae'],
+    primary_muscle: 'Quadriceps',
+    secondary_muscles: ['Gluteus Maximus', 'Core', 'Upper Back'],
     muscle_group: 'legs',
-    equipment: ['barbell', 'dumbbell'],
-    difficulty: 'intermediate',
+    equipment: ['barbell'],
+    difficulty: 'advanced',
     exercise_type: 'strength',
-    movement_pattern: 'hinge',
+    movement_pattern: 'squat',
     image_url: null,
     video_url: null,
     is_compound: true,
@@ -489,7 +914,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Half reps.'
     ],
     primary_muscle: 'Quadriceps',
-    secondary_muscles: ['Glutes', 'Hamstrings'],
+    secondary_muscles: ['Gluteus Maximus', 'Hamstrings'],
     muscle_group: 'legs',
     equipment: ['machine'],
     difficulty: 'beginner',
@@ -533,8 +958,203 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z'
   },
+  {
+    id: 'ex-leg-curl',
+    name: 'Leg Curl',
+    slug: 'leg-curl',
+    description: 'Isolation exercise targeting hamstring knee flexion across prone or seated machines.',
+    instructions: [
+      'Lie face down on machine with roller pad against lower calves.',
+      'Curl heels toward glutes in a smooth arc.',
+      'Squeeze hamstrings at contraction, then lower slowly.'
+    ],
+    tips: [
+      'Keep hips pressed into bench.',
+      'Do not jerk weight off starting point.'
+    ],
+    common_mistakes: [
+      'Hyperextending lower back to assist lift.',
+      'Swinging weights.'
+    ],
+    primary_muscle: 'Hamstrings',
+    secondary_muscles: ['Calves'],
+    muscle_group: 'legs',
+    equipment: ['machine'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-romanian-deadlift',
+    name: 'Romanian Deadlift',
+    slug: 'romanian-deadlift',
+    description: 'Hip hinge movement emphasizing hamstring and glute elongation under tension.',
+    instructions: [
+      'Hold bar at hip height with knees slightly unlocked.',
+      'Push hips backward as if touching a wall behind you.',
+      'Lower bar along thighs until you feel a deep hamstring stretch.',
+      'Drive hips forward to return to standing.'
+    ],
+    tips: [
+      'Movement comes from hip hinge, not knee bending.',
+      'Keep spine rigid throughout.'
+    ],
+    common_mistakes: [
+      'Squatting the weight down.',
+      'Allowing lower back to round.'
+    ],
+    primary_muscle: 'Hamstrings',
+    secondary_muscles: ['Gluteus Maximus', 'Erector Spinae'],
+    muscle_group: 'legs',
+    equipment: ['barbell', 'dumbbell'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'hinge',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-lunges',
+    name: 'Lunges',
+    slug: 'lunges',
+    description: 'Dynamic unilateral leg exercise building quad, glute, and stabilizing balance.',
+    instructions: [
+      'Take a long step forward with one leg.',
+      'Lower hips until front thigh is parallel to floor and back knee taps near floor.',
+      'Drive off front heel to step forward into next stride.'
+    ],
+    tips: [
+      'Keep torso upright and core engaged.',
+      'Avoid letting front knee cave inward.'
+    ],
+    common_mistakes: [
+      'Taking too short a step, crowding front knee.',
+      'Banging back knee on floor.'
+    ],
+    primary_muscle: 'Quadriceps',
+    secondary_muscles: ['Gluteus Maximus', 'Hamstrings', 'Calves'],
+    muscle_group: 'legs',
+    equipment: ['dumbbell', 'bodyweight'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'lunge',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-bulgarian-split-squat',
+    name: 'Bulgarian Split Squat',
+    slug: 'bulgarian-split-squat',
+    description: 'Rear foot elevated split squat providing extreme quad and glute hypertrophy and hip mobility.',
+    instructions: [
+      'Place top of rear foot on a bench behind you.',
+      'Lower until front thigh is parallel to floor.',
+      'Drive through front mid-foot to stand up tall.'
+    ],
+    tips: [
+      'Lean torso slightly forward to bias glutes, or remain upright for quads.',
+      '90% of your weight should be on the front foot.'
+    ],
+    common_mistakes: [
+      'Front foot placed too close to bench.',
+      'Losing balance due to narrow foot path.'
+    ],
+    primary_muscle: 'Quadriceps',
+    secondary_muscles: ['Gluteus Maximus', 'Hamstrings'],
+    muscle_group: 'legs',
+    equipment: ['dumbbell', 'bodyweight'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'squat',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-hack-squat',
+    name: 'Hack Squat',
+    slug: 'hack-squat',
+    description: 'Machine squat on an angled slide targeting pure quad overload with solid back support.',
+    instructions: [
+      'Position shoulders under pads with back firmly against pad.',
+      'Release safety handles and descend to 90 degrees knee flexion.',
+      'Drive sled up smoothly through mid-foot.'
+    ],
+    tips: [
+      'Position feet lower on platform to emphasize quads.',
+      'Avoid locking knees abruptly at top.'
+    ],
+    common_mistakes: [
+      'Letting heels lift off platform.',
+      'Rounding hips off pad at deep depth.'
+    ],
+    primary_muscle: 'Quadriceps',
+    secondary_muscles: ['Gluteus Maximus'],
+    muscle_group: 'legs',
+    equipment: ['machine'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'squat',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-calf-raise',
+    name: 'Calf Raise',
+    slug: 'calf-raise',
+    description: 'Standing or seated calf exercise isolating the gastrocnemius and soleus.',
+    instructions: [
+      'Place balls of feet on block with heels hanging off.',
+      'Lower heels into full deep calf stretch.',
+      'Explode upward onto toes, squeezing calves at apex.'
+    ],
+    tips: [
+      'Hold the bottom stretch for 1-2 seconds to eliminate Achilles bounce.',
+      'Keep knees softly locked.'
+    ],
+    common_mistakes: [
+      'Bouncing fast with zero stretch.',
+      'Short range of motion.'
+    ],
+    primary_muscle: 'Gastrocnemius',
+    secondary_muscles: ['Soleus'],
+    muscle_group: 'legs',
+    equipment: ['machine', 'dumbbell', 'bodyweight'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
 
-  // ── ARMS ──
+  // ═════════════════════════════════════════════════════════════════════════════
+  // ARMS (8)
+  // ═════════════════════════════════════════════════════════════════════════════
   {
     id: 'ex-barbell-curl',
     name: 'Barbell Curl',
@@ -569,9 +1189,105 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updated_at: '2026-01-01T00:00:00.000Z'
   },
   {
-    id: 'ex-triceps-pushdown',
-    name: 'Triceps Pushdown',
-    slug: 'triceps-pushdown',
+    id: 'ex-dumbbell-curl',
+    name: 'Dumbbell Curl',
+    slug: 'dumbbell-curl',
+    description: 'Classic bicep exercise permitting natural forearm supination for peak biceps peak contraction.',
+    instructions: [
+      'Hold dumbbells at sides with palms neutral.',
+      'Curl dumbbells up while rotating palms toward ceiling at the top.',
+      'Squeeze biceps, then lower with control.'
+    ],
+    tips: [
+      'Supinate wrists early during the ascent.',
+      'Can be performed alternating or bilateral.'
+    ],
+    common_mistakes: [
+      'Swinging upper body.',
+      'Allowing elbows to flare outward.'
+    ],
+    primary_muscle: 'Biceps Brachii',
+    secondary_muscles: ['Brachialis', 'Forearms'],
+    muscle_group: 'biceps',
+    equipment: ['dumbbell'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-hammer-curl',
+    name: 'Hammer Curl',
+    slug: 'hammer-curl',
+    description: 'Neutral-grip curl targeting the brachialis and brachioradialis for arm thickness.',
+    instructions: [
+      'Hold dumbbells at sides with palms facing each other (neutral grip).',
+      'Curl weights upward without rotating wrists.',
+      'Squeeze forearms and brachialis, then lower slowly.'
+    ],
+    tips: [
+      'Keep wrists rigid throughout the rep.',
+      'Pinned elbows ensure pure arm recruitment.'
+    ],
+    common_mistakes: [
+      'Rocking body back and forth.',
+      'Dropping weights abruptly.'
+    ],
+    primary_muscle: 'Brachialis',
+    secondary_muscles: ['Biceps Brachii', 'Brachioradialis'],
+    muscle_group: 'biceps',
+    equipment: ['dumbbell'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-preacher-curl',
+    name: 'Preacher Curl',
+    slug: 'preacher-curl',
+    description: 'Arm curl performed against angled preacher bench eliminating all body momentum.',
+    instructions: [
+      'Sit at preacher bench with upper arms resting flat against the incline pad.',
+      'Curl barbell or EZ-bar upward toward shoulders.',
+      'Lower under control to full arm stretch.'
+    ],
+    tips: [
+      'Keep armpits snug against the top of pad.',
+      'Avoid hyperextending elbows abruptly at the bottom.'
+    ],
+    common_mistakes: [
+      'Lifting elbows off the pad.',
+      'Using excessive weight and dropping into lockout.'
+    ],
+    primary_muscle: 'Biceps Brachii',
+    secondary_muscles: ['Brachialis'],
+    muscle_group: 'biceps',
+    equipment: ['barbell', 'dumbbell'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-tricep-pushdown',
+    name: 'Tricep Pushdown',
+    slug: 'tricep-pushdown',
     description: 'Cable movement isolating the lateral and medial heads of the triceps.',
     instructions: [
       'Stand facing cable with bar or rope at chest height.',
@@ -602,30 +1318,94 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updated_at: '2026-01-01T00:00:00.000Z'
   },
   {
-    id: 'ex-dips',
-    name: 'Dips',
-    slug: 'dips',
-    description: 'Powerful bodyweight compound movement building the lower chest and triceps.',
+    id: 'ex-skull-crusher',
+    name: 'Skull Crusher',
+    slug: 'skull-crusher',
+    description: 'Lying triceps extension building tremendous long and lateral triceps head strength.',
     instructions: [
-      'Mount parallel dip bars and support bodyweight with straight arms.',
-      'Lower body until elbows reach 90 degrees.',
-      'Push back up to full lockout.'
+      'Lie on flat bench holding EZ-bar with arms vertical.',
+      'Hinge at elbows to lower bar toward forehead or slightly behind crown.',
+      'Extend arms back to starting position.'
     ],
     tips: [
-      'Lean forward slightly for chest emphasis, or remain upright for triceps.',
-      'Keep shoulders depressed down away from ears.'
+      'Keep elbows pointing straight up, not flaring out.',
+      'Lowering slightly behind head keeps continuous triceps tension.'
     ],
     common_mistakes: [
-      'Descending too deep if shoulder mobility is restricted.',
-      'Swinging legs.'
+      'Flaring elbows outward excessively.',
+      'Moving upper arms back and forth like a pullover.'
+    ],
+    primary_muscle: 'Triceps Brachii',
+    secondary_muscles: [],
+    muscle_group: 'triceps',
+    equipment: ['barbell'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-overhead-tricep-extension',
+    name: 'Overhead Tricep Extension',
+    slug: 'overhead-tricep-extension',
+    description: 'Overhead extension that places the long head of the triceps in a deep, loaded stretch.',
+    instructions: [
+      'Hold dumbbell or cable overhead with both hands.',
+      'Lower weight behind head by bending elbows.',
+      'Contract triceps to extend weight back overhead.'
+    ],
+    tips: [
+      'Keep ribcage tucked down and core braced.',
+      'Keep elbows pointing forward as much as possible.'
+    ],
+    common_mistakes: [
+      'Arching lower back.',
+      'Flaring elbows out sideways.'
+    ],
+    primary_muscle: 'Triceps Brachii',
+    secondary_muscles: [],
+    muscle_group: 'triceps',
+    equipment: ['dumbbell', 'cable'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-close-grip-bench-press',
+    name: 'Close Grip Bench Press',
+    slug: 'close-grip-bench-press',
+    description: 'Compound bench press with hands shoulder-width apart to overload triceps with heavy weight.',
+    instructions: [
+      'Lie on bench and grip bar shoulder-width apart.',
+      'Lower bar to lower chest while keeping elbows tucked close to sides.',
+      'Press up powerfully focusing on tricep drive.'
+    ],
+    tips: [
+      'Hands should be shoulder-width; do not place hands too close together to save wrists.',
+      'Maintain stable shoulder blade retraction.'
+    ],
+    common_mistakes: [
+      'Placing hands too close (touching thumbs), straining wrists.',
+      'Flaring elbows outward.'
     ],
     primary_muscle: 'Triceps Brachii',
     secondary_muscles: ['Pectoralis Major', 'Anterior Deltoid'],
     muscle_group: 'triceps',
-    equipment: ['bodyweight'],
+    equipment: ['barbell'],
     difficulty: 'intermediate',
     exercise_type: 'strength',
-    movement_pattern: 'vertical_push',
+    movement_pattern: 'horizontal_push',
     image_url: null,
     video_url: null,
     is_compound: true,
@@ -634,7 +1414,9 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updated_at: '2026-01-01T00:00:00.000Z'
   },
 
-  // ── CORE ──
+  // ═════════════════════════════════════════════════════════════════════════════
+  // CORE (7)
+  // ═════════════════════════════════════════════════════════════════════════════
   {
     id: 'ex-plank',
     name: 'Plank',
@@ -654,7 +1436,40 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Holding breath.'
     ],
     primary_muscle: 'Transverse Abdominis',
-    secondary_muscles: ['Rectus Abdominis', 'Glutes'],
+    secondary_muscles: ['Rectus Abdominis', 'Gluteus Maximus'],
+    muscle_group: 'core',
+    equipment: ['bodyweight'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-crunch',
+    name: 'Crunch',
+    slug: 'crunch',
+    description: 'Classic abdominal flexion exercise targeting the upper rectus abdominis.',
+    instructions: [
+      'Lie on back with knees bent and feet flat on floor.',
+      'Place fingertips lightly behind ears or across chest.',
+      'Curl shoulders off floor by contracting abs.',
+      'Lower with control without neck straining.'
+    ],
+    tips: [
+      'Exhale on the way up to achieve full abdominal contraction.',
+      'Keep chin away from chest.'
+    ],
+    common_mistakes: [
+      'Yanking on the neck with hands.',
+      'Lifting entire lower back (turning it into a sit-up).'
+    ],
+    primary_muscle: 'Rectus Abdominis',
+    secondary_muscles: [],
     muscle_group: 'core',
     equipment: ['bodyweight'],
     difficulty: 'beginner',
@@ -682,7 +1497,8 @@ export const DEFAULT_EXERCISES: Exercise[] = [
       'Avoid swinging momentum.'
     ],
     common_mistakes: [
-      'Arching back to generate momentum.'
+      'Arching back to generate momentum.',
+      'Using only hip flexors without posterior pelvic tilt.'
     ],
     primary_muscle: 'Rectus Abdominis',
     secondary_muscles: ['Hip Flexors', 'Forearms'],
@@ -698,12 +1514,142 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z'
   },
+  {
+    id: 'ex-leg-raise',
+    name: 'Leg Raise',
+    slug: 'leg-raise',
+    description: 'Floor-based leg raise targeting lower abdominal wall strength.',
+    instructions: [
+      'Lie flat on back with hands underneath glutes for lumbar support.',
+      'Raise legs together to 90 degrees.',
+      'Lower legs slowly until heels are 1 inch above floor, then repeat.'
+    ],
+    tips: [
+      'Keep lower back pressed firmly into floor.',
+      'Control the descent.'
+    ],
+    common_mistakes: [
+      'Arching lower back off floor.',
+      'Letting feet touch floor between reps.'
+    ],
+    primary_muscle: 'Rectus Abdominis',
+    secondary_muscles: ['Hip Flexors'],
+    muscle_group: 'core',
+    equipment: ['bodyweight'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-russian-twist',
+    name: 'Russian Twist',
+    slug: 'russian-twist',
+    description: 'Rotational core exercise strengthening the internal and external obliques.',
+    instructions: [
+      'Sit on floor with knees bent, leaning back 45 degrees.',
+      'Hold hands or a weight in front of chest.',
+      'Rotate torso side to side, tapping floor on each side.'
+    ],
+    tips: [
+      'Move from the ribs/torso, not just arms.',
+      'Elevate feet for greater challenge.'
+    ],
+    common_mistakes: [
+      'Rounding the spine excessively.',
+      'Moving hands without rotating torso.'
+    ],
+    primary_muscle: 'Obliques',
+    secondary_muscles: ['Rectus Abdominis'],
+    muscle_group: 'core',
+    equipment: ['bodyweight', 'dumbbell'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-cable-crunch',
+    name: 'Cable Crunch',
+    slug: 'cable-crunch',
+    description: 'Kneeling cable crunch enabling progressive resistance overload for abdominal hypertrophy.',
+    instructions: [
+      'Kneel below high pulley holding rope attachment at sides of head.',
+      'Flex spine to curl elbows toward knees.',
+      'Squeeze abs hard at bottom, then return slowly.'
+    ],
+    tips: [
+      'Hips stay stationary; motion comes strictly from spinal flexion.',
+      'Exhale completely at bottom.'
+    ],
+    common_mistakes: [
+      'Sitting back on heels (using hip hinge instead of ab crunch).',
+      'Pulling with arms.'
+    ],
+    primary_muscle: 'Rectus Abdominis',
+    secondary_muscles: [],
+    muscle_group: 'core',
+    equipment: ['cable'],
+    difficulty: 'intermediate',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-ab-wheel',
+    name: 'Ab Wheel',
+    slug: 'ab-wheel',
+    description: 'Extreme anti-extension core challenge building superhuman anterior core stability.',
+    instructions: [
+      'Kneel on floor holding ab wheel handles below shoulders.',
+      'Roll wheel forward while keeping core braced and hips aligned.',
+      'Pull wheel back to starting position using your abs.'
+    ],
+    tips: [
+      'Maintain slight posterior pelvic tilt (tucked tailbone).',
+      'Do not extend further than your core can support without back sagging.'
+    ],
+    common_mistakes: [
+      'Letting lumbar spine arch/sag downward.',
+      'Pulling back with hips first.'
+    ],
+    primary_muscle: 'Rectus Abdominis',
+    secondary_muscles: ['Latissimus Dorsi', 'Shoulders'],
+    muscle_group: 'core',
+    equipment: ['bodyweight'],
+    difficulty: 'advanced',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
 
-  // ── GLUTES ──
+  // ═════════════════════════════════════════════════════════════════════════════
+  // GLUTES (4)
+  // ═════════════════════════════════════════════════════════════════════════════
   {
     id: 'ex-barbell-hip-thrust',
-    name: 'Barbell Hip Thrust',
-    slug: 'barbell-hip-thrust',
+    name: 'Hip Thrust',
+    slug: 'hip-thrust',
     description: 'Gold-standard exercise for maximum gluteus maximus hypertrophy and hip extension power.',
     instructions: [
       'Sit on floor with upper back against flat bench, padded barbell across hips.',
@@ -730,6 +1676,102 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     video_url: null,
     is_compound: true,
     is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-glute-bridge',
+    name: 'Glute Bridge',
+    slug: 'glute-bridge',
+    description: 'Floor-based hip extension movement isolating glute activation and hip stability.',
+    instructions: [
+      'Lie on back with knees bent, feet flat on floor hip-width apart.',
+      'Drive through heels to raise hips until straight line forms from shoulders to knees.',
+      'Hold peak squeeze for 2 seconds, then lower.'
+    ],
+    tips: [
+      'Squeeze glutes at top without arching lower back.',
+      'Can be loaded with a dumbbell or barbell across hips.'
+    ],
+    common_mistakes: [
+      'Pushing through toes instead of heels.',
+      'Overextending lumbar spine.'
+    ],
+    primary_muscle: 'Gluteus Maximus',
+    secondary_muscles: ['Hamstrings'],
+    muscle_group: 'glutes',
+    equipment: ['bodyweight', 'dumbbell'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'hinge',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-cable-kickback',
+    name: 'Cable Kickback',
+    slug: 'cable-kickback',
+    description: 'Isolation cable exercise targeting the gluteus maximus through terminal hip extension.',
+    instructions: [
+      'Attach ankle cuff to low cable pulley.',
+      'Face machine, hinge slightly at hips, and kick leg straight backward.',
+      'Squeeze glute at full extension, then return under control.'
+    ],
+    tips: [
+      'Keep pelvis square to machine.',
+      'Movement comes from hip extension, not lower back bending.'
+    ],
+    common_mistakes: [
+      'Arching lower back on every rep.',
+      'Swinging the leg with momentum.'
+    ],
+    primary_muscle: 'Gluteus Maximus',
+    secondary_muscles: ['Hamstrings'],
+    muscle_group: 'glutes',
+    equipment: ['cable'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'isolation',
+    image_url: null,
+    video_url: null,
+    is_compound: false,
+    is_unilateral: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    id: 'ex-step-up',
+    name: 'Step Up',
+    slug: 'step-up',
+    description: 'Unilateral movement targeting glute strength, quadriceps drive, and pelvic stability.',
+    instructions: [
+      'Stand facing a sturdy box or bench.',
+      'Place one foot flat on box and drive through heel to step onto box.',
+      'Lower trailing foot back down under control.'
+    ],
+    tips: [
+      'Do not push off the floor with trailing foot; make leading leg do the work.',
+      'Keep torso proud.'
+    ],
+    common_mistakes: [
+      'Jumping off the back foot.',
+      'Leading knee collapsing inward.'
+    ],
+    primary_muscle: 'Gluteus Maximus',
+    secondary_muscles: ['Quadriceps', 'Hamstrings', 'Calves'],
+    muscle_group: 'glutes',
+    equipment: ['dumbbell', 'bodyweight'],
+    difficulty: 'beginner',
+    exercise_type: 'strength',
+    movement_pattern: 'lunge',
+    image_url: null,
+    video_url: null,
+    is_compound: true,
+    is_unilateral: true,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z'
   }

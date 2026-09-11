@@ -3,7 +3,6 @@ import {
   Bot, 
   X, 
   Send, 
-  Sparkles, 
   ChevronDown, 
   RotateCcw, 
   ExternalLink,
@@ -107,9 +106,8 @@ export function FloatingAiCoach() {
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-surface-900" />
               </div>
               <div>
-                <h3 className="text-sm font-bold leading-none flex items-center gap-1.5">
+                <h3 className="text-sm font-bold leading-none">
                   GYMTrack AI Coach
-                  <Sparkles size={12} className="text-brand-300" />
                 </h3>
                 <p className="text-[11px] text-surface-300 mt-0.5">
                   {analysis?.hasData 

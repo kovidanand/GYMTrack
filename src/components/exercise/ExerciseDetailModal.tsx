@@ -9,7 +9,6 @@ import {
   Layers, 
   ChevronRight,
   Clock,
-  Sparkles,
   Loader2
 } from 'lucide-react'
 import * as RadixDialog from '@radix-ui/react-dialog'
@@ -88,7 +87,7 @@ export function ExerciseDetailModal({
                   {/* Current 1RM */}
                   <div className="card p-3.5 bg-gradient-to-br from-brand-50/60 to-white border-brand-100">
                     <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Sparkles size={13} className="text-brand-500" /> Current 1RM
+                      <Trophy size={13} className="text-brand-500" /> Current 1RM
                     </p>
                     <p className="text-2xl font-black text-surface-900 tracking-tight">
                       {intelligence.isBodyweightOrTimed

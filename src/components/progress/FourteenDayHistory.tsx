@@ -10,7 +10,7 @@ import {
   Dumbbell, 
   Info, 
   RotateCcw,
-  Sparkles,
+  Trophy,
   ChevronDown,
   ChevronUp
 } from 'lucide-react'
@@ -435,7 +435,7 @@ export function FourteenDayHistory({
                             <span className="font-bold text-surface-800">{ex.exerciseName}</span>
                             {ex.isPR && (
                               <span className="badge bg-amber-50 text-amber-700 border border-amber-200 text-[10px] py-0 px-1 font-bold flex items-center gap-0.5">
-                                <Sparkles size={9} /> PR
+                                <Trophy size={9} /> PR
                               </span>
                             )}
                           </div>

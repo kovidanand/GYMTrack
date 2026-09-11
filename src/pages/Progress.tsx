@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Activity, Clock, Flame, BarChart2, Trophy, Sparkles, ChevronRight, Calendar, List, Dumbbell } from 'lucide-react'
+import { Activity, Clock, Flame, BarChart2, Trophy, TrendingUp, ChevronRight, Calendar, List, Dumbbell } from 'lucide-react'
 import { PageHeader, StatCard, SectionHeader, EmptyState } from '@/components/shared'
 import { FourteenDayHistory } from '@/components/progress/FourteenDayHistory'
 import { useProgress } from '@/hooks/useProgress'
 import { useWorkouts } from '@/hooks/useWorkouts'
 import { formatDuration, formatRelativeDate, cn } from '@/lib/utils'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
+import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 import {
   XAxis,
   YAxis,
@@ -49,6 +50,35 @@ export default function Progress() {
       }
     })
   }, [personalRecords, history])
+
+  // Weekly Activity: last 7 days at a glance
+  const weeklyDays = useMemo(() => {
+    const today = new Date()
+    const days = []
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(today.getDate() - i)
+      const isToday = i === 0
+      const hasWorkout = history.some(s => {
+        if (s.status !== 'completed') return false
+        const sd = new Date(s.started_at)
+        return (
+          sd.getFullYear() === d.getFullYear() &&
+          sd.getMonth() === d.getMonth() &&
+          sd.getDate() === d.getDate()
+        )
+      })
+      days.push({
+        label: dayLabels[d.getDay()],
+        dateNumber: d.getDate(),
+        isToday,
+        hasWorkout
+      })
+    }
+    return days
+  }, [history])
 
   if (loading && history.length === 0) {
     return <div className="p-12 text-center text-surface-500 font-medium animate-pulse">Loading training progress...</div>
@@ -103,18 +133,90 @@ export default function Progress() {
         </div>
       </section>
 
-      {/* ── 2. EXERCISE PROGRESS ── */}
+      {/* ── 2. WEEKLY ACTIVITY (LAST 7 DAYS AT A GLANCE) ── */}
+      <section aria-label="Weekly Activity" className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">
+            Weekly Activity (Last 7 Days)
+          </h2>
+          <span className="text-[11px] font-semibold text-surface-500">
+            {weeklyDays.filter(d => d.hasWorkout).length} of 7 days trained
+          </span>
+        </div>
+
+        <div className="card p-4 sm:p-5 bg-white border border-surface-200 rounded-2xl shadow-xs">
+          <div className="grid grid-cols-7 gap-2">
+            {weeklyDays.map(day => (
+              <div
+                key={`${day.label}-${day.dateNumber}`}
+                className={cn(
+                  'flex flex-col items-center py-2.5 px-1 rounded-xl transition-all text-center',
+                  day.isToday
+                    ? 'bg-brand-50 border border-brand-300 ring-2 ring-brand-400/20'
+                    : 'bg-surface-50 border border-surface-100'
+                )}
+              >
+                <span className="text-[10px] font-bold uppercase text-surface-400">
+                  {day.label}
+                </span>
+                <span className={cn(
+                  'text-sm font-black mt-0.5',
+                  day.isToday ? 'text-brand-600' : 'text-surface-800'
+                )}>
+                  {day.dateNumber}
+                </span>
+
+                <div className="mt-2 h-4 flex items-center justify-center">
+                  {day.hasWorkout ? (
+                    <span 
+                      className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs" 
+                      title={`${day.label}: Workout logged`} 
+                    />
+                  ) : (
+                    <span className="w-2 h-0.5 bg-surface-300 rounded-full" title={`${day.label}: Rest day`} />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 3. EXERCISE PROGRESSION & SELECTOR ── */}
       <section aria-label="Exercise Progress" className="space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-surface-900 tracking-tight">Exercise Progress</h2>
-          <p className="text-xs text-surface-500 mt-0.5">Performance benchmarks and volume trajectory.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-surface-900 tracking-tight">Exercise Progression</h2>
+            <p className="text-xs text-surface-500 mt-0.5">Select any exercise to view its 1RM trajectory and detailed logs.</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              aria-label="Select exercise to view progression"
+              onChange={(e) => {
+                const ex = DEFAULT_EXERCISES.find(item => item.id === e.target.value)
+                if (ex) {
+                  setSelectedExercise({ id: ex.id, name: ex.name })
+                }
+              }}
+              defaultValue=""
+              className="bg-white border border-surface-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-surface-700 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-2xs"
+            >
+              <option value="" disabled>Select exercise curve...</option>
+              {DEFAULT_EXERCISES.map(ex => (
+                <option key={ex.id} value={ex.id}>
+                  {ex.name} ({ex.muscle_group})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Key Movement Progress Bars */}
         {exerciseProgressList.length > 0 && (
           <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">
-              Key Movement Progression
+              Key Movement Benchmarks
             </h3>
             <div className="space-y-4">
               {exerciseProgressList.map(ex => (
@@ -247,7 +349,7 @@ export default function Progress() {
                   <span className="text-xs font-semibold text-surface-500 mb-1">{pr.unit}</span>
                 </div>
                 <p className="text-[10px] text-surface-400 mt-2 flex items-center gap-1">
-                  <Sparkles size={11} className="text-amber-500" /> View 1RM & progression graph
+                  <TrendingUp size={11} className="text-brand-500" /> View 1RM & progression graph
                 </p>
               </div>
             ))

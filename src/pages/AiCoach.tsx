@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
-  Sparkles, 
   Send, 
   Bot, 
   User, 
@@ -115,7 +114,7 @@ export default function AiCoach() {
       {/* ── Baseline Guidance Banner if no workouts ── */}
       {!hasWorkouts && (
         <div className="p-4 rounded-xl bg-brand-50/80 border border-brand-200/80 flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-brand-600 mt-0.5 flex-shrink-0" />
+          <Bot className="w-5 h-5 text-brand-600 mt-0.5 flex-shrink-0" />
           <div className="text-xs text-brand-900">
             <span className="font-bold">AI Coach Baseline Mode:</span> Log your first workout session to unlock calculated 1RM metrics, plateau detection, and automated progressive overload cues. You can ask form and technique questions anytime in the <strong>Ask Coach</strong> tab!
           </div>
@@ -138,7 +137,7 @@ export default function AiCoach() {
               : "border-transparent text-surface-500 hover:text-surface-900"
           )}
         >
-          <Sparkles size={16} />
+          <TrendingUp size={16} />
           Recommendations ({safeAnalysis.recommendations.length})
         </button>
 
@@ -186,7 +185,7 @@ export default function AiCoach() {
           ) : (
             <div className="card p-6 bg-white border border-surface-200 text-center max-w-lg mx-auto space-y-3">
               <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
-                <Sparkles size={24} />
+                <TrendingUp size={24} />
               </div>
               <h4 className="font-bold text-surface-900 text-base">Progressive Overload Telemetry</h4>
               <p className="text-xs text-surface-600">
@@ -263,7 +262,7 @@ export default function AiCoach() {
             {messages.length === 0 ? (
               <div className="text-center py-10 max-w-md mx-auto space-y-4">
                 <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
-                  <Sparkles size={24} />
+                  <Bot size={24} />
                 </div>
                 <div>
                   <h4 className="font-bold text-surface-900 text-base">Ask your Coach anything</h4>

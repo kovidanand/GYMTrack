@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Heart, ArrowLeft, Loader2, PlayCircle, Trophy, Activity, Sparkles, Flame, History, Search, Lightbulb, AlertTriangle, Check, X as XIcon } from 'lucide-react'
+import { Heart, ArrowLeft, Loader2, PlayCircle, Trophy, Activity, Flame, History, Search, Lightbulb, AlertTriangle, Check, X as XIcon } from 'lucide-react'
 import { getExerciseBySlug, getRelatedExercises, toggleFavorite, getUserFavorites } from '@/lib/exercises'
 import { useAuth } from '@/context/AuthContext'
 import { ExerciseIllustration, ExerciseCard } from '@/components/exercise/ExerciseComponents'
@@ -250,7 +250,7 @@ export default function ExerciseDetail() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
                   <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Sparkles size={13} className="text-brand-500" /> Current 1RM
+                    <Trophy size={13} className="text-brand-500" /> Current 1RM
                   </p>
                   <p className="text-2xl font-black text-surface-900 tracking-tight">
                     {intelligence.isBodyweightOrTimed

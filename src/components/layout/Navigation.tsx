@@ -3,7 +3,6 @@ import { LayoutDashboard, BookOpen, TrendingUp, User, LogOut, Timer } from 'luci
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { GYMTrackLogo, Avatar } from '@/components/shared'
-import { ConnectionStatusBadge } from '@/components/shared/ConnectionStatusBadge'
 
 interface TopNavigationProps {
   onOpenTimer?: () => void
@@ -81,8 +80,7 @@ export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
             </button>
           )}
 
-          <ConnectionStatusBadge />
-
+          {/* Divider */}
           <div className="h-5 w-px bg-surface-200 mx-1" aria-hidden="true" />
 
           {/* Profile & Avatar */}
@@ -186,8 +184,6 @@ export function MobileTopBar({ onOpenTimer }: TopNavigationProps) {
             <span>Timer</span>
           </button>
         )}
-
-        <ConnectionStatusBadge />
 
         {user && (
           <NavLink
