@@ -3,20 +3,16 @@ import {
   Bot, 
   X, 
   Send, 
-  ChevronDown, 
-  RotateCcw, 
-  ExternalLink,
   Dumbbell,
-  CheckCircle2,
-  AlertCircle
+  CheckCircle2
 } from 'lucide-react'
 import { useAiCoach, type CoachChatMessage } from '@/hooks/useAiCoach'
 import { useAuth } from '@/context/AuthContext'
-import { Link } from 'react-router-dom'
+import { AiResponseRenderer, sanitizeAiContent } from '@/components/ai/AiResponseRenderer'
 
 export function FloatingAiCoach() {
   const { user, profile } = useAuth()
-  const { analysis, messages, isAsking, ask, refresh } = useAiCoach()
+  const { analysis, messages, isAsking, ask } = useAiCoach()
 
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
@@ -54,10 +50,10 @@ export function FloatingAiCoach() {
 
   const defaultQuickPrompts = [
     'What should I train today?',
+    'How did I progress this week?',
     'How do I do a bench press?',
-    'How do I do a deadlift?',
-    'What exercises target upper chest?',
-    'Should I increase my weight?'
+    'What weight did I use last time?',
+    "What's my best Bench Press?"
   ]
 
   if (!user) return null
@@ -72,11 +68,10 @@ export function FloatingAiCoach() {
           aria-label="Open AI Fitness Coach"
           id="floating-ai-coach-button"
         >
-          {/* Subtle pulse ring */}
           <span className="absolute -inset-0.5 rounded-full bg-brand-400 opacity-30 group-hover:opacity-75 animate-ping -z-10 pointer-events-none" />
           
           <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-            <Bot size={16} className="text-white animate-pulse" />
+            <Bot size={16} className="text-white" />
           </div>
           
           <span className="text-sm font-bold tracking-tight pr-0.5">
@@ -84,7 +79,7 @@ export function FloatingAiCoach() {
           </span>
 
           {analysis && analysis.recentSessionsCount > 0 && (
-            <span className="w-2 h-2 rounded-full bg-emerald-400" title="Telemetry synced" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400" title="Data synced" />
           )}
         </button>
       )}
@@ -94,7 +89,7 @@ export function FloatingAiCoach() {
         <div 
           className="w-[92vw] sm:w-[400px] h-[580px] max-h-[82vh] bg-white rounded-2xl shadow-2xl border border-surface-200 flex flex-col overflow-hidden animate-scale-in"
           role="dialog"
-          aria-label="GYMTrack AI Fitness Assistant"
+          aria-label="GYMTrack AI Fitness Coach"
         >
           {/* ── Header ── */}
           <div className="p-3.5 px-4 bg-gradient-to-r from-surface-900 to-surface-800 text-white flex items-center justify-between shadow-sm flex-shrink-0">
@@ -111,8 +106,8 @@ export function FloatingAiCoach() {
                 </h3>
                 <p className="text-[11px] text-surface-300 mt-0.5">
                   {analysis?.hasData 
-                    ? `Grounded in ${analysis.totalWorkouts} logged sessions` 
-                    : 'Grounded in your fitness goals & profile'}
+                    ? `Based on ${analysis.totalWorkouts} logged sessions` 
+                    : 'Ready to guide your training'}
                 </p>
               </div>
             </div>
@@ -128,7 +123,7 @@ export function FloatingAiCoach() {
             </div>
           </div>
 
-          {/* ── Telemetry Status Ribbon ── */}
+          {/* ── Status Ribbon ── */}
           <div className="p-2 px-3 bg-brand-50 border-b border-brand-100 flex items-center justify-between text-[11px] text-brand-800 flex-shrink-0">
             <span className="flex items-center gap-1 font-medium truncate">
               {analysis && analysis.hasData ? (
@@ -139,7 +134,7 @@ export function FloatingAiCoach() {
               ) : (
                 <>
                   <Dumbbell size={12} className="text-brand-600 flex-shrink-0" />
-                  <span>Telemetry active · Ready to guide your training</span>
+                  <span>Ready to guide your training</span>
                 </>
               )}
             </span>
@@ -157,7 +152,7 @@ export function FloatingAiCoach() {
                   Hello, {profile?.first_name || 'Athlete'}
                 </p>
                 <p>
-                  I am your contextual training assistant. Ask me about <strong>exercise technique</strong>, <strong>what to train today</strong>, your <strong>recent workouts</strong>, or <strong>target muscle groups</strong>.
+                  I can help with <strong>exercise technique</strong>, <strong>what to train today</strong>, your <strong>recent progress</strong>, or <strong>target muscle groups</strong>.
                 </p>
               </div>
             </div>
@@ -183,18 +178,14 @@ export function FloatingAiCoach() {
                       : 'bg-white border border-surface-200 rounded-tl-none text-surface-800'
                   }`}
                 >
-                  <div className="whitespace-pre-line break-words space-y-1">
-                    {msg.content}
-                  </div>
-
-                  {msg.imageUrl && (
-                    <div className="my-2.5 rounded-xl overflow-hidden border border-surface-200 bg-surface-50 p-1">
-                      <img 
-                        src={msg.imageUrl} 
-                        alt="Exercise Demonstration" 
-                        className="w-full max-h-48 object-contain rounded-lg bg-white"
-                        loading="lazy"
-                      />
+                  {msg.role === 'assistant' ? (
+                    <AiResponseRenderer 
+                      content={sanitizeAiContent(msg.content)} 
+                      imageUrl={msg.imageUrl}
+                    />
+                  ) : (
+                    <div className="whitespace-pre-line break-words">
+                      {msg.content}
                     </div>
                   )}
 
@@ -207,7 +198,7 @@ export function FloatingAiCoach() {
                   {msg.suggestedQuestions && msg.suggestedQuestions.length > 0 && (
                     <div className="mt-2.5 pt-2 border-t border-surface-100 space-y-1">
                       <p className="text-[10px] font-bold text-surface-400 uppercase tracking-wide">
-                        Suggested Follow-ups
+                        Follow-ups
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {msg.suggestedQuestions.slice(0, 2).map((sq, i) => (
@@ -236,7 +227,7 @@ export function FloatingAiCoach() {
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce" />
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:0.2s]" />
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:0.4s]" />
-                  <span className="text-[11px] font-medium ml-1">Analyzing telemetry...</span>
+                  <span className="text-[11px] font-medium ml-1">Thinking...</span>
                 </div>
               </div>
             )}
@@ -268,7 +259,7 @@ export function FloatingAiCoach() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about exercises, workouts, 1RM..."
+                placeholder="Ask about your training, exercises or progress..."
                 className="flex-1 bg-transparent border-0 text-xs text-surface-900 placeholder-surface-400 focus:outline-none py-1.5"
                 disabled={isAsking}
               />

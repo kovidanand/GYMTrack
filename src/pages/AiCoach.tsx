@@ -11,13 +11,13 @@ import {
   Dumbbell, 
   HelpCircle,
   TrendingUp,
-  Layers,
   ChevronRight
 } from 'lucide-react'
 import { PageHeader, EmptyState } from '@/components/shared'
 import { useAiCoach } from '@/hooks/useAiCoach'
 import { CoachSummary } from '@/components/ai/CoachSummary'
 import { CoachRecommendationCard } from '@/components/ai/CoachRecommendationCard'
+import { AiResponseRenderer, sanitizeAiContent } from '@/components/ai/AiResponseRenderer'
 import type { StructuredWorkoutAnalysis, ExerciseCoachAnalysis, CoachRecommendation } from '@/lib/coachAnalysis'
 import { cn } from '@/lib/utils'
 
@@ -37,11 +37,11 @@ export default function AiCoach() {
   const [inputQuery, setInputQuery] = useState('')
 
   const suggestedQuestions = [
-    'Should I increase my bench weight?',
-    'Which exercise improved the most?',
-    'Am I training consistently?',
-    'Why has my squat progress slowed?',
-    'How has my training volume changed?'
+    'What should I train today?',
+    'How did I progress this week?',
+    'How do I do a bench press?',
+    'What weight did I use last time?',
+    "What's my best Bench Press?"
   ]
 
   const handleSend = async (textToSend?: string) => {
@@ -65,7 +65,7 @@ export default function AiCoach() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3 animate-fade-in">
         <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
-        <p className="text-surface-500 font-medium text-sm">Analyzing workout telemetry & 1RM models...</p>
+        <p className="text-surface-500 font-medium text-sm">Loading training data...</p>
       </div>
     )
   }
@@ -86,7 +86,7 @@ export default function AiCoach() {
     biggestImprovement: null,
     potentialPlateau: null,
     recommendations: [],
-    recoveryNotice: 'Deterministic telemetry models are ready. Log your first workout session to track volume and 1RM progression.',
+    recoveryNotice: 'Log your first workout session to start tracking volume and progression.',
     recentWorkoutsSummary: []
   }
 
@@ -97,13 +97,13 @@ export default function AiCoach() {
       {/* ── Page Header ── */}
       <PageHeader
         title="AI Coach"
-        description="Grounded training intelligence and progressive overload analysis from your stored workout telemetry."
+        description="Training intelligence and progressive overload analysis based on your workout data."
         action={
           <div className="flex items-center gap-2">
             <button
               onClick={() => refresh()}
               className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5"
-              title="Refresh telemetry"
+              title="Refresh data"
             >
               <RotateCw size={13} /> Refresh
             </button>
@@ -116,13 +116,13 @@ export default function AiCoach() {
         <div className="p-4 rounded-xl bg-brand-50/80 border border-brand-200/80 flex items-start gap-3">
           <Bot className="w-5 h-5 text-brand-600 mt-0.5 flex-shrink-0" />
           <div className="text-xs text-brand-900">
-            <span className="font-bold">AI Coach Baseline Mode:</span> Log your first workout session to unlock calculated 1RM metrics, plateau detection, and automated progressive overload cues. You can ask form and technique questions anytime in the <strong>Ask Coach</strong> tab!
+            <span className="font-bold">Getting Started:</span> Log your first workout session to unlock progression metrics, plateau detection, and personalized overload cues. You can ask form and technique questions anytime in the <strong>Ask Coach</strong> tab.
           </div>
         </div>
       )}
 
       {/* ── Coach Key Summary ── */}
-      <section aria-label="Telemetry Overview">
+      <section aria-label="Overview">
         <CoachSummary analysis={safeAnalysis} />
       </section>
 
@@ -169,7 +169,7 @@ export default function AiCoach() {
           )}
         >
           <Database size={16} />
-          Telemetry Data ({safeAnalysis.exercises.length} lifts)
+          Exercise Data ({safeAnalysis.exercises.length})
         </button>
       </div>
 
@@ -187,35 +187,35 @@ export default function AiCoach() {
               <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
                 <TrendingUp size={24} />
               </div>
-              <h4 className="font-bold text-surface-900 text-base">Progressive Overload Telemetry</h4>
+              <h4 className="font-bold text-surface-900 text-base">Progressive Overload Analysis</h4>
               <p className="text-xs text-surface-600">
-                Log exercises and sets in your workouts to unlock personalized recommendations, 1RM progression tracking, and plateau detection.
+                Log exercises and sets in your workouts to unlock personalized recommendations, progression tracking, and plateau detection.
               </p>
               <div className="flex flex-wrap gap-2 justify-center pt-2">
                 <button
                   onClick={() => setActiveTab('ask')}
                   className="btn-primary text-xs py-2 px-3"
                 >
-                  <Bot size={14} /> Ask Form / Technique
+                  <Bot size={14} /> Ask Coach
                 </button>
                 <button
-                  onClick={() => navigate('/workouts')}
+                  onClick={() => navigate('/dashboard')}
                   className="btn-secondary text-xs py-2 px-3"
                 >
-                  <Dumbbell size={14} /> Start a Workout
+                  <Dumbbell size={14} /> Log a Workout
                 </button>
               </div>
             </div>
           )}
 
 
-          {/* Quick Questions Prompter */}
+          {/* Quick Questions */}
           <div className="card p-5 bg-gradient-to-r from-brand-50/70 to-surface-50 border-brand-100">
             <h3 className="font-bold text-surface-900 text-sm mb-2 flex items-center gap-2">
-              <HelpCircle size={16} className="text-brand-600" /> Have questions about your progression?
+              <HelpCircle size={16} className="text-brand-600" /> Questions about your training?
             </h3>
             <p className="text-xs text-surface-600 mb-3">
-              Ask about load adjustments, volume deltas, or individual exercise plateaus.
+              Ask about exercise technique, weight adjustments, or your progress.
             </p>
             <div className="flex flex-wrap gap-2">
               {suggestedQuestions.slice(0, 3).map(q => (
@@ -242,8 +242,8 @@ export default function AiCoach() {
                 <Bot size={18} />
               </span>
               <div>
-                <h3 className="font-bold text-sm text-surface-900">Interactive Training Q&A</h3>
-                <p className="text-[11px] text-surface-500">Every response is verified against your actual workout logs.</p>
+                <h3 className="font-bold text-sm text-surface-900">Ask Coach</h3>
+                <p className="text-[11px] text-surface-500">Responses are based on your actual workout data.</p>
               </div>
             </div>
 
@@ -267,7 +267,7 @@ export default function AiCoach() {
                 <div>
                   <h4 className="font-bold text-surface-900 text-base">Ask your Coach anything</h4>
                   <p className="text-xs text-surface-500 mt-1">
-                    Select a data-grounded question or type your own fitness inquiry below:
+                    Select a question or type your own below:
                   </p>
                 </div>
 
@@ -307,30 +307,26 @@ export default function AiCoach() {
                   <div className={cn("space-y-2 max-w-[85%] sm:max-w-[75%]", msg.role === 'user' ? "items-end" : "items-start")}>
                     <div
                       className={cn(
-                        "p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line",
+                        "p-4 rounded-2xl text-sm leading-relaxed",
                         msg.role === 'user'
                           ? "bg-brand-600 text-white rounded-tr-sm"
                           : "bg-surface-50 text-surface-900 border border-surface-200/80 rounded-tl-sm shadow-sm"
                       )}
                     >
-                      {msg.content}
-
-                      {msg.imageUrl && (
-                        <div className="my-3 rounded-xl overflow-hidden border border-surface-200 bg-white p-2">
-                          <img 
-                            src={msg.imageUrl} 
-                            alt="Exercise Demonstration" 
-                            className="w-full max-h-56 object-contain rounded-lg"
-                            loading="lazy"
-                          />
-                        </div>
+                      {msg.role === 'assistant' ? (
+                        <AiResponseRenderer 
+                          content={sanitizeAiContent(msg.content)} 
+                          imageUrl={msg.imageUrl}
+                        />
+                      ) : (
+                        <span>{msg.content}</span>
                       )}
                     </div>
 
                     {msg.supportingData && (
                       <div className="flex items-center gap-1.5 text-[11px] font-mono text-surface-400 px-1">
                         <Database size={11} className="text-brand-500 flex-shrink-0" />
-                        <span>Source: {msg.supportingData}</span>
+                        <span>{msg.supportingData}</span>
                       </div>
                     )}
 
@@ -359,7 +355,7 @@ export default function AiCoach() {
                 </div>
                 <div className="p-3 bg-surface-50 rounded-2xl border border-surface-200 flex items-center gap-2">
                   <Loader2 size={14} className="animate-spin text-brand-600" />
-                  <span>Evaluating workout telemetry...</span>
+                  <span>Thinking...</span>
                 </div>
               </div>
             )}
@@ -372,7 +368,7 @@ export default function AiCoach() {
                 value={inputQuery}
                 onChange={e => setInputQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask your coach (e.g., 'Should I increase my bench weight?')..."
+                placeholder="Ask about your training, exercises or progress..."
                 rows={1}
                 className="w-full bg-transparent resize-none py-2 px-3 text-sm focus:outline-none max-h-28"
               />
@@ -388,15 +384,15 @@ export default function AiCoach() {
         </div>
       )}
 
-      {/* ── TAB 3: TELEMETRY & TRANSPARENCY ── */}
+      {/* ── TAB 3: EXERCISE DATA ── */}
       {activeTab === 'telemetry' && (
         <div className="space-y-6 animate-fade-in">
           <div className="card overflow-hidden">
             <div className="p-4 border-b border-surface-100 flex items-center justify-between bg-surface-50/70">
               <div>
-                <h3 className="font-bold text-sm text-surface-900">Tracked Exercise Telemetry</h3>
+                <h3 className="font-bold text-sm text-surface-900">Exercise Performance Data</h3>
                 <p className="text-xs text-surface-500">
-                  Deterministic metrics computed from {safeAnalysis.totalWorkouts} workout sessions across the last 28 days.
+                  Metrics computed from {safeAnalysis.totalWorkouts} workout sessions across the last 28 days.
                 </p>
               </div>
               <span className="badge bg-brand-50 text-brand-700 font-bold border border-brand-200">
@@ -462,18 +458,18 @@ export default function AiCoach() {
         </div>
       )}
 
-      {/* ── Data Transparency & Safety Footer ── */}
+      {/* ── Data & Safety Footer ── */}
       <footer className="card p-4 bg-surface-50/80 border border-surface-200 text-xs text-surface-600 space-y-2">
         <div className="flex items-start gap-2">
           <Database size={15} className="text-brand-500 mt-0.5 flex-shrink-0" />
           <p>
-            <strong>Recovery Data Notice:</strong> {safeAnalysis.recoveryNotice}
+            <strong>Data Notice:</strong> {safeAnalysis.recoveryNotice}
           </p>
         </div>
         <div className="flex items-start gap-2">
           <ShieldAlert size={15} className="text-amber-500 mt-0.5 flex-shrink-0" />
           <p>
-            <strong>Safety Guardrail:</strong> GYMTrack AI Coach is a training performance assistant, not a physician or licensed healthcare provider. Never train through severe or sharp joint pain. Consult a medical professional for injury diagnosis and rehabilitation.
+            <strong>Safety:</strong> GYMTrack AI Coach is a training performance assistant, not a physician or licensed healthcare provider. Never train through severe or sharp joint pain. Consult a medical professional for injury diagnosis and rehabilitation.
           </p>
         </div>
       </footer>

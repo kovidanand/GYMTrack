@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { 
   Plus, 
   ChevronRight, 
-  Play, 
   CheckCircle2, 
   Dumbbell, 
   Flame, 
@@ -13,7 +12,6 @@ import {
   Mic, 
   Info,
   Calendar,
-  ArrowRight,
   TrendingUp
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -66,45 +64,72 @@ export default function Dashboard() {
   }, [history, today])
 
   const activeTodaySession = todaySessions.find(s => s.status === 'in_progress')
-  const completedTodaySession = todaySessions.find(s => s.status === 'completed')
+  const completedTodaySessions = todaySessions.filter(s => s.status === 'completed')
 
   const todayStatus: 'Completed' | 'In progress' | 'Not started' = activeTodaySession
     ? 'In progress'
-    : completedTodaySession
+    : completedTodaySessions.length > 0
     ? 'Completed'
     : 'Not started'
 
-  const todayExercises = todaySessions.reduce((acc, s) => acc + (s.total_exercises || 0), 0)
-  const todaySets = todaySessions.reduce((acc, s) => acc + (s.completed_sets || 0), 0)
-  const todayVolume = todaySessions.reduce((acc, s) => acc + (s.total_volume || 0), 0)
-  const todayDurationMins = todaySessions.reduce(
-    (acc, s) => acc + Math.round((s.duration_seconds || 0) / 60),
-    0
-  )
+  // ── Volume: Direct computation from workout_session_sets (weight × reps) ──
+  const todayMetrics = useMemo(() => {
+    let exercises = 0
+    let sets = 0
+    let volume = 0
+    let durationSecs = 0
+    const exerciseNames = new Set<string>()
 
-  // Next planned workout if user has an active plan
-  const planWorkouts = activePlan
-    ? workouts
-        .filter(w => w.plan_id === activePlan.id)
-        .sort((a, b) => (a.day_number || 0) - (b.day_number || 0))
-    : []
-  const todaysWorkout = planWorkouts.length > 0 ? planWorkouts[0] : null
+    for (const session of todaySessions) {
+      durationSecs += session.duration_seconds || 0
+
+      if (session.workout_session_sets && session.workout_session_sets.length > 0) {
+        for (const s of session.workout_session_sets) {
+          if (!s.completed) continue
+          sets += 1
+          volume += (Number(s.weight) || 0) * (Number(s.reps) || 0)
+          if (s.exercise_name) exerciseNames.add(s.exercise_name)
+        }
+      } else {
+        // Fallback to session-level aggregates if sets aren't loaded
+        sets += session.completed_sets || 0
+        volume += session.total_volume || 0
+        exercises += session.total_exercises || 0
+      }
+    }
+
+    // If we counted from sets, use the unique exercise names
+    if (exerciseNames.size > 0) {
+      exercises = exerciseNames.size
+    }
+
+    return {
+      exercises,
+      sets,
+      volume,
+      durationMins: Math.round(durationSecs / 60)
+    }
+  }, [todaySessions])
 
   // Activity breakdown for today's completed session(s)
   const todayExercisesBreakdown = useMemo(() => {
-    if (!completedTodaySession?.workout_session_sets) return []
-    const map = new Map<string, { name: string; sets: number; maxWeight: number }>()
-    for (const set of completedTodaySession.workout_session_sets) {
-      if (!set.completed) continue
-      const name = set.exercise_name || 'Exercise'
-      const cur = map.get(name) || { name, sets: 0, maxWeight: 0 }
-      cur.sets += 1
-      const w = Number(set.weight) || 0
-      if (w > cur.maxWeight) cur.maxWeight = w
-      map.set(name, cur)
+    const map = new Map<string, { name: string; sets: number; maxWeight: number; volume: number }>()
+    for (const session of completedTodaySessions) {
+      if (!session.workout_session_sets) continue
+      for (const set of session.workout_session_sets) {
+        if (!set.completed) continue
+        const name = set.exercise_name || 'Exercise'
+        const cur = map.get(name) || { name, sets: 0, maxWeight: 0, volume: 0 }
+        cur.sets += 1
+        const w = Number(set.weight) || 0
+        const r = Number(set.reps) || 0
+        if (w > cur.maxWeight) cur.maxWeight = w
+        cur.volume += w * r
+        map.set(name, cur)
+      }
     }
     return Array.from(map.values())
-  }, [completedTodaySession])
+  }, [completedTodaySessions])
 
   // ── 7-Day Weekly Snapshot (Mon to Sun) ──
   const weeklyDays = useMemo(() => {
@@ -122,17 +147,22 @@ export default function Dashboard() {
       const d = new Date(monday)
       d.setDate(monday.getDate() + i)
       const isTodayDate = isSameDay(d, today)
-      const hasWorkout = history.some(s => s.status === 'completed' && isSameDay(new Date(s.started_at), d))
+      const daySessionIds = history
+        .filter(s => s.status === 'completed' && isSameDay(new Date(s.started_at), d))
+        .map(s => s.id)
       days.push({
         label: dayLabels[i],
         dateNumber: d.getDate(),
         fullDate: d,
         isToday: isTodayDate,
-        hasWorkout
+        hasWorkout: daySessionIds.length > 0,
+        sessionId: daySessionIds[0] || null
       })
     }
     return days
   }, [history, today])
+
+  const weeklySessionCount = weeklyDays.filter(d => d.hasWorkout).length
 
   // ── Recent Personal Best ──
   const recentPB = useMemo(() => {
@@ -148,19 +178,38 @@ export default function Dashboard() {
       return "Log your first workout to start tracking volume, progression, and personal records."
     }
 
+    if (todayStatus === 'Completed' && todayMetrics.volume > 0) {
+      // Compare against previous session's volume
+      const previousCompletedSessions = history
+        .filter(s => s.status === 'completed' && !isSameDay(new Date(s.started_at), today))
+        .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
+      
+      if (previousCompletedSessions.length > 0) {
+        const prevVolume = previousCompletedSessions[0].total_volume || 0
+        if (prevVolume > 0) {
+          const diff = Math.round(((todayMetrics.volume - prevVolume) / prevVolume) * 100)
+          if (diff > 0) {
+            return `Today's volume is ${diff}% higher than your previous session. ${todayMetrics.exercises} exercises, ${todayMetrics.sets} sets completed.`
+          } else if (diff < -5) {
+            return `${todayMetrics.exercises} exercises completed today. Volume is lighter than your previous session — recovery-focused sessions count too.`
+          }
+        }
+      }
+      return `Solid effort today — ${todayMetrics.exercises} exercises, ${todayMetrics.sets} sets, ${todayMetrics.volume.toLocaleString()} kg total volume.`
+    }
+
     if (todayStatus === 'Completed') {
-      return `Solid effort today! You completed ${todayExercises} exercises across ${todaySets} sets (${todayVolume.toLocaleString()} kg total volume).`
+      return `You've completed ${todayMetrics.exercises} exercises across ${todayMetrics.sets} sets today.`
     }
 
-    const trainedThisWeek = weeklyDays.filter(d => d.hasWorkout).length
-    if (trainedThisWeek >= 3) {
-      return `Consistent week: You've completed ${trainedThisWeek} sessions this week. Ready for today's training?`
-    } else if (trainedThisWeek > 0) {
-      return `You're at ${trainedThisWeek} session${trainedThisWeek > 1 ? 's' : ''} this week. Tap '+ Log Training' to record today.`
+    if (weeklySessionCount >= 3) {
+      return `Consistent week: ${weeklySessionCount} sessions completed. Ready for today's training?`
+    } else if (weeklySessionCount > 0) {
+      return `${weeklySessionCount} session${weeklySessionCount > 1 ? 's' : ''} this week. Tap '+ Log Training' to record today.`
     }
 
-    return "No workouts recorded yet this week. Log your training in seconds with manual entry or voice."
-  }, [history, todayStatus, todayExercises, todaySets, todayVolume, weeklyDays])
+    return "No workouts recorded yet this week. Log your training in seconds."
+  }, [history, todayStatus, todayMetrics, weeklySessionCount, today])
 
   const handleOpenManualLog = () => {
     setLoggerMode('manual')
@@ -182,8 +231,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="animate-fade-in space-y-6 pb-20 max-w-4xl mx-auto">
-      {/* ── 1. WHAT DAY IS IT: GREETING & DATE HEADER ── */}
+    <div className="animate-fade-in space-y-5 pb-20 max-w-4xl mx-auto">
+      {/* ── 1. GREETING & DATE HEADER ── */}
       <section className="space-y-1">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight leading-tight">
@@ -208,19 +257,16 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ── 2. PRIMARY ACTION: LOG TODAY'S TRAINING (UNMISSABLE LAUNCHER) ── */}
+      {/* ── 2. PRIMARY ACTION: LOG TODAY'S TRAINING ── */}
       <section aria-label="Log today's workout">
-        <div className="card p-5 sm:p-6 bg-gradient-to-r from-brand-600 via-brand-500 to-brand-700 text-white rounded-2xl shadow-md space-y-4">
+        <div className="card p-4 sm:p-5 bg-gradient-to-r from-brand-600 via-brand-500 to-brand-700 text-white rounded-2xl shadow-md space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-brand-100">
-                Primary Action
-              </span>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-0.5">
+              <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-white">
                 Log What You Just Trained
               </h2>
-              <p className="text-xs sm:text-sm text-brand-100 max-w-md mt-1">
-                Log exercises, weights, and sets in seconds. Review summary before saving.
+              <p className="text-xs sm:text-sm text-brand-100 max-w-md mt-0.5">
+                Log exercises, sets, reps and weights in seconds.
               </p>
             </div>
 
@@ -230,10 +276,10 @@ export default function Dashboard() {
                 type="button"
                 onClick={handleOpenManualLog}
                 id="dashboard-log-training-btn"
-                className="bg-white text-brand-700 hover:bg-brand-50 active:scale-95 py-2.5 px-5 rounded-xl font-black text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all"
+                className="bg-white text-brand-700 hover:bg-brand-50 active:scale-95 py-2.5 px-5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all"
               >
                 <Plus size={16} className="stroke-[3]" />
-                <span>+ Log Training</span>
+                <span>Log Training</span>
               </button>
 
               <button
@@ -248,22 +294,12 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-
-          <div className="pt-2 border-t border-white/15 flex items-center justify-between text-xs text-brand-100">
-            <span>Prefer a guided stopwatch session?</span>
-            <button
-              onClick={() => navigate(todaysWorkout ? `/workouts/${todaysWorkout.id}/run` : '/workouts/quick')}
-              className="font-bold underline hover:text-white transition-colors flex items-center gap-1"
-            >
-              Start live routine <ArrowRight size={13} />
-            </button>
-          </div>
         </div>
       </section>
 
-      {/* ── 3. TODAY'S TRAINING SUMMARY (WHAT HAVE I DONE TODAY) ── */}
+      {/* ── 3. TODAY'S TRAINING SUMMARY ── */}
       <section aria-label="Today's activity record">
-        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
+        <div className="card p-4 sm:p-5 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider text-surface-400">
@@ -288,7 +324,7 @@ export default function Dashboard() {
             </span>
           </div>
 
-          {todayStatus === 'Completed' && completedTodaySession ? (
+          {todayStatus === 'Completed' && completedTodaySessions.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
@@ -297,16 +333,16 @@ export default function Dashboard() {
                     <span className="text-xs font-bold">Session Logged</span>
                   </div>
                   <h3 className="text-lg font-bold text-surface-900">
-                    {completedTodaySession.workout_name || 'Completed Workout'}
+                    {completedTodaySessions[0].workout_name || 'Completed Workout'}
                   </h3>
                   <p className="text-xs text-surface-500">
-                    {todayExercises} exercises • {todaySets} sets • {todayVolume.toLocaleString()} kg total volume
+                    {todayMetrics.exercises} exercises &middot; {todayMetrics.sets} sets &middot; {todayMetrics.volume.toLocaleString()} kg total volume
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => navigate(`/history/${completedTodaySession.id}`)}
+                    onClick={() => navigate(`/history/${completedTodaySessions[0].id}`)}
                     id="dashboard-view-record-btn"
                     className="btn-secondary py-2 px-3.5 text-xs font-bold inline-flex items-center gap-1"
                   >
@@ -329,15 +365,19 @@ export default function Dashboard() {
               {todayExercisesBreakdown.length > 0 && (
                 <div className="divide-y divide-surface-100 border-t border-surface-100 pt-2">
                   {todayExercisesBreakdown.map((ex, idx) => (
-                    <div key={idx} className="py-2.5 flex items-center justify-between text-xs sm:text-sm">
+                    <button
+                      key={idx}
+                      onClick={() => navigate('/progress')}
+                      className="w-full py-2.5 flex items-center justify-between text-xs sm:text-sm hover:bg-surface-50 -mx-1 px-1 rounded-lg transition-colors text-left"
+                    >
                       <div className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
                         <span className="font-bold text-surface-900 truncate">{ex.name}</span>
                       </div>
                       <span className="text-surface-500 font-mono text-xs">
-                        {ex.sets} sets {ex.maxWeight > 0 ? `• max ${ex.maxWeight} kg` : ''}
+                        {ex.sets} sets {ex.maxWeight > 0 ? `· max ${ex.maxWeight} kg` : ''}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -346,26 +386,25 @@ export default function Dashboard() {
             <div className="space-y-3">
               <div>
                 <h3 className="text-base font-bold text-surface-900">
-                  {activeTodaySession.workout_name || 'Live Workout in Progress'}
+                  {activeTodaySession.workout_name || 'Workout in Progress'}
                 </h3>
                 <p className="text-xs text-surface-500">
-                  Session started • {todaySets} completed sets so far
+                  Session started &middot; {todayMetrics.sets} completed sets so far
                 </p>
               </div>
               <button
                 onClick={() => navigate(`/workouts/${activeTodaySession.workout_id || 'quick'}/run`)}
                 className="btn-primary py-2 px-4 text-xs font-bold inline-flex items-center gap-1.5"
               >
-                <Play size={13} className="fill-white" />
                 Continue Active Workout
               </button>
             </div>
           ) : (
             <div className="p-4 rounded-xl bg-surface-50 border border-surface-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold text-surface-800">No workout recorded yet today</p>
+                <p className="text-xs font-bold text-surface-800">No training recorded today</p>
                 <p className="text-xs text-surface-500 mt-0.5">
-                  Finished a workout? Tap the button to log your movements and sets.
+                  Start logging the exercises you complete today.
                 </p>
               </div>
               <button
@@ -374,90 +413,108 @@ export default function Dashboard() {
                 className="btn-secondary py-1.5 px-3.5 text-xs font-bold inline-flex items-center gap-1 self-start sm:self-auto"
               >
                 <Plus size={13} />
-                Log Today
+                Log Training
               </button>
             </div>
           )}
         </div>
       </section>
 
-      {/* ── 4. MIXED INFORMATION HIERARCHY: METRIC TILES ── */}
+      {/* ── 4. METRIC TILES ── */}
       <section aria-label="Today's metrics">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {/* Exercises Tile */}
-          <div className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1">
+          <button
+            onClick={() => navigate('/progress')}
+            className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1 text-left hover:border-brand-300 transition-colors"
+          >
             <div className="flex items-center justify-between text-surface-400">
               <span className="text-[11px] font-bold uppercase tracking-wider">Exercises</span>
               <Dumbbell size={16} className="text-brand-500" />
             </div>
             <p className="text-2xl font-black text-surface-900 tracking-tight">
-              {todayExercises}
+              {todayMetrics.exercises}
             </p>
             <p className="text-[10px] text-surface-400">logged today</p>
-          </div>
+          </button>
 
           {/* Sets Tile */}
-          <div className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1">
+          <button
+            onClick={() => navigate('/progress')}
+            className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1 text-left hover:border-brand-300 transition-colors"
+          >
             <div className="flex items-center justify-between text-surface-400">
               <span className="text-[11px] font-bold uppercase tracking-wider">Sets</span>
               <Layers size={16} className="text-brand-500" />
             </div>
             <p className="text-2xl font-black text-surface-900 tracking-tight">
-              {todaySets}
+              {todayMetrics.sets}
             </p>
             <p className="text-[10px] text-surface-400">completed sets</p>
-          </div>
+          </button>
 
-          {/* Volume Highlight Card */}
-          <div className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1">
+          {/* Volume Tile */}
+          <button
+            onClick={() => navigate('/progress')}
+            className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1 text-left hover:border-brand-300 transition-colors"
+          >
             <div className="flex items-center justify-between text-surface-400">
               <span className="text-[11px] font-bold uppercase tracking-wider">Volume</span>
               <Flame size={16} className="text-amber-500" />
             </div>
             <p className="text-2xl font-black text-surface-900 tracking-tight">
-              {todayVolume.toLocaleString()} <span className="text-xs font-semibold text-surface-500">kg</span>
+              {todayMetrics.volume.toLocaleString()} <span className="text-xs font-semibold text-surface-500">kg</span>
             </p>
             <p className="text-[10px] text-surface-400">workload lifted</p>
-          </div>
+          </button>
 
           {/* Duration Tile */}
-          <div className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1">
+          <button
+            onClick={() => navigate('/progress')}
+            className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1 text-left hover:border-brand-300 transition-colors"
+          >
             <div className="flex items-center justify-between text-surface-400">
               <span className="text-[11px] font-bold uppercase tracking-wider">Duration</span>
               <Clock size={16} className="text-indigo-500" />
             </div>
             <p className="text-2xl font-black text-surface-900 tracking-tight">
-              {todayDurationMins} <span className="text-xs font-semibold text-surface-500">min</span>
+              {todayMetrics.durationMins} <span className="text-xs font-semibold text-surface-500">min</span>
             </p>
             <p className="text-[10px] text-surface-400">active training time</p>
-          </div>
+          </button>
         </div>
       </section>
 
       {/* ── 5. 7-DAY WEEKLY SNAPSHOT STRIP ── */}
       <section aria-label="Weekly training snapshot">
-        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-3">
+        <div className="card p-4 sm:p-5 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar size={16} className="text-brand-600" />
               <h2 className="text-sm font-bold uppercase tracking-wide text-surface-900">
-                Weekly Snapshot
+                This Week
               </h2>
             </div>
             <span className="text-[11px] font-semibold text-surface-400">
-              {weeklyDays.filter(d => d.hasWorkout).length} of 7 days completed
+              {weeklySessionCount} session{weeklySessionCount !== 1 ? 's' : ''}
             </span>
           </div>
 
           <div className="grid grid-cols-7 gap-2 pt-1">
             {weeklyDays.map(day => (
-              <div
+              <button
                 key={day.label}
+                onClick={() => {
+                  if (day.sessionId) navigate(`/history/${day.sessionId}`)
+                }}
+                disabled={!day.sessionId}
                 className={cn(
                   'flex flex-col items-center py-2.5 px-1 rounded-xl transition-all text-center',
                   day.isToday
                     ? 'bg-brand-50 border border-brand-300 ring-2 ring-brand-400/20'
-                    : 'bg-surface-50 border border-surface-100'
+                    : 'bg-surface-50 border border-surface-100',
+                  day.sessionId && !day.isToday && 'hover:border-brand-200 cursor-pointer',
+                  !day.sessionId && 'cursor-default'
                 )}
               >
                 <span className="text-[10px] font-bold uppercase text-surface-400">
@@ -480,7 +537,7 @@ export default function Dashboard() {
                     <span className="w-2 h-0.5 bg-surface-300 rounded-full" title={`${day.label}: Rest day`} />
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
