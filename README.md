@@ -1,203 +1,250 @@
 <div align="center">
 
-#  GYMTrack — Production Fitness Intelligence & Offline Tracking Platform
+# ⚡ GYMTrack
+### Next-Generation Fitness Intelligence & Offline-First Strength Tracking
 
-**Intelligent. Resilient. Data-Grounded.**
+*Log what you trained. Zero friction. Zero data loss in the gym basement.*
 
-An enterprise-grade, full-stack fitness tracking application engineered for high reliability, offline resilience in connection-poor environments, transparent 1RM progression analytics, and evidence-grounded AI coaching.
-
-[![Live Demo](https://img.shields.io/badge/Live_Demo-gymtrack--fitness--kovid.vercel.app-00C853?style=for-the-badge&logo=vercel&logoColor=white)](https://gymtrack-fitness-kovid.vercel.app)
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-gymtrack--fitness--kovid.vercel.app-00E599?style=for-the-badge&logo=vercel&logoColor=black)](https://gymtrack-fitness-kovid.vercel.app)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20Postgres%20%2B%20RLS-3FCF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
-[![IndexedDB](https://img.shields.io/badge/Storage-IndexedDB%20Offline%20Engine-FFA116?style=flat-square&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
-[![Google Gemini](https://img.shields.io/badge/AI-Gemini%201.5%20Edge%20Coach-8E75B2?style=flat-square&logo=google&logoColor=white)](https://ai.google.dev)
-[![Vercel](https://img.shields.io/badge/Deployed-Vercel%20SPA-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
+[![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%2015%20%2B%20RLS-3FCF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
+[![IndexedDB](https://img.shields.io/badge/Storage-IndexedDB%20Sync%20Engine-FFA116?style=flat-square&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+[![Google Gemini](https://img.shields.io/badge/AI-Gemini%201.5%20Flash-8E75B2?style=flat-square&logo=google&logoColor=white)](https://ai.google.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
 </div>
 
 ---
 
-## 📌 Executive Product Overview
+## 💡 The Problem & The GYMTrack Vision
 
-GYMTrack solves a major real-world fitness software dilemma: **gym basements have notoriously poor cellular reception**, yet lifters need real-time workout logging, progressive overload tracking, and personalized coaching without data loss or lagging UIs.
+Most workout apps fall into one of two traps:
+1. **They fail in underground basements**: When cell signals drop between concrete walls, cloud-dependent trackers freeze, spin indefinitely, or lose entire workout sessions.
+2. **They feel like bloated spreadsheets**: Convoluted menu hierarchies, mandatory stopwatch modes, and clunky sidebars turn what should be a 5-second log into a workout interruption.
 
-GYMTrack combines a **zero-loss IndexedDB local caching engine** with an **asynchronous reconciliation queue** to allow seamless logging even in total airplane mode. On top of this rock-solid offline-first foundation, GYMTrack implements transparent **Epley 1RM progression analytics**, rigorous **Row Level Security (RLS)** user isolation, and a **data-grounded AI Fitness Coach** powered by Google Gemini and Supabase Edge Functions with a deterministic fallback engine.
+**GYMTrack re-imagines the fitness tracking workflow:**
+```
+  ┌─────────────┐       ┌─────────────┐       ┌─────────────┐       ┌─────────────┐
+  │  OPEN APP   │  ──▶  │  SEE TODAY  │  ──▶  │    TAP +    │  ──▶  │ CONFIRM LOG │
+  └─────────────┘       └─────────────┘       └─────────────┘       └─────────────┘
+                                                                           │
+                                                                           ▼
+                                                               ┌──────────────────────┐
+                                                               │  DASHBOARD UPDATES   │
+                                                               │  (VOLUME & 1RM PRs)  │
+                                                               └──────────────────────┘
+```
+
+Built with modern consumer UX principles—a clean top navigation bar, glassmorphism design tokens, instant one-tap exercise logging, set-accurate volume aggregation, and an evidence-grounded AI coach that never hallucinates.
 
 ---
 
-## 🎯 Key Architectural Pillars & Features
+## ✨ Core Feature Highlights
 
-### 1. 🛡️ Bulletproof Authentication & Security
-- **Email OTP & Magic Codes**: Secure passwordless verification codes and standard credentials.
-- **Google OAuth with PKCE**: RFC 7636 Proof Key for Code Exchange preventing authorization code injection attacks.
-- **Session Persistence & Auto-Refresh**: Seamless token lifecycle management with automatic refresh in local storage.
-- **Multi-Tenant Row Level Security (RLS)**: Strict database-level isolation where `auth.uid() = user_id` enforces complete privacy across all tables (`profiles`, `workouts`, `workout_sessions`, `workout_session_sets`, `ai_conversations`).
-- **Zero Token Leakage in Cache**: IndexedDB explicitly stores only non-sensitive workout definitions, session queue state, and exercise metadata. Passwords, auth tokens, OTP codes, and API secrets are never persisted in IndexedDB or client state.
+### 1. ⚡ Consumer-Grade Frictionless Logging
+- **Instant Top-Level Action**: Direct access to `+ Log Training` without navigating nested submenus.
+- **Accurate Set Analytics**: Daily volume calculated directly from completed sets ($\text{weight} \times \text{reps}$) with dynamic session aggregations.
+- **Interactive Daily Stream**: Click any exercise row to inspect history, tap metric tiles (Exercises, Sets, Volume, Duration) to jump directly into deep progress analytics, and select weekly calendar days for instant logs.
+- **Contextual Daily Insights**: Grounded coaching summaries that analyze actual training deltas against prior sessions.
 
-### 2. ⚡ Offline Sync & Local-First Resilience (Basement Mode)
-- **IndexedDB Sync Engine**: Local IndexedDB database managing `sync_queue`, `active_sessions`, and `cached_workouts`.
-- **Automatic Network Reconnection Listener**: Real-time detection of online/offline status with an interactive sync indicator badge.
-- **Idempotent Queue Replay**: Retries pending workout writes sequentially upon reconnection, deduplicating inflight requests to prevent duplicate session records.
-- **Survives Refresh & Interruption**: Active workouts persist in IndexedDB across browser reloads, accidental tab closures, or phone screen timeouts.
+### 2. 📶 "Basement Mode" — Zero-Loss Offline Resilience
+- **Persistent IndexedDB Engine**: Operates independently of network availability via local `sync_queue`, `cached_workouts`, and `active_sessions`.
+- **Automatic Network Reconnection**: Detects network transitions with an interactive sync indicator badge.
+- **Idempotent Queue Replay**: Retries pending mutations sequentially upon reconnection, deduplicating inflight payloads to ensure zero duplicate sessions.
+- **Session Continuity**: Active workouts persist seamlessly across tab refreshes, background suspensions, and accidental closures.
 
-### 3. 📈 Exercise Intelligence & 1RM Overload Tracking
-- **Standardized Epley Formula**: Evaluates dynamic One-Rep Max (1RM):
+### 3. 📈 Precision 1RM & Overload Analytics
+- **Standardized Epley Progression Formula**:
   $$\text{1RM} = \text{weight} \times \left(1 + \frac{\text{reps}}{30}\right)$$
-- **Transparent Progression Metrics**: Displays estimated maxes and overload velocity with mathematical explanations rather than opaque scores.
-- **Differentiated Exercise Types**: Safely distinguishes weighted barbell/dumbbell movements from bodyweight, assisted, and time-based exercises, preventing inaccurate 1RM estimations.
-- **Volume & PR Tracking**: Automatic detection and celebration of all-time Personal Records (PRs) by weight and calculated 1RM.
+- **Transparent Velocity Metrics**: Real math-backed estimations rather than arbitrary proprietary fatigue scores.
+- **Differentiated Movement Classification**: Distinguishes weighted barbell/dumbbell movements from bodyweight, assisted, and duration-based exercises.
+- **All-Time PR Celebrations**: Automatically flags, archives, and displays Personal Records by weight, volume, and estimated 1RM.
 
-### 4. 🤖 Grounded AI Coach & Deterministic Fallback Engine
-- **Strict Data Grounding**: The AI Coach operates solely on the user's authentic logged workout sessions, actual volume trends, real rest days, and calculated PRs.
-- **Zero Hallucination Guardrails**: Prohibits fabricating biometric recovery stats (e.g., HRV, sleep stages) unless explicitly provided, and includes an explicit transparency disclosure.
-- **Medical Safety Filtering**: Automatically screens prompt queries for medical advice or injury treatment requests, returning responsible medical disclaimers.
-- **Deterministic Offline Fallback**: If the Google Gemini Edge Function is unreachable or network is offline, a deterministic heuristic engine analyzes the user's local volume and frequency patterns to supply instantaneous, rule-based training guidance.
+### 4. 🧠 Grounded AI Coach & Structured UI Renderer
+- **Dual-Engine Architecture**: Powered by **Google Gemini 1.5 Flash** (via Supabase Edge Functions) with a robust, rule-based **Deterministic Local Engine** fallback when offline.
+- **Strict Guardrails**: Operates strictly on authentic user log data. No fabricated recovery stats or synthetic HRV claims.
+- **Native `AiResponseRenderer`**: Completely eliminates raw markdown formatting (`###`, `**`, `*`) and decorative sparkles in favor of native, responsive UI components:
+  - Clean typographic hierarchy (`h3`, `h4`, styled lists, parameter chips)
+  - Interactive exercise cards with anatomical target badges and visual guides
+  - Biomechanical cues and structured progression tables
+- **Dual Form Factor**: Available as an unobtrusive **Floating Mobile Drawer** across all screens or as a dedicated **Full-Page Intelligence Workspace**.
 
-### 5. ⏱️ Live Workout Runner
-- Set-by-set execution interface with previous session benchmarks displayed inline.
-- Integrated rest timer with audio-visual notifications.
-- Dynamic exercise re-ordering and ad-hoc set additions during live training.
-- Instant session breakdown and volume summary upon completion.
-
----
-
-## 🛠️ Technology Stack
-
-| Domain | Technology | Implementation Details |
-|---|---|---|
-| **Frontend Framework** | React 18.3 | TypeScript 5.5, Vite 5 build system with tree-shaking |
-| **Styling & UI** | Tailwind CSS 3, Radix UI | Headless accessible UI primitives (Dialog, Tabs, Avatar, Tooltip) |
-| **State & Storage** | React Context + IndexedDB | Dual-layer persistence with local-first sync queue |
-| **Data Visualization**| Recharts | Responsive volume load trends, PR timelines, and frequency heatmaps |
-| **Backend & Auth** | Supabase (PostgreSQL 15) | Row Level Security (RLS), GoTrue Auth (PKCE & Email OTP) |
-| **Serverless AI** | Supabase Edge Functions | Deno runtime, Google Gemini 1.5 Flash API with server-side secrets |
-| **Error Handling** | React ErrorBoundary | Global crash resilience with graceful recovery and reload actions |
-| **Hosting & CI/CD** | Vercel | Single-Page Application rewrites and automated production builds |
+### 5. 🛡️ Enterprise Security & Multi-Tenant Privacy
+- **Row Level Security (RLS)**: PostgreSQL enforces strict user isolation (`auth.uid() = user_id`) across all tables.
+- **RFC 7636 PKCE OAuth**: Hardened authorization code exchange for Google Sign-In and passwordless Email OTP verification.
+- **Zero Token Leakage**: Tokens and secrets are never cached inside IndexedDB. API keys remain securely vaulted inside Supabase Edge Function environment variables.
 
 ---
 
-## 🏗️ System Architecture & Data Flow
+## 🏛️ System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              GYMTrack Client (Vite + React)                  │
+│                            GYMTrack Web App (React 18 + Vite)                │
 ├───────────────────┬───────────────────────────────┬─────────────────────────┤
-│    Auth Layer     │      State & Components       │   Local Offline Engine  │
-│  - Supabase Auth  │  - Dashboard & Workout Runner │   - IndexedDB Storage   │
-│  - PKCE / OTP     │  - 1RM Epley Analytics        │   - Sync Queue Manager  │
-│  - Protected Route│  - ErrorBoundary Protection   │   - Network Listeners   │
+│    Auth Layer     │      State & UI Engine        │   Local Offline Engine  │
+│  - Supabase Auth  │  - Top Navigation & Dashboard │   - IndexedDB Storage   │
+│  - PKCE / OTP     │  - 1RM Epley Analytics        │   - Sync Queue Replay   │
+│  - Protected Route│  - AiResponseRenderer         │   - Network Listeners   │
 └─────────┬─────────┴───────────────┬───────────────┴────────────┬────────────┘
           │                         │                            │
           ▼                         ▼                            ▼
 ┌──────────────────┐      ┌──────────────────┐      ┌─────────────────────────┐
-│ Supabase Auth API│      │ Supabase PostgREST│     │ Supabase Edge Functions │
-│ - Token Refresh  │      │ - RLS Enforced   │      │ - ai-coach (Gemini 1.5) │
-│ - User Session   │      │ - PostgreSQL DB  │      │ - Server Secret Guard   │
+│  Supabase Auth   │      │ Supabase PostgREST│     │ Supabase Edge Functions │
+│ - Token Refresh  │      │ - PostgreSQL 15  │      │ - ai-coach (Gemini 1.5) │
+│ - Session Guard  │      │ - Multi-Tenant RLS│     │ - Server Secret Vault   │
 └──────────────────┘      └──────────────────┘      └─────────────────────────┘
 ```
 
 ---
 
-## 🔒 Security & Row Level Security (RLS) Policies
+## 💻 Tech Stack
 
-All tables are protected by PostgreSQL Row Level Security to prevent unauthorized access across tenants:
-
-- **`profiles`**: `auth.uid() = id` (Users manage their own fitness profile).
-- **`workout_plans`**: `auth.uid() = user_id` (Private training routines).
-- **`workouts`**: `auth.uid() = user_id` (Custom workout definitions).
-- **`workout_exercises`**: Inherits workout ownership via foreign key constraints.
-- **`workout_sessions`**: `auth.uid() = user_id` (Full session logs).
-- **`workout_session_sets`**: Inherits session ownership via `workout_sessions.user_id = auth.uid()`.
-- **`ai_conversations` & `ai_messages`**: `auth.uid() = user_id` (Private coaching history).
-
-> **API Key Safety Notice**: Frontend bundles contain only public `VITE_SUPABASE_ANON_KEY`. All Gemini AI API secrets remain isolated inside Supabase Edge Function environment vaults.
+| Domain | Technology | Purpose & Implementation |
+|---|---|---|
+| **Frontend Framework** | [React 18.3](https://react.dev) | High-performance component model with functional hooks |
+| **Language** | [TypeScript 5.5](https://www.typescriptlang.org) | End-to-end type safety, strict compile checks, zero-lint debt |
+| **Build & Dev Server** | [Vite 5.4](https://vitejs.dev) | Lightning-fast HMR and optimized production Rollup bundling |
+| **Styling & Design** | [Tailwind CSS 3.4](https://tailwindcss.com) | Curated dark-mode theme, glassmorphism, responsive grid system |
+| **UI Primitives** | [Radix UI](https://www.radix-ui.com) & [Lucide Icons](https://lucide.dev) | Accessible, unstyled UI primitives and consistent iconography |
+| **Charts & Visuals** | [Recharts](https://recharts.org) | SVG-rendered volume loads, frequency trends, and PR progression curves |
+| **Offline Persistence** | [IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) | Low-level browser database for offline logging & sync queue |
+| **Cloud Database** | [Supabase PostgreSQL 15](https://supabase.com) | Enterprise relational storage with Row Level Security (RLS) policies |
+| **Authentication** | [Supabase GoTrue](https://supabase.com/docs/guides/auth) | Google OAuth (PKCE flow), Email OTP, and automatic session refresh |
+| **Serverless AI** | [Supabase Edge Functions](https://supabase.com/docs/guides/functions) | Deno-based secure proxy communicating with Google Gemini 1.5 Flash |
+| **Deployment** | [Vercel](https://vercel.com) | Automated CI/CD pipeline, global CDN edge distribution, SPA routing |
 
 ---
 
-## 🚀 Local Development Setup
+## 📁 Repository Structure
+
+```
+GYMTrack/
+├── public/                     # Static assets & web manifest
+├── src/
+│   ├── components/
+│   │   ├── ai/                 # AI Assistant components
+│   │   │   ├── AiResponseRenderer.tsx  # Structured UI Markdown transformer
+│   │   │   └── FloatingAiCoach.tsx     # Contextual mobile/desktop floating panel
+│   │   ├── auth/               # Authentication modals & forms (OTP, Google)
+│   │   ├── common/             # Reusable UI primitives (Buttons, Cards, Modals)
+│   │   ├── navigation/         # Responsive Top Navigation & Mobile Bar
+│   │   └── workouts/           # Training Logger, Set Inputs, Exercise Selector
+│   ├── hooks/                  # Custom React hooks (useAuth, useProgress, useAiCoach)
+│   ├── lib/                    # Core application libraries
+│   │   ├── coachProvider.ts    # Dual-mode AI Coach & deterministic heuristics
+│   │   ├── indexedDb.ts        # Offline storage & sync queue management
+│   │   ├── supabase.ts         # Supabase client singleton & auth helpers
+│   │   └── utils.ts            # Formatting, calculations (Epley 1RM, volume)
+│   ├── pages/                  # Main route pages
+│   │   ├── Dashboard.tsx       # Primary action dashboard & daily activity stream
+│   │   ├── AiCoach.tsx         # Full-page interactive AI intelligence portal
+│   │   ├── Workouts.tsx        # Workout routine builder & exercise library
+│   │   ├── Progress.tsx        # In-depth analytics, PR timelines & charts
+│   │   └── Profile.tsx         # Account settings & data export
+│   ├── types/                  # TypeScript domain declarations
+│   ├── App.tsx                 # Route declarations & global providers
+│   └── main.tsx                # Application mount point
+├── supabase/
+│   ├── functions/ai-coach/     # Deno edge function integrating Google Gemini
+│   └── migrations/             # Incremental SQL migrations with RLS policies
+├── package.json
+├── tailwind.config.js
+├── tsconfig.json
+└── vite.config.ts
+```
+
+---
+
+## 🚀 Quickstart & Local Setup
 
 ### Prerequisites
-- **Node.js** ≥ 18.x
-- **npm** ≥ 9.x
-- A [Supabase](https://supabase.com) project with PostgreSQL instance
-- (Optional) [Google AI Studio API Key](https://aistudio.google.com) for Gemini Edge Function
+- **Node.js**: `v18.0.0` or higher
+- **npm**: `v9.0.0` or higher
+- A free [Supabase](https://supabase.com) account
 
-### 1. Clone & Install Dependencies
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/kovidanand/GYMTrack.git
 cd GYMTrack
+```
+
+### 2. Install Dependencies
+```bash
 npm install
 ```
 
-### 2. Environment Configuration
-Create a `.env.local` file in the root directory:
+### 3. Environment Configuration
+Create a `.env.local` file in the project root:
 ```env
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-### 3. Run Database Migrations
-Apply the migrations sequentially in your Supabase SQL Editor:
-1. `supabase/migrations/001_profiles.sql` — User profiles and triggers
-2. `supabase/migrations/002_exercises.sql` — Exercise reference library
-3. `supabase/migrations/003_workouts.sql` — Workouts, plans, exercises
-4. `supabase/migrations/004_progress.sql` — Workout session tracking
-5. `supabase/migrations/005_ai_coach.sql` — AI Coach conversation tables
+### 4. Database Setup
+Execute the SQL migrations located in `supabase/migrations/` inside your Supabase SQL Editor:
+1. `001_profiles.sql` — User profiles, settings, and update triggers
+2. `002_exercises.sql` — Exercise dictionary with biomechanics and target muscles
+3. `003_workouts.sql` — Workout routines, splits, and exercise orders
+4. `004_progress.sql` — Workout sessions, sets, volume, and 1RM calculation helpers
+5. `005_ai_coach.sql` — Chat history and conversation thread isolation
 
-### 4. Deploy AI Edge Function (Optional)
-```bash
-supabase functions deploy ai-coach
-supabase secrets set GEMINI_API_KEY=your-gemini-key
-```
-
-### 5. Start Development Server
+### 5. Start Local Development
 ```bash
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
+Visit `http://localhost:5173` to explore GYMTrack locally.
 
 ---
 
-## 🧪 Verification & Production Build
+## 🧪 Quality Assurance & Build Checks
 
-To validate code quality, strict typing, and build integrity:
+To verify code integrity, strict type contracts, and production assets:
 
 ```bash
-# Run strict TypeScript validation
+# TypeScript strict type checking
 npx tsc --noEmit
 
-# Compile production bundle with Vite
+# Production bundle compilation
 npm run build
 
-# Preview production build locally
+# Preview optimized production bundle
 npm run preview
 ```
 
 ---
 
-## 🌐 Production Deployment
+## 🔒 Security & Data Integrity
 
-GYMTrack is configured for continuous zero-downtime deployment on **Vercel**:
-
-1. Link the repository to your Vercel project.
-2. In Vercel Project Settings → **Environment Variables**, provide:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-3. In Supabase Dashboard → **Authentication** → **URL Configuration**:
-   - Add your production domain: `https://gymtrack-fitness-kovid.vercel.app`
-   - Add OAuth Redirect URL: `https://gymtrack-fitness-kovid.vercel.app/`
-4. Deploy — `vercel.json` ensures client-side routing rewrites are respected.
+- **Row Level Security (RLS)**: No client can read, update, or delete records belonging to another `user_id`. PostgreSQL verifies `auth.uid() = user_id` at the database kernel level.
+- **Edge Function Secrets**: Client bundles only contain the public anon key. The `GEMINI_API_KEY` is securely injected in the edge runtime and never exposed to browser memory.
+- **Sanitized Inputs**: All user inputs undergo client and schema-level validation to prevent injection or invalid numeric formats.
 
 ---
 
-## 🔮 Future Enhancements
-- **Wearable Device Integration**: Apple HealthKit and Google Health Connect sync.
-- **Plate Calculator & Barbell Loader**: Visual rack and plate configuration helper during live sets.
-- **Social Workout Sharing**: Shareable deep links for community routines with read-only previews.
-- **Camera Form Check**: On-device lightweight pose detection for squat and deadlift path tracking.
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+Feel free to open an issue or submit a Pull Request following standard GitHub workflows:
+
+1. Fork the Project (`gh repo fork kovidanand/GYMTrack`)
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'feat: add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
+
+## 📄 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
 
 <div align="center">
+
+**Built with passion for strength athletes and lifters worldwide.**  
+[Live App](https://gymtrack-fitness-kovid.vercel.app) • [Report Issue](https://github.com/kovidanand/GYMTrack/issues)
+
 </div>
