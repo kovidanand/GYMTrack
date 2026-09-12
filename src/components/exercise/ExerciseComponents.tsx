@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { cn, getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel } from '@/lib/utils'
 import type { Exercise } from '@/types'
 import { MuscleGroupBadge } from '@/components/shared'
-import { Dumbbell, Heart, Plus } from 'lucide-react'
+import { Dumbbell, Heart, Plus, PlayCircle } from 'lucide-react'
 import { getExerciseVisual, resolveExerciseMedia } from '@/lib/exerciseMedia'
 
 // ─── Muscle Group Visual ────────────────────────────────────────────────────────
@@ -27,8 +27,115 @@ const muscleIllustrationColors: Record<string, { bg: string; accent: string }> =
 export function ExerciseIllustration({ muscleGroup, className }: { muscleGroup: string; className?: string }) {
   const style = muscleIllustrationColors[muscleGroup] ?? { bg: 'bg-surface-50', accent: 'text-surface-300' }
   return (
-    <div className={cn('flex items-center justify-center rounded-lg', style.bg, className)}>
-      <Dumbbell className={cn('w-8 h-8 opacity-60', style.accent)} aria-hidden="true" />
+    <div className={cn('flex flex-col items-center justify-center gap-2 rounded-lg', style.bg, className)}>
+      <Dumbbell className={cn('w-8 h-8 opacity-50', style.accent)} aria-hidden="true" />
+      <span className="text-[10px] font-medium text-surface-400">Demonstration unavailable</span>
+    </div>
+  )
+}
+
+// ─── Exercise Card Media (owns all states: loading / video / poster / fallback) ────
+
+interface ExerciseMediaProps {
+  exercise: Exercise
+  variant?: 'card' | 'detail'
+}
+
+export function ExerciseMedia({ exercise, variant = 'card' }: ExerciseMediaProps) {
+  const media = resolveExerciseMedia(exercise)
+  const videoUrl = media?.videoUrl || media?.maleVideoUrl || media?.femaleVideoUrl
+  const posterUrl = media?.posterUrl || media?.thumbnailUrl || getExerciseVisual(exercise.slug, exercise.image_url)
+
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [isVisible, setIsVisible] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const [videoLoaded, setVideoLoaded] = useState(false)
+  const [videoError, setVideoError] = useState(false)
+
+  // IntersectionObserver — only play when in viewport (card mode) or always (detail mode)
+  useEffect(() => {
+    if (variant === 'detail') {
+      setIsVisible(true)
+      return
+    }
+    const el = containerRef.current
+    if (!el || !videoUrl) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold: 0.25 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [videoUrl, variant])
+
+  // Manage video playback
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || videoError) return
+    if (isVisible || isHovered) {
+      video.play().catch(() => {/* autoplay blocked */})
+    } else {
+      video.pause()
+    }
+  }, [isVisible, isHovered, videoError])
+
+  return (
+    <div
+      ref={containerRef}
+      className="exercise-card-media"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Loading skeleton while video fetches */}
+      {videoUrl && !videoError && !videoLoaded && posterUrl && (
+        <img
+          src={posterUrl}
+          alt={`${exercise.name} demonstration poster`}
+          className="absolute inset-0 w-full h-full object-cover"
+          draggable={false}
+        />
+      )}
+
+      {videoUrl && !videoError ? (
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          poster={posterUrl || undefined}
+          muted
+          loop
+          playsInline
+          preload="none"
+          onLoadedData={() => setVideoLoaded(true)}
+          onError={() => setVideoError(true)}
+          className={cn(
+            'absolute inset-0 w-full h-full object-cover transition-transform duration-300',
+            (isVisible || isHovered) && 'group-hover:scale-105'
+          )}
+          aria-label={`${exercise.name} exercise demonstration`}
+        />
+      ) : posterUrl ? (
+        <img
+          src={posterUrl}
+          alt={exercise.name}
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+          draggable={false}
+        />
+      ) : (
+        <ExerciseIllustration
+          muscleGroup={exercise.muscle_group}
+          className="absolute inset-0 w-full h-full rounded-none"
+        />
+      )}
+
+      {/* HD badge */}
+      {videoUrl && !videoError && (
+        <div className="absolute bottom-1.5 left-2 z-10 bg-black/50 backdrop-blur-sm text-[9px] font-bold text-white/90 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+          <PlayCircle size={8} className="opacity-80" aria-hidden="true" />
+          HD
+        </div>
+      )}
     </div>
   )
 }
@@ -45,54 +152,11 @@ interface ExerciseCardProps {
 
 export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, onAddToWorkout, onClick }: ExerciseCardProps) {
   const difficultyClass = getDifficultyColor(exercise.difficulty)
-  const media = resolveExerciseMedia(exercise)
-  const videoUrl = media?.videoUrl || media?.maleVideoUrl || media?.femaleVideoUrl
-  const posterUrl = media?.posterUrl || media?.thumbnailUrl || getExerciseVisual(exercise.slug, exercise.image_url)
-
-  const cardRef = useRef<HTMLElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [isVisible, setIsVisible] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
-  const [videoError, setVideoError] = useState(false)
-
-  // IntersectionObserver to only load/play video when in viewport
-  useEffect(() => {
-    const cardEl = cardRef.current
-    if (!cardEl || !videoUrl) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries
-        setIsVisible(entry.isIntersecting)
-      },
-      { threshold: 0.3 }
-    )
-
-    observer.observe(cardEl)
-    return () => observer.disconnect()
-  }, [videoUrl])
-
-  // Manage playback based on visibility or hover
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video || videoError) return
-
-    if (isVisible || isHovered) {
-      video.play().catch(() => {
-        // Autoplay may be restricted or pending interaction
-      })
-    } else {
-      video.pause()
-    }
-  }, [isVisible, isHovered, videoError])
 
   return (
     <article
-      ref={cardRef}
-      className="card card-hover cursor-pointer group overflow-hidden animate-fade-in relative flex flex-col justify-between"
+      className="exercise-library-card group"
       onClick={() => onClick(exercise)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       role="button"
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick(exercise)}
@@ -101,97 +165,65 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
       {/* Favorite Button Overlay */}
       {onToggleFavorite && (
         <button
-          onClick={(e) => onToggleFavorite(exercise.id, e)}
-          className="absolute top-2 right-2 p-2 bg-white/85 backdrop-blur-sm rounded-full z-10 hover:scale-110 transition-transform shadow-sm"
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(exercise.id, e) }}
+          className="absolute top-2 right-2 p-1.5 bg-white/85 backdrop-blur-sm rounded-full z-20 hover:scale-110 transition-transform shadow-sm"
           aria-label={isFavorite ? `Remove ${exercise.name} from favorites` : `Add ${exercise.name} to favorites`}
+          type="button"
         >
-          <Heart 
-            size={16} 
-            className={cn("transition-colors", isFavorite ? "fill-brand-500 text-brand-500" : "text-surface-400 hover:text-brand-500")} 
+          <Heart
+            size={14}
+            className={cn("transition-colors", isFavorite ? "fill-brand-500 text-brand-500" : "text-surface-400 hover:text-brand-500")}
           />
         </button>
       )}
 
-      <div>
-        {/* Visual Media Video Preview area */}
-        <div className="h-36 mb-3 -mx-5 -mt-5 rounded-t-xl overflow-hidden bg-surface-900 flex items-center justify-center relative">
-          {videoUrl && !videoError ? (
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              poster={posterUrl || undefined}
-              muted
-              loop
-              playsInline
-              preload="none"
-              onError={() => setVideoError(true)}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              aria-label={`${exercise.name} preview demonstration`}
-            />
-          ) : posterUrl ? (
-            <img
-              src={posterUrl}
-              alt={exercise.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-            />
-          ) : (
-            <ExerciseIllustration
-              muscleGroup={exercise.muscle_group}
-              className="w-full h-full rounded-none"
-            />
-          )}
+      {/* ── Media Area (standardized 16:9, never overflows) ── */}
+      <ExerciseMedia exercise={exercise} variant="card" />
 
-          {/* Subtle Video badge */}
-          {videoUrl && !videoError && (
-            <div className="absolute bottom-1.5 left-2 z-10 bg-black/50 backdrop-blur-xs text-[9px] font-semibold text-white/90 px-1.5 py-0.5 rounded">
-              HD
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2 relative z-0">
-          {/* Name */}
-          <h3 className="font-bold text-surface-900 text-sm leading-snug group-hover:text-brand-600 transition-colors line-clamp-1">
+      {/* ── Content ── */}
+      <div className="exercise-card-content">
+        <div className="exercise-card-info">
+          {/* Exercise Name — never clipped, wraps naturally */}
+          <h3 className="exercise-card-title group-hover:text-brand-600 transition-colors">
             {exercise.name}
           </h3>
 
-          {/* Muscle + Equipment */}
-          <div className="flex flex-wrap gap-1.5">
+          {/* Muscle + Equipment chips */}
+          <div className="flex flex-wrap gap-1 mt-1">
             <MuscleGroupBadge group={exercise.muscle_group} />
             {exercise.equipment && exercise.equipment.length > 0 && (
-              <span className="badge bg-surface-100 text-surface-600 text-[11px]">
+              <span className="badge bg-surface-100 text-surface-600 text-[10px]">
                 {getEquipmentLabel(exercise.equipment[0])}
               </span>
             )}
           </div>
 
-          {/* Difficulty & Type */}
-          <div className="flex items-center justify-between text-xs pt-0.5">
+          {/* Difficulty + Type */}
+          <div className="flex items-center justify-between text-xs mt-1.5">
             <span className={cn('badge border text-[10px]', difficultyClass)}>
               {exercise.difficulty}
             </span>
-            <span className="text-[11px] text-surface-400 capitalize">{exercise.exercise_type}</span>
+            <span className="text-[10px] text-surface-400 capitalize">{exercise.exercise_type}</span>
           </div>
         </div>
-      </div>
 
-      {/* Quick Add to Workout Button */}
-      {onAddToWorkout && (
-        <div className="mt-3 pt-2.5 border-t border-surface-100">
-          <button
-            type="button"
-            onClick={(e) => onAddToWorkout(exercise, e)}
-            id={`exercise-card-add-${exercise.slug}`}
-            className="w-full py-2 px-3 rounded-xl bg-surface-50 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-surface-200 text-surface-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
-            title={`Add ${exercise.name} to today's workout`}
-            aria-label={`Add ${exercise.name} to today's workout`}
-          >
-            <Plus size={14} className="text-brand-600 stroke-[2.5]" />
-            <span>+ Add</span>
-          </button>
-        </div>
-      )}
+        {/* ── Footer: Add Button (always bottom-aligned via margin-top: auto) ── */}
+        {onAddToWorkout && (
+          <div className="exercise-card-footer">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onAddToWorkout(exercise, e) }}
+              id={`exercise-card-add-${exercise.slug}`}
+              className="w-full py-2 px-3 rounded-xl bg-surface-50 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-surface-200 text-surface-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
+              title={`Add ${exercise.name} to today's workout`}
+              aria-label={`Add ${exercise.name} to today's workout`}
+            >
+              <Plus size={13} className="text-brand-600 stroke-[2.5]" aria-hidden="true" />
+              <span>+ Add</span>
+            </button>
+          </div>
+        )}
+      </div>
     </article>
   )
 }

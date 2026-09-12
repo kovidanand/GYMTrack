@@ -1,17 +1,128 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getWorkoutHistory, getProgressStats, getVolumeChartData, getPersonalRecords, getExerciseProgress } from '@/lib/progress'
 import { useAuth } from '@/context/AuthContext'
 import { subscribeGymtrackEvent } from '@/lib/events'
 import type { WorkoutSession, ProgressStats, ChartDataPoint, PersonalRecord } from '@/types'
+import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 
-export type TimeRange = '7d' | '30d' | '90d' | '1y'
+export type TimeRange = '7d' | '30d' | 'all'
 
-const RANGE_DAYS: Record<TimeRange, number> = {
+const RANGE_DAYS: Record<Exclude<TimeRange, 'all'>, number> = {
   '7d': 7,
   '30d': 30,
-  '90d': 90,
-  '1y': 365,
 }
+
+/**
+ * Returns calendar-date-aware period boundaries using LOCAL dates.
+ * Avoids UTC midnight bugs where workouts near midnight appear on wrong day.
+ */
+function computePeriodBoundaries(timeRange: TimeRange): {
+  currentStart: Date
+  currentEnd: Date
+  previousStart: Date
+  previousEnd: Date
+} {
+  const now = new Date()
+  // Set to end of today in local time
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+  
+  if (timeRange === 'all') {
+    // All time: epoch to now, no meaningful "previous period"
+    const epoch = new Date(0)
+    return {
+      currentStart: epoch,
+      currentEnd: endOfToday,
+      previousStart: epoch,
+      previousEnd: epoch,
+    }
+  }
+
+  const days = RANGE_DAYS[timeRange]
+  
+  // Current period: last N days (inclusive of today)
+  const currentStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1), 0, 0, 0, 0)
+  
+  // Previous period: the N days immediately before
+  const previousEnd = new Date(currentStart.getTime() - 1) // 1ms before current start
+  const previousStart = new Date(previousEnd.getFullYear(), previousEnd.getMonth(), previousEnd.getDate() - (days - 1), 0, 0, 0, 0)
+
+  return { currentStart, currentEnd: endOfToday, previousStart, previousEnd }
+}
+
+/**
+ * Filters sessions to those that fall within a date range using LOCAL calendar dates.
+ */
+function filterSessionsByPeriod(sessions: WorkoutSession[], start: Date, end: Date): WorkoutSession[] {
+  return sessions.filter(s => {
+    if (!s.started_at) return false
+    const sessionDate = new Date(s.started_at)
+    return sessionDate >= start && sessionDate <= end
+  })
+}
+
+/**
+ * Computes total volume from session sets (weight × reps).
+ * Falls back to session-level total_volume if sets aren't loaded.
+ */
+function computeVolume(sessions: WorkoutSession[]): number {
+  let vol = 0
+  for (const s of sessions) {
+    if (s.workout_session_sets && s.workout_session_sets.length > 0) {
+      for (const set of s.workout_session_sets) {
+        if (set.completed) {
+          vol += (Number(set.weight) || 0) * (Number(set.reps) || 0)
+        }
+      }
+    } else {
+      vol += s.total_volume || 0
+    }
+  }
+  return vol
+}
+
+// Pre-build exercise name → muscle group lookup at module level (static, no circular dep issues)
+const EXERCISE_MUSCLE_MAP = new Map<string, string>(
+  DEFAULT_EXERCISES.map(ex => [ex.name.toLowerCase(), ex.muscle_group])
+)
+
+/**
+ * Computes muscle group distribution as % of completed sets per muscle group.
+ * Uses exercise_name to look up muscle group via DEFAULT_EXERCISES catalog.
+ */
+function computeMuscleDistribution(sessions: WorkoutSession[]): Record<string, number> {
+  const muscleCounts: Record<string, number> = {}
+  let totalSets = 0
+
+  for (const session of sessions) {
+    if (!session.workout_session_sets) continue
+    for (const set of session.workout_session_sets) {
+      if (!set.completed) continue
+      const muscle = EXERCISE_MUSCLE_MAP.get(set.exercise_name?.toLowerCase() || '') || 'other'
+      muscleCounts[muscle] = (muscleCounts[muscle] || 0) + 1
+      totalSets++
+    }
+  }
+
+  if (totalSets === 0) return {}
+
+  const dist: Record<string, number> = {}
+  for (const [muscle, count] of Object.entries(muscleCounts)) {
+    dist[muscle] = Math.round((count / totalSets) * 100)
+  }
+  return dist
+}
+
+export interface PeriodComparison {
+  currentVolume: number
+  previousVolume: number
+  volumePctChange: number | null
+  currentSessions: number
+  previousSessions: number
+  sessionsPctChange: number | null
+  hasPreviousData: boolean
+}
+
+export { computeMuscleDistribution }
 
 export function useProgress() {
   const { user } = useAuth()
@@ -25,16 +136,20 @@ export function useProgress() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const userId = user?.id
+
   const fetchData = useCallback(async () => {
-    if (!user) return
+    if (!userId) return
     setLoading(true)
     setError(null)
 
+    const days = timeRange === 'all' ? 3650 : RANGE_DAYS[timeRange]
+
     const [historyRes, statsRes, volumeRes, prsRes] = await Promise.all([
-      getWorkoutHistory(user.id),
-      getProgressStats(user.id),
-      getVolumeChartData(user.id, RANGE_DAYS[timeRange]),
-      getPersonalRecords(user.id)
+      getWorkoutHistory(userId),
+      getProgressStats(userId),
+      getVolumeChartData(userId, days),
+      getPersonalRecords(userId)
     ])
 
     if (historyRes.error || statsRes.error) {
@@ -47,7 +162,7 @@ export function useProgress() {
     }
     
     setLoading(false)
-  }, [user, timeRange])
+  }, [userId, timeRange])
 
   useEffect(() => {
     fetchData()
@@ -64,8 +179,57 @@ export function useProgress() {
     }
   }, [fetchData])
 
+  // ── Derived period-filtered data ──────────────────────────────────────────
+
+  const periodBoundaries = useMemo(() => computePeriodBoundaries(timeRange), [timeRange])
+
+  const filteredHistory = useMemo(() => {
+    if (timeRange === 'all') return history
+    return filterSessionsByPeriod(history, periodBoundaries.currentStart, periodBoundaries.currentEnd)
+  }, [history, timeRange, periodBoundaries])
+
+  const previousPeriodHistory = useMemo(() => {
+    if (timeRange === 'all') return []
+    return filterSessionsByPeriod(history, periodBoundaries.previousStart, periodBoundaries.previousEnd)
+  }, [history, timeRange, periodBoundaries])
+
+  const periodComparison = useMemo((): PeriodComparison => {
+    const currentVolume = computeVolume(filteredHistory)
+    const previousVolume = computeVolume(previousPeriodHistory)
+    const currentSessions = filteredHistory.filter(s => s.status === 'completed').length
+    const previousSessions = previousPeriodHistory.filter(s => s.status === 'completed').length
+    const hasPreviousData = previousPeriodHistory.length > 0
+
+    const volumePctChange = hasPreviousData && previousVolume > 0
+      ? Math.round(((currentVolume - previousVolume) / previousVolume) * 100)
+      : null
+
+    const sessionsPctChange = hasPreviousData && previousSessions > 0
+      ? Math.round(((currentSessions - previousSessions) / previousSessions) * 100)
+      : null
+
+    return {
+      currentVolume,
+      previousVolume,
+      volumePctChange,
+      currentSessions,
+      previousSessions,
+      sessionsPctChange,
+      hasPreviousData,
+    }
+  }, [filteredHistory, previousPeriodHistory])
+
+  const muscleDistribution = useMemo(
+    () => computeMuscleDistribution(filteredHistory),
+    [filteredHistory]
+  )
+
   return {
     history,
+    filteredHistory,
+    previousPeriodHistory,
+    periodComparison,
+    muscleDistribution,
     stats,
     volumeChart,
     personalRecords,
@@ -74,6 +238,7 @@ export function useProgress() {
     loading,
     error,
     refresh: fetchData,
-    getExerciseProgress
+    getExerciseProgress,
+    periodBoundaries,
   }
 }

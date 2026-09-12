@@ -1,9 +1,22 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Activity, Clock, Flame, BarChart2, Trophy, TrendingUp, ChevronRight, Calendar, List, Dumbbell } from 'lucide-react'
-import { PageHeader, StatCard, SectionHeader, EmptyState } from '@/components/shared'
+import {
+  BarChart2,
+  Trophy,
+  TrendingUp,
+  ChevronRight,
+  Calendar,
+  List,
+  Dumbbell,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
+import { PageHeader, StatCard, EmptyState } from '@/components/shared'
 import { FourteenDayHistory } from '@/components/progress/FourteenDayHistory'
-import { useProgress } from '@/hooks/useProgress'
+import { PeriodComparison } from '@/components/progress/PeriodComparison'
+import { MuscleDistributionChart } from '@/components/progress/MuscleDistributionChart'
+import { AiCoachInsightsPanel } from '@/components/progress/AiCoachInsightsPanel'
+import { useProgress, type TimeRange } from '@/hooks/useProgress'
 import { useWorkouts } from '@/hooks/useWorkouts'
 import { formatDuration, formatRelativeDate, cn } from '@/lib/utils'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
@@ -14,26 +27,137 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar
+  AreaChart,
+  Area,
 } from 'recharts'
+
+// Expandable history session row
+function HistorySessionRow({ session }: { session: any }) {
+  const navigate = useNavigate()
+  const [expanded, setExpanded] = useState(false)
+
+  const sets = session.workout_session_sets || []
+  const exerciseMap = useMemo(() => {
+    const map = new Map<string, { name: string; sets: Array<{ weight: number; reps: number }> }>()
+    for (const set of sets) {
+      if (!set.completed) continue
+      const name = set.exercise_name || 'Exercise'
+      const cur = map.get(name) || { name, sets: [] as Array<{ weight: number; reps: number }> }
+      cur.sets.push({ weight: Number(set.weight) || 0, reps: Number(set.reps) || 0 })
+      map.set(name, cur)
+    }
+    return Array.from(map.values())
+  }, [sets])
+
+  const totalVolume = sets
+    .filter((s: any) => s.completed)
+    .reduce((acc: number, s: any) => acc + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0)
+
+  return (
+    <article className="card bg-white border border-surface-200 rounded-xl shadow-2xs overflow-hidden">
+      <button
+        className="w-full p-4 sm:p-5 text-left flex items-start justify-between gap-3 hover:bg-surface-50 transition-colors"
+        onClick={() => setExpanded(v => !v)}
+        aria-expanded={expanded}
+        aria-label={`${session.workout_name} — expand details`}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <h3 className="font-bold text-surface-900 text-sm">
+              {session.workout_name || 'Workout'}
+            </h3>
+            <span className={cn(
+              'badge text-[10px] font-bold',
+              session.status === 'completed'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'bg-surface-100 text-surface-500 border border-surface-200'
+            )}>
+              {session.status}
+            </span>
+          </div>
+          <p className="text-xs text-surface-400">{formatRelativeDate(session.started_at)}</p>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-surface-600 mt-2">
+            {exerciseMap.length > 0 && (
+              <span>{exerciseMap.length} exercise{exerciseMap.length !== 1 ? 's' : ''}</span>
+            )}
+            {sets.filter((s: any) => s.completed).length > 0 && (
+              <span>{sets.filter((s: any) => s.completed).length} sets</span>
+            )}
+            {totalVolume > 0 && (
+              <span className="font-semibold text-surface-800">
+                {(totalVolume / 1000).toFixed(1)}k kg
+              </span>
+            )}
+            {session.duration_seconds > 0 && (
+              <span>{formatDuration(session.duration_seconds)}</span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={e => { e.stopPropagation(); navigate(`/history/${session.id}`) }}
+            className="text-xs text-brand-600 hover:text-brand-700 font-bold hidden sm:flex items-center gap-0.5"
+            aria-label="View full session record"
+          >
+            View <ChevronRight size={13} />
+          </button>
+          {expanded ? <ChevronUp size={16} className="text-surface-400" /> : <ChevronDown size={16} className="text-surface-400" />}
+        </div>
+      </button>
+
+      {expanded && exerciseMap.length > 0 && (
+        <div className="border-t border-surface-100 px-4 sm:px-5 py-3 space-y-2 animate-fade-in">
+          {exerciseMap.map((ex, i) => (
+            <div key={i} className="flex items-start justify-between text-xs gap-4">
+              <span className="font-semibold text-surface-800 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-400 flex-shrink-0 mt-0.5" />
+                {ex.name}
+              </span>
+              <div className="text-surface-500 text-right flex-shrink-0">
+                {ex.sets.map((s, si) => (
+                  <div key={si} className="font-mono">
+                    {s.weight > 0 ? `${s.weight} kg × ${s.reps}` : `${s.reps} reps`}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </article>
+  )
+}
 
 export default function Progress() {
   const navigate = useNavigate()
-  const { history, stats, volumeChart, personalRecords, timeRange, setTimeRange, loading, error } = useProgress()
+  const {
+    history,
+    filteredHistory,
+    periodComparison,
+    muscleDistribution,
+    stats,
+    volumeChart,
+    personalRecords,
+    timeRange,
+    setTimeRange,
+    loading,
+    error,
+  } = useProgress()
+
   const { activePlan, workouts } = useWorkouts()
 
-  const [historyViewMode, setHistoryViewMode] = useState<'14day' | 'list'>('14day')
+  const [historyViewMode, setHistoryViewMode] = useState<'14day' | 'list'>('list')
   const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
 
-  // Derived key exercise progression (e.g. Bench Press, Squat, Lat Pulldown, Deadlift, etc.)
+  // Derived exercise progression
   const exerciseProgressList = useMemo(() => {
     if (!personalRecords || personalRecords.length === 0) return []
     return personalRecords.slice(0, 6).map(pr => {
-      // Find all sets for this exercise in history
       let latestWeight = pr.value
-      history.forEach(session => {
-        const matchingSet = session.workout_session_sets?.find(s => s.exercise_id === pr.exerciseId && s.completed && s.weight)
+      filteredHistory.forEach(session => {
+        const matchingSet = session.workout_session_sets?.find(
+          s => s.exercise_id === pr.exerciseId && s.completed && s.weight
+        )
         if (matchingSet && matchingSet.weight) {
           latestWeight = matchingSet.weight
         }
@@ -46,178 +170,237 @@ export default function Progress() {
         latestWeight,
         unit: pr.unit || 'kg',
         progressPct: pct,
-        achievedAt: pr.achievedAt
+        achievedAt: pr.achievedAt,
       }
     })
-  }, [personalRecords, history])
+  }, [personalRecords, filteredHistory])
 
-  // Weekly Activity: last 7 days at a glance
-  const weeklyDays = useMemo(() => {
-    const today = new Date()
-    const days = []
-    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today)
-      d.setDate(today.getDate() - i)
-      const isToday = i === 0
-      const hasWorkout = history.some(s => {
-        if (s.status !== 'completed') return false
-        const sd = new Date(s.started_at)
-        return (
-          sd.getFullYear() === d.getFullYear() &&
-          sd.getMonth() === d.getMonth() &&
-          sd.getDate() === d.getDate()
-        )
+  // Training consistency for the filtered period
+  const consistencyStats = useMemo(() => {
+    const completed = filteredHistory.filter(s => s.status === 'completed')
+    const uniqueDays = new Set(
+      completed.map(s => {
+        const d = new Date(s.started_at)
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
       })
-      days.push({
-        label: dayLabels[d.getDay()],
-        dateNumber: d.getDate(),
-        isToday,
-        hasWorkout
-      })
-    }
-    return days
-  }, [history])
+    )
+    const daysWithWorkout = uniqueDays.size
+    const weeksInPeriod = timeRange === '7d' ? 1 : timeRange === '30d' ? 4.3 : null
+    const avgPerWeek = weeksInPeriod && weeksInPeriod > 0
+      ? (completed.length / weeksInPeriod).toFixed(1)
+      : null
+
+    return { sessions: completed.length, daysWithWorkout, avgPerWeek }
+  }, [filteredHistory, timeRange])
 
   if (loading && history.length === 0) {
     return <div className="p-12 text-center text-surface-500 font-medium animate-pulse">Loading training progress...</div>
   }
-  
+
   if (error) {
     return <div className="p-8 text-center text-red-500 font-medium">{error}</div>
+  }
+
+  const periodLabels: Record<TimeRange, string> = {
+    '7d': '7 Days',
+    '30d': '30 Days',
+    'all': 'All Time',
   }
 
   return (
     <div className="animate-fade-in space-y-8 pb-28 max-w-5xl mx-auto">
       <PageHeader
         title="Progress & History"
-        description="Review your long-term training metrics, exercise progression, and 14-day consistency."
+        description="Historical analytics, exercise progression, training balance, and AI-grounded insights."
       />
 
-      {/* ── 1. TRAINING OVERVIEW ── */}
-      <section aria-label="Training Overview" className="space-y-3">
+      {/* ── 1. PERIOD SELECTOR ── */}
+      <section aria-label="Period selector">
+        <div className="flex items-center gap-1 bg-surface-100 p-1 rounded-xl border border-surface-200 w-fit">
+          {(['7d', '30d', 'all'] as TimeRange[]).map(range => (
+            <button
+              key={range}
+              id={`progress-period-${range}`}
+              aria-pressed={timeRange === range}
+              onClick={() => setTimeRange(range)}
+              className={cn(
+                'px-4 py-2 rounded-lg text-xs font-bold transition-all',
+                timeRange === range
+                  ? 'bg-white text-brand-600 shadow-sm'
+                  : 'text-surface-600 hover:text-surface-900 hover:bg-white/50'
+              )}
+            >
+              {periodLabels[range]}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 2. PERFORMANCE SUMMARY ── */}
+      <section aria-label="Performance summary" className="space-y-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">
-          Training Overview
+          Performance Summary — {periodLabels[timeRange]}
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
           <StatCard
-            label="Total Workouts"
-            value={stats?.totalWorkouts || 0}
-            icon={<Activity size={18} />}
-            trend="up"
-            trendValue={`${stats?.workoutsThisMonth || 0} this month`}
+            label="Sessions"
+            value={consistencyStats.sessions}
+            icon={<BarChart2 size={18} />}
           />
           <StatCard
             label="Total Volume"
-            value={((stats?.totalVolume || 0) / 1000).toFixed(1)}
+            value={periodComparison.currentVolume > 0
+              ? ((periodComparison.currentVolume / 1000).toFixed(1))
+              : '0'
+            }
             unit="k kg"
-            icon={<BarChart2 size={18} />}
-            trend="up"
+            icon={<TrendingUp size={18} />}
           />
           <StatCard
-            label="Training Frequency"
-            value={stats?.currentStreak || 0}
-            unit="day streak"
-            icon={<Flame size={18} />}
-            trend="up"
-            trendValue={`Best: ${stats?.longestStreak || 0} days`}
+            label="Days Trained"
+            value={consistencyStats.daysWithWorkout}
+            icon={<Calendar size={18} />}
           />
           <StatCard
             label="Personal Bests"
             value={personalRecords?.length || 0}
             unit="records"
             icon={<Trophy size={18} />}
-            trend="up"
           />
         </div>
       </section>
 
-      {/* ── 2. WEEKLY ACTIVITY (LAST 7 DAYS AT A GLANCE) ── */}
-      <section aria-label="Weekly Activity" className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">
-            Weekly Activity (Last 7 Days)
-          </h2>
-          <span className="text-[11px] font-semibold text-surface-500">
-            {weeklyDays.filter(d => d.hasWorkout).length} of 7 days trained
-          </span>
-        </div>
+      {/* ── 3. PERIOD COMPARISON ── */}
+      {timeRange !== 'all' && (
+        <section aria-label="Period comparison">
+          <PeriodComparison
+            comparison={periodComparison}
+            timeRange={timeRange as '7d' | '30d'}
+          />
+        </section>
+      )}
 
-        <div className="card p-4 sm:p-5 bg-white border border-surface-200 rounded-2xl shadow-xs">
-          <div className="grid grid-cols-7 gap-2">
-            {weeklyDays.map(day => (
-              <div
-                key={`${day.label}-${day.dateNumber}`}
-                className={cn(
-                  'flex flex-col items-center py-2.5 px-1 rounded-xl transition-all text-center',
-                  day.isToday
-                    ? 'bg-brand-50 border border-brand-300 ring-2 ring-brand-400/20'
-                    : 'bg-surface-50 border border-surface-100'
-                )}
-              >
-                <span className="text-[10px] font-bold uppercase text-surface-400">
-                  {day.label}
-                </span>
-                <span className={cn(
-                  'text-sm font-black mt-0.5',
-                  day.isToday ? 'text-brand-600' : 'text-surface-800'
-                )}>
-                  {day.dateNumber}
-                </span>
-
-                <div className="mt-2 h-4 flex items-center justify-center">
-                  {day.hasWorkout ? (
-                    <span 
-                      className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs" 
-                      title={`${day.label}: Workout logged`} 
-                    />
-                  ) : (
-                    <span className="w-2 h-0.5 bg-surface-300 rounded-full" title={`${day.label}: Rest day`} />
-                  )}
-                </div>
+      {/* ── 4. VOLUME TREND CHART ── */}
+      <section aria-label="Volume trend" className="space-y-3">
+        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs">
+          <div className="mb-4">
+            <h3 className="text-sm font-bold text-surface-900">Volume Trend</h3>
+            <p className="text-xs text-surface-500 mt-0.5">Aggregate tonnage lifted per day — {periodLabels[timeRange].toLowerCase()}.</p>
+          </div>
+          <div className="min-h-[220px]">
+            {volumeChart && volumeChart.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={volumeChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="volumeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <XAxis
+                    dataKey="date"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748B', fontSize: 11 }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748B', fontSize: 11 }}
+                    tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    cursor={{ stroke: '#7C3AED', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Volume']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#7C3AED"
+                    strokeWidth={2}
+                    fill="url(#volumeGrad)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[220px] flex items-center justify-center text-surface-400 text-xs font-medium">
+                Not enough workout data to display volume trend.
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
 
-      {/* ── 3. EXERCISE PROGRESSION & SELECTOR ── */}
-      <section aria-label="Exercise Progress" className="space-y-4">
+      {/* ── 5. TRAINING CONSISTENCY ── */}
+      <section aria-label="Training consistency" className="space-y-3">
+        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-surface-900">Training Consistency</h3>
+            <p className="text-xs text-surface-500 mt-0.5">Session frequency over the selected period.</p>
+          </div>
+          {consistencyStats.sessions === 0 ? (
+            <p className="text-sm text-surface-400 font-medium">No sessions recorded in this period.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="p-3 rounded-xl bg-surface-50 border border-surface-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-surface-400">Sessions</p>
+                <p className="text-2xl font-black text-surface-900 mt-1">{consistencyStats.sessions}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-surface-50 border border-surface-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-surface-400">Days Trained</p>
+                <p className="text-2xl font-black text-surface-900 mt-1">{consistencyStats.daysWithWorkout}</p>
+              </div>
+              {consistencyStats.avgPerWeek && (
+                <div className="p-3 rounded-xl bg-surface-50 border border-surface-100">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-surface-400">Avg / Week</p>
+                  <p className="text-2xl font-black text-surface-900 mt-1">{consistencyStats.avgPerWeek}</p>
+                </div>
+              )}
+              {stats?.currentStreak != null && (
+                <div className="p-3 rounded-xl bg-surface-50 border border-surface-100">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-surface-400">Current Streak</p>
+                  <p className="text-2xl font-black text-surface-900 mt-1">{stats.currentStreak} <span className="text-xs font-semibold text-surface-500">days</span></p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── 6. MUSCLE DISTRIBUTION ── */}
+      <section aria-label="Muscle distribution">
+        <MuscleDistributionChart distribution={muscleDistribution} />
+      </section>
+
+      {/* ── 7. EXERCISE PROGRESSION ── */}
+      <section aria-label="Exercise progression" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-surface-900 tracking-tight">Exercise Progression</h2>
-            <p className="text-xs text-surface-500 mt-0.5">Select any exercise to view its 1RM trajectory and detailed logs.</p>
+            <p className="text-xs text-surface-500 mt-0.5">Select an exercise to view 1RM trajectory and detailed logs.</p>
           </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              aria-label="Select exercise to view progression"
-              onChange={(e) => {
-                const ex = DEFAULT_EXERCISES.find(item => item.id === e.target.value)
-                if (ex) {
-                  setSelectedExercise({ id: ex.id, name: ex.name })
-                }
-              }}
-              defaultValue=""
-              className="bg-white border border-surface-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-surface-700 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-2xs"
-            >
-              <option value="" disabled>Select exercise curve...</option>
-              {DEFAULT_EXERCISES.map(ex => (
-                <option key={ex.id} value={ex.id}>
-                  {ex.name} ({ex.muscle_group})
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            aria-label="Select exercise to view progression"
+            onChange={(e) => {
+              const ex = DEFAULT_EXERCISES.find(item => item.id === e.target.value)
+              if (ex) setSelectedExercise({ id: ex.id, name: ex.name })
+            }}
+            defaultValue=""
+            className="bg-white border border-surface-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-surface-700 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-2xs"
+          >
+            <option value="" disabled>Select exercise...</option>
+            {DEFAULT_EXERCISES.map(ex => (
+              <option key={ex.id} value={ex.id}>{ex.name} ({ex.muscle_group})</option>
+            ))}
+          </select>
         </div>
 
-        {/* Key Movement Progress Bars */}
         {exerciseProgressList.length > 0 && (
           <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">
-              Key Movement Benchmarks
-            </h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">Key Movement Benchmarks</h3>
             <div className="space-y-4">
               {exerciseProgressList.map(ex => (
                 <div
@@ -248,83 +431,19 @@ export default function Progress() {
             </div>
           </div>
         )}
-
-        {/* Volume Analytics Chart */}
-        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-surface-900">Volume Analytics</h3>
-              <p className="text-xs text-surface-500 mt-0.5">Aggregate tonnage lifted over time.</p>
-            </div>
-            <div className="flex bg-surface-100 p-1 rounded-lg self-start sm:self-auto">
-              {(['7d', '30d', '90d', '1y'] as const).map(range => (
-                <button
-                  key={range}
-                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
-                    timeRange === range
-                      ? 'bg-white text-brand-600 shadow-sm'
-                      : 'text-surface-600 hover:text-surface-900'
-                  }`}
-                  onClick={() => setTimeRange(range)}
-                >
-                  {range.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="min-h-[260px]">
-            {volumeChart && volumeChart.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={volumeChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748B', fontSize: 11 }}
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748B', fontSize: 11 }}
-                    tickFormatter={(val) => `${val / 1000}k`}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: '#F1F5F9' }}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value: number) => [`${value} kg`, 'Volume']}
-                  />
-                  <Bar 
-                    dataKey="value" 
-                    fill="#0EA5E9" 
-                    radius={[4, 4, 0, 0]} 
-                    maxBarSize={45}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[260px] flex items-center justify-center text-surface-400 text-xs font-medium">
-                Not enough workout data to display volume trajectory.
-              </div>
-            )}
-          </div>
-        </div>
       </section>
 
-      {/* ── 3. PERSONAL BESTS ── */}
+      {/* ── 8. PERSONAL BESTS ── */}
       <section aria-label="Personal records" className="space-y-4">
         <div>
           <h2 className="text-lg font-bold text-surface-900 tracking-tight">Personal Bests</h2>
           <p className="text-xs text-surface-500 mt-0.5">Highest recorded working weight per exercise.</p>
         </div>
-
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {personalRecords && personalRecords.length > 0 ? (
             personalRecords.map(pr => (
-              <div 
-                key={pr.id} 
+              <div
+                key={pr.id}
                 className="card p-5 relative overflow-hidden group hover:border-amber-300 hover:shadow-md transition-all cursor-pointer bg-white border border-surface-200 rounded-2xl shadow-xs"
                 onClick={() => setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
                 role="button"
@@ -339,7 +458,6 @@ export default function Progress() {
                     {formatRelativeDate(pr.achievedAt)}
                   </span>
                 </div>
-                
                 <h3 className="font-bold text-surface-900 mb-1 group-hover:text-brand-600 transition-colors flex items-center justify-between text-sm">
                   <span>{pr.exerciseName}</span>
                   <ChevronRight size={15} className="text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -355,33 +473,24 @@ export default function Progress() {
             ))
           ) : (
             <div className="col-span-full card p-8 text-center text-surface-500 bg-white border border-surface-200 text-xs rounded-2xl">
-              No personal records logged yet. Complete your first session to set baselines!
+              No personal records yet. Complete your first session to set baselines!
             </div>
           )}
         </div>
       </section>
 
-      {/* ── 4. TRAINING HISTORY (Embedded under Progress) ── */}
+      {/* ── 9. TRAINING HISTORY ── */}
       <section aria-label="Training history" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-100 pb-3">
           <div>
             <h2 className="text-lg font-bold text-surface-900 tracking-tight">Training History</h2>
-            <p className="text-xs text-surface-500 mt-0.5">Consecutive workout telemetry and historical records.</p>
+            <p className="text-xs text-surface-500 mt-0.5">
+              {filteredHistory.length} session{filteredHistory.length !== 1 ? 's' : ''} — {periodLabels[timeRange].toLowerCase()}
+            </p>
           </div>
 
-          {history.length > 0 && (
+          {filteredHistory.length > 0 && (
             <div className="flex items-center bg-surface-100 rounded-lg p-1 border border-surface-200 self-start sm:self-auto">
-              <button
-                onClick={() => setHistoryViewMode('14day')}
-                id="progress-tab-14day"
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  historyViewMode === '14day'
-                    ? 'bg-white text-brand-600 shadow-sm'
-                    : 'text-surface-600 hover:text-surface-900'
-                }`}
-              >
-                <Calendar size={13} /> 14-Day View
-              </button>
               <button
                 onClick={() => setHistoryViewMode('list')}
                 id="progress-tab-list"
@@ -391,20 +500,33 @@ export default function Progress() {
                     : 'text-surface-600 hover:text-surface-900'
                 }`}
               >
-                <List size={13} /> All Sessions ({history.length})
+                <List size={13} /> All Sessions ({filteredHistory.length})
               </button>
+              {timeRange === '30d' || timeRange === 'all' ? (
+                <button
+                  onClick={() => setHistoryViewMode('14day')}
+                  id="progress-tab-14day"
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    historyViewMode === '14day'
+                      ? 'bg-white text-brand-600 shadow-sm'
+                      : 'text-surface-600 hover:text-surface-900'
+                  }`}
+                >
+                  <Calendar size={13} /> Calendar
+                </button>
+              ) : null}
             </div>
           )}
         </div>
 
-        {history.length === 0 ? (
+        {filteredHistory.length === 0 ? (
           <EmptyState
-            title="No workout records yet"
-            description="Record your first workout from the Home dashboard to start your training history."
+            title="No workouts in this period"
+            description="No sessions were logged during the selected period. Try selecting a broader range or start logging today."
             icon={<Calendar size={28} className="text-brand-500" />}
             action={
-              <button className="btn-primary text-xs" onClick={() => navigate('/workouts/quick')}>
-                Start Today's Workout
+              <button className="btn-primary text-xs" onClick={() => navigate('/dashboard')}>
+                Log Today's Training
               </button>
             }
           />
@@ -416,46 +538,25 @@ export default function Progress() {
           />
         ) : (
           <div className="space-y-3 animate-fade-in">
-            {history.map(session => (
-              <article 
-                key={session.id} 
-                className="card p-4 sm:p-5 cursor-pointer hover:border-brand-300 transition-colors group bg-white border border-surface-200 rounded-xl shadow-2xs"
-                onClick={() => navigate(`/history/${session.id}`)}
-              >
-                <div className="flex items-start justify-between gap-3 mb-2.5">
-                  <div>
-                    <h3 className="font-bold text-surface-900 group-hover:text-brand-600 transition-colors text-sm sm:text-base">
-                      {session.workout_name}
-                    </h3>
-                    <p className="text-xs text-surface-400">{formatRelativeDate(session.started_at)}</p>
-                  </div>
-                  <span className="badge bg-emerald-50 text-emerald-700 border border-emerald-200 capitalize font-bold text-[11px]">
-                    {session.status}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4 text-xs text-surface-600">
-                  <div className="flex items-center gap-1.5 font-medium">
-                    <Clock size={14} className="text-surface-400" aria-hidden="true" />
-                    <span className="text-surface-900 font-bold">{formatDuration(session.duration_seconds || 0)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 font-medium">
-                    <BarChart2 size={14} className="text-surface-400" aria-hidden="true" />
-                    <span className="text-surface-900 font-bold">
-                      {((session.total_volume || 0) / 1000).toFixed(1)}k kg
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 bg-surface-100 px-2 py-0.5 rounded font-semibold text-surface-700 text-[11px]">
-                    <span>{session.completed_sets}</span> sets logged
-                  </div>
-                </div>
-              </article>
+            {filteredHistory.map(session => (
+              <HistorySessionRow key={session.id} session={session} />
             ))}
           </div>
         )}
       </section>
 
-      {/* ── Exercise Detail & Intelligence Modal ── */}
+      {/* ── 10. AI COACH INSIGHTS ── */}
+      <section aria-label="AI Coach Insights" className="space-y-3">
+        <AiCoachInsightsPanel
+          comparison={periodComparison}
+          muscleDistribution={muscleDistribution}
+          timeRange={timeRange}
+          totalWorkouts={stats?.totalWorkouts || 0}
+          filteredSessions={filteredHistory}
+        />
+      </section>
+
+      {/* Exercise Detail & Intelligence Modal */}
       <ExerciseDetailModal
         exerciseId={selectedExercise?.id || null}
         exerciseName={selectedExercise?.name}

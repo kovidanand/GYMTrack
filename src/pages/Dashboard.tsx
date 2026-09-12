@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Plus, 
@@ -19,6 +19,7 @@ import { useProgress } from '@/hooks/useProgress'
 import { useWorkouts } from '@/hooks/useWorkouts'
 import { TrainingLoggerModal } from '@/components/workout/TrainingLoggerModal'
 import { cn } from '@/lib/utils'
+import { subscribeGymtrackEvent } from '@/lib/events'
 
 function getLocalGreeting(date = new Date()): string {
   const h = date.getHours()
@@ -48,20 +49,39 @@ export default function Dashboard() {
   const [loggerMode, setLoggerMode] = useState<'manual' | 'voice'>('manual')
 
   const firstName = profile?.first_name || user?.email?.split('@')[0] || 'Athlete'
-  const today = new Date()
+  const today = useMemo(() => new Date(), [])
 
-  // Refresh data on mount and window focus
+  // Stable reference to refresh for event listeners and focus handlers
+  const refreshRef = useRef(refresh)
   useEffect(() => {
-    refresh()
-    const onFocus = () => refresh()
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
+    refreshRef.current = refresh
   }, [refresh])
+
+  // Subscribe to real-time training events and throttled window focus (runs once on mount)
+  useEffect(() => {
+    let lastFocusRefresh = Date.now()
+    const onFocus = () => {
+      // Throttle window focus refresh to at most once every 10 seconds
+      if (Date.now() - lastFocusRefresh > 10000) {
+        lastFocusRefresh = Date.now()
+        refreshRef.current?.()
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    const unsub1 = subscribeGymtrackEvent('gymtrack:sets_logged', () => refreshRef.current?.())
+    const unsub2 = subscribeGymtrackEvent('gymtrack:session_completed', () => refreshRef.current?.())
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      unsub1()
+      unsub2()
+    }
+  }, [])
 
   // ── Scoped Strictly to TODAY ONLY (resets at local midnight) ──
   const todaySessions = useMemo(() => {
-    return history.filter(s => isSameDay(new Date(s.started_at), today))
-  }, [history, today])
+    const now = new Date()
+    return history.filter(s => isSameDay(new Date(s.started_at), now))
+  }, [history])
 
   const activeTodaySession = todaySessions.find(s => s.status === 'in_progress')
   const completedTodaySessions = todaySessions.filter(s => s.status === 'completed')
@@ -420,68 +440,91 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ── 4. METRIC TILES ── */}
-      <section aria-label="Today's metrics">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* Exercises Tile */}
-          <button
-            onClick={() => navigate('/progress')}
-            className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1 text-left hover:border-brand-300 transition-colors"
-          >
-            <div className="flex items-center justify-between text-surface-400">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Exercises</span>
-              <Dumbbell size={16} className="text-brand-500" />
+      {/* ── 4. TODAY'S TRAINING OVERVIEW ── */}
+      <section aria-label="Today's training overview">
+        <div className="card p-4 sm:p-5 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">Today&rsquo;s Training</h2>
+              <p className="text-[11px] text-surface-400 mt-0.5">
+                {today.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+              </p>
             </div>
-            <p className="text-2xl font-black text-surface-900 tracking-tight">
-              {todayMetrics.exercises}
-            </p>
-            <p className="text-[10px] text-surface-400">logged today</p>
-          </button>
+            <span className={cn(
+              'badge text-[11px] font-bold px-2.5 py-0.5 rounded-full',
+              todayStatus === 'Completed'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : todayStatus === 'In progress'
+                ? 'bg-brand-50 text-brand-700 border border-brand-200'
+                : 'bg-surface-100 text-surface-600 border border-surface-200'
+            )}>
+              {todayStatus}
+            </span>
+          </div>
 
-          {/* Sets Tile */}
-          <button
-            onClick={() => navigate('/progress')}
-            className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1 text-left hover:border-brand-300 transition-colors"
-          >
-            <div className="flex items-center justify-between text-surface-400">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Sets</span>
-              <Layers size={16} className="text-brand-500" />
-            </div>
-            <p className="text-2xl font-black text-surface-900 tracking-tight">
-              {todayMetrics.sets}
-            </p>
-            <p className="text-[10px] text-surface-400">completed sets</p>
-          </button>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Exercises Tile */}
+            <button
+              onClick={() => navigate('/progress')}
+              className="p-3 rounded-xl bg-surface-50 border border-surface-100 space-y-1 text-left hover:border-brand-200 transition-colors"
+            >
+              <div className="flex items-center justify-between text-surface-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider">Exercises</span>
+                <Dumbbell size={14} className="text-brand-500" />
+              </div>
+              <p className="text-xl font-black text-surface-900 tracking-tight">
+                {todayMetrics.exercises}
+              </p>
+              <p className="text-[10px] text-surface-400">logged today</p>
+            </button>
 
-          {/* Volume Tile */}
-          <button
-            onClick={() => navigate('/progress')}
-            className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1 text-left hover:border-brand-300 transition-colors"
-          >
-            <div className="flex items-center justify-between text-surface-400">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Volume</span>
-              <Flame size={16} className="text-amber-500" />
-            </div>
-            <p className="text-2xl font-black text-surface-900 tracking-tight">
-              {todayMetrics.volume.toLocaleString()} <span className="text-xs font-semibold text-surface-500">kg</span>
-            </p>
-            <p className="text-[10px] text-surface-400">workload lifted</p>
-          </button>
+            {/* Sets Tile */}
+            <button
+              onClick={() => navigate('/progress')}
+              className="p-3 rounded-xl bg-surface-50 border border-surface-100 space-y-1 text-left hover:border-brand-200 transition-colors"
+            >
+              <div className="flex items-center justify-between text-surface-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider">Sets</span>
+                <Layers size={14} className="text-brand-500" />
+              </div>
+              <p className="text-xl font-black text-surface-900 tracking-tight">
+                {todayMetrics.sets}
+              </p>
+              <p className="text-[10px] text-surface-400">completed</p>
+            </button>
 
-          {/* Duration Tile */}
-          <button
-            onClick={() => navigate('/progress')}
-            className="card p-4 bg-white border border-surface-200 rounded-xl shadow-2xs space-y-1 text-left hover:border-brand-300 transition-colors"
-          >
-            <div className="flex items-center justify-between text-surface-400">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Duration</span>
-              <Clock size={16} className="text-indigo-500" />
-            </div>
-            <p className="text-2xl font-black text-surface-900 tracking-tight">
-              {todayMetrics.durationMins} <span className="text-xs font-semibold text-surface-500">min</span>
-            </p>
-            <p className="text-[10px] text-surface-400">active training time</p>
-          </button>
+            {/* Volume Tile */}
+            <button
+              onClick={() => navigate('/progress')}
+              className="p-3 rounded-xl bg-surface-50 border border-surface-100 space-y-1 text-left hover:border-brand-200 transition-colors"
+            >
+              <div className="flex items-center justify-between text-surface-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider">Volume</span>
+                <Flame size={14} className="text-amber-500" />
+              </div>
+              <p className="text-xl font-black text-surface-900 tracking-tight">
+                {todayMetrics.volume > 0
+                  ? <>{(todayMetrics.volume / 1000).toFixed(1)}<span className="text-xs font-semibold text-surface-500">k kg</span></>
+                  : <>0 <span className="text-xs font-semibold text-surface-500">kg</span></>}
+              </p>
+              <p className="text-[10px] text-surface-400">lifted</p>
+            </button>
+
+            {/* Duration Tile */}
+            <button
+              onClick={() => navigate('/progress')}
+              className="p-3 rounded-xl bg-surface-50 border border-surface-100 space-y-1 text-left hover:border-brand-200 transition-colors"
+            >
+              <div className="flex items-center justify-between text-surface-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider">Duration</span>
+                <Clock size={14} className="text-indigo-500" />
+              </div>
+              <p className="text-xl font-black text-surface-900 tracking-tight">
+                {todayMetrics.durationMins} <span className="text-xs font-semibold text-surface-500">min</span>
+              </p>
+              <p className="text-[10px] text-surface-400">active time</p>
+            </button>
+          </div>
         </div>
       </section>
 

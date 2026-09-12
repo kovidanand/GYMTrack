@@ -227,7 +227,7 @@ export default function Exercises() {
 
       {/* ── Results ── */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[...Array(10)].map((_, i) => (
             <ExerciseSkeleton key={i} />
           ))}
@@ -237,7 +237,7 @@ export default function Exercises() {
           <p className="text-sm text-surface-500">
             Showing <span className="font-semibold text-surface-700">{exercises.length}</span> exercise{exercises.length !== 1 ? 's' : ''}
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
             {exercises.map(exercise => (
               <ExerciseCard
                 key={exercise.id}
