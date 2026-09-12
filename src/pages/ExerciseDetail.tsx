@@ -9,7 +9,8 @@ import { getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, cn, formatR
 import { useExerciseIntelligence } from '@/hooks/useExerciseIntelligence'
 import { ExerciseProgressionGraph } from '@/components/exercise/ExerciseProgressionGraph'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
-import { getExerciseVisual, getExerciseMediaMeta } from '@/lib/exerciseMedia'
+import { resolveExerciseMedia } from '@/lib/exerciseMedia'
+import { ExerciseVideoPlayer } from '@/components/exercise/ExerciseVideoPlayer'
 import { useToast } from '@/components/shared/Toast'
 import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
 import type { Exercise } from '@/types'
@@ -117,50 +118,21 @@ export default function ExerciseDetail() {
       {/* ── Hero Section ── */}
       <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-surface-200">
         <div className="relative">
-          {/* Media / Illustration */}
-          {(() => {
-            const visualUrl = getExerciseVisual(exercise.slug, exercise.image_url)
-            const meta = getExerciseMediaMeta(exercise.slug)
-            if (visualUrl) {
-              return (
-                <div className="aspect-video w-full bg-gradient-to-b from-surface-100 to-surface-200 relative flex items-center justify-center overflow-hidden">
-                  <img
-                    src={visualUrl}
-                    alt={exercise.name}
-                    className="max-h-full max-w-full object-contain p-4 transition-transform hover:scale-105 duration-300"
-                    loading="lazy"
-                  />
-                  {meta && (
-                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-[10px] text-surface-200 px-2 py-0.5 rounded">
-                      {meta.attribution} ({meta.license})
-                    </div>
-                  )}
-                  {exercise.video_url && (
-                    <a
-                      href={exercise.video_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group"
-                      aria-label={`Watch video demonstration for ${exercise.name}`}
-                    >
-                      <PlayCircle className="w-16 h-16 text-white opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all" />
-                    </a>
-                  )}
-                </div>
-              )
-            }
-            return (
-              <ExerciseIllustration 
-                muscleGroup={exercise.muscle_group} 
-                className="h-48 sm:h-64 rounded-none" 
-              />
-            )
-          })()}
+          {/* Continuous Demonstration Video */}
+          <ExerciseVideoPlayer
+            media={resolveExerciseMedia(exercise)}
+            exerciseName={exercise.name}
+            aspectRatio="16/9"
+            autoPlay={true}
+            showGenderToggle={true}
+            objectFit="cover"
+            className="w-full"
+          />
 
           {/* Favorite Floating Button */}
           <button
             onClick={handleToggleFavorite}
-            className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:scale-110 transition-transform"
+            className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:scale-110 transition-transform z-10"
             aria-label={isFavorite ? `Remove ${exercise.name} from favorites` : `Add ${exercise.name} to favorites`}
           >
             <Heart 
@@ -195,8 +167,12 @@ export default function ExerciseDetail() {
                 onClick={() => {
                   queueExerciseForTodayWorkout(exercise)
                   toast.success(
-                    `${exercise.name} added to today's workout`,
-                    'Ready to train? Tap Start Workout on Home.'
+                    `${exercise.name} added to today's training.`,
+                    undefined,
+                    {
+                      label: 'Log now',
+                      onClick: () => navigate('/dashboard')
+                    }
                   )
                 }} 
                 className="btn-primary flex-1 sm:flex-none"

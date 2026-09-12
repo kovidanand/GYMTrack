@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext'
 import { subscribeGymtrackEvent } from '@/lib/events'
 import { getStructuredWorkoutAnalysis, type StructuredWorkoutAnalysis } from '@/lib/coachAnalysis'
 import { askCoachQuestion, type CoachAnswer } from '@/lib/coachProvider'
+import type { StructuredExerciseGuidance, StructuredWorkoutRecommendation } from '@/types'
 
 export interface CoachChatMessage {
   id: string
@@ -11,6 +12,8 @@ export interface CoachChatMessage {
   supportingData?: string
   suggestedQuestions?: string[]
   imageUrl?: string
+  structuredGuidance?: StructuredExerciseGuidance
+  structuredRecommendation?: StructuredWorkoutRecommendation
   createdAt: number
 }
 
@@ -102,6 +105,8 @@ export function useAiCoach() {
         supportingData: answer.supportingData,
         suggestedQuestions: answer.suggestedQuestions,
         imageUrl: answer.imageUrl,
+        structuredGuidance: answer.structuredGuidance,
+        structuredRecommendation: answer.structuredRecommendation,
         createdAt: Date.now()
       }
 

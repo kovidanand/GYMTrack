@@ -1,191 +1,249 @@
 /**
- * GYMTrack Verified Exercise Media Library
- * Provides legally verified, open-license (CC-BY-SA / Public Domain / Wikimedia Commons / Wger)
- * instructional media assets with high-reliability fallback visuals.
+ * GYMTrack Exercise Media Resolver Layer
+ * 
+ * Provides real demonstration videos (male & female Full-HD MP4s),
+ * high-resolution posters/thumbnails, instructions, form cues, and common mistakes
+ * from the MIT-licensed open-source exercise database.
  */
 
-interface ExerciseMediaAsset {
-  demonstrationUrl: string
-  thumbnailUrl: string
-  attribution: string
-  license: string
+import type { Exercise, ExerciseMedia } from '@/types'
+import rawDb from '@/data/freeExerciseDb.json'
+
+export interface ExerciseDbRecord {
+  id: string
+  name: string
+  aliases?: string[]
+  bodyPart?: string
+  target?: string
+  secondaryMuscles?: string[]
+  equipment?: string
+  muscleGroup?: string
+  difficulty?: string
+  compound?: boolean
+  unilateral?: boolean
+  shortDescription?: string
+  instructions?: string
+  steps?: string[]
+  formCues?: string[]
+  commonMistakes?: string[]
+  breathing?: string
+  videos?: {
+    male?: string
+    female?: string
+  }
+  thumbnails?: {
+    male?: string
+    female?: string
+  }
 }
 
-// Curated dictionary of canonical exercise media assets
-export const EXERCISE_MEDIA_REGISTRY: Record<string, ExerciseMediaAsset> = {
-  'bench-press': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Barbell-bench-press-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Barbell-bench-press-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'incline-bench-press': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/30/Incline-barbell-bench-press-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/30/Incline-barbell-bench-press-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'dumbbell-bench-press': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/Dumbbell-bench-press-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/Dumbbell-bench-press-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'incline-dumbbell-press': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/52/Incline-dumbbell-bench-press-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/52/Incline-dumbbell-bench-press-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'push-up': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Pushup-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Pushup-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'deadlift': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Barbell-deadlift-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Barbell-deadlift-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'romanian-deadlift': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Barbell-romanian-deadlift-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Barbell-romanian-deadlift-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'squat': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Barbell-squat-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Barbell-squat-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'barbell-squat': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Barbell-squat-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/82/Barbell-squat-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'front-squat': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/9c/Barbell-front-squat-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/9c/Barbell-front-squat-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'pull-up': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/49/Pullup-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/49/Pullup-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'lat-pulldown': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Cable-pulldown-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/43/Cable-pulldown-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'barbell-row': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/58/Barbell-bent-over-row-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/58/Barbell-bent-over-row-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'dumbbell-row': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/b2/One-arm-dumbbell-row-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/b2/One-arm-dumbbell-row-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'overhead-press': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/54/Barbell-standing-military-press-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/54/Barbell-standing-military-press-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'dumbbell-shoulder-press': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/15/Seated-dumbbell-shoulder-press-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/15/Seated-dumbbell-shoulder-press-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'lateral-raise': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/16/Dumbbell-lateral-raise-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/1/16/Dumbbell-lateral-raise-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'barbell-curl': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Barbell-biceps-curl-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/7/7b/Barbell-biceps-curl-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'dumbbell-curl': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/59/Dumbbell-biceps-curl-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/5/59/Dumbbell-biceps-curl-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'triceps-pushdown': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/29/Cable-pushdown-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/29/Cable-pushdown-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'skull-crushers': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/36/Barbell-lying-triceps-extension-skull-crusher-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/36/Barbell-lying-triceps-extension-skull-crusher-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'dips': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/a/ae/Dip-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/a/ae/Dip-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'leg-press': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/7/7d/Sled-45-degree-leg-press-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/7/7d/Sled-45-degree-leg-press-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'lunges': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Bodyweight-lunge-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Bodyweight-lunge-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'plank': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/b3/Plank-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/b3/Plank-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  },
-  'hanging-leg-raise': {
-    demonstrationUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/dd/Hanging-leg-raise-2.png',
-    thumbnailUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/dd/Hanging-leg-raise-2.png',
-    attribution: 'Wikimedia Commons / Everkinetic',
-    license: 'CC-BY-SA 3.0'
-  }
+const EXERCISE_DB: ExerciseDbRecord[] = rawDb as ExerciseDbRecord[]
+
+// Curated explicit aliases mapping GYMTrack exercise slugs to canonical dataset exercise names
+export const EXERCISE_ALIASES: Record<string, string> = {
+  // Target 10 exercises
+  'arnold-press': 'Dumbbell Arnold Press',
+  'bench-press': 'Barbell Bench Press',
+  'squat': 'Barbell Back Squat',
+  'barbell-squat': 'Barbell Back Squat',
+  'deadlift': 'Barbell Straight Leg Deadlift',
+  'lat-pulldown': 'Cable Pulldown',
+  'shoulder-press': 'Barbell Overhead Press',
+  'overhead-press': 'Barbell Overhead Press',
+  'bicep-curl': 'Barbell Drag Curl',
+  'barbell-curl': 'Barbell Drag Curl',
+  'hammer-curl': 'Dumbbell Cross Body Hammer Curl',
+  'leg-press': 'Close Feet Leg Press',
+  'cable-row': 'Cable One-Arm Twisting Seated Row',
+  'seated-cable-row': 'Cable One-Arm Twisting Seated Row',
+
+  // Full library coverage
+  'incline-bench-press': 'Barbell Incline Bench Press',
+  'decline-bench-press': 'Barbell Decline Bench Press',
+  'dumbbell-press': 'Dumbbell Lying Hammer Press',
+  'dumbbell-bench-press': 'Dumbbell Lying Hammer Press',
+  'incline-dumbbell-press': 'Dumbbell Incline Bench Press',
+  'push-up': 'Push-Ups',
+  'chest-fly': 'Dumbbell Fly',
+  'cable-crossover': 'Cable Crossover Reverse Fly',
+  'dips': 'Chest Dip',
+  'barbell-row': 'Barbell Underhand Bent-Over Row',
+  'pull-up': 'Pull-up',
+  'chin-up': 'Chin-Up',
+  'dumbbell-row': 'Dumbbell Row',
+  't-bar-row': 'Barbell Bent Over Row',
+  'face-pull': 'Cable Rear Delt Row (with rope)',
+  'dumbbell-shoulder-press': 'Dumbbell Arnold Press',
+  'lateral-raise': 'Dumbbell Lateral Raise',
+  'front-raise': 'Barbell Front Raise',
+  'rear-delt-fly': 'Band Bent-Over Rear Lateral Raise',
+  'upright-row': 'Barbell Upright Row',
+  'shrugs': 'Barbell Shrug',
+  'front-squat': 'Barbell Front Squat',
+  'romanian-deadlift': 'Barbell Straight Leg Deadlift',
+  'lunges': 'Barbell Lunge',
+  'walking-lunges': 'Barbell Lunge',
+  'leg-extension': 'Band Seated Leg Extension',
+  'leg-curl': 'Band Seated Leg Extension',
+  'calf-raise': 'Barbell Standing Calf Raise',
+  'hip-thrust': 'Glute Bridge',
+  'dumbbell-curl': 'Dumbbell Bicep Curl',
+  'preacher-curl': 'Barbell Drag Curl',
+  'incline-dumbbell-curl': 'Dumbbell Bicep Curl',
+  'tricep-pushdown': 'Cable Triceps Pushdown',
+  'skull-crusher': 'Cable Lying Triceps Extension',
+  'overhead-tricep-extension': 'Cable Rope Overhead Triceps Extension',
+  'tricep-dips': 'Chest Dip',
+  'cable-kickback': 'Dumbbell Kickback',
+  'plank': 'Plank',
+  'hanging-leg-raise': 'Hanging Leg Raise',
+  'ab-wheel': 'Standing Wheel Rollout',
+  'ab-wheel-rollout': 'Standing Wheel Rollout',
+  'cable-crunch': 'Cable Kneeling Crunch',
+  'russian-twist': 'Russian Twist'
+}
+
+// In-memory cache for resolved media
+const mediaCache = new Map<string, ExerciseMedia | null>()
+const detailsCache = new Map<string, ExerciseDbRecord | null>()
+
+function normalizeString(val: string): string {
+  return val.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
 /**
- * Returns the best visual demonstration URL for a given exercise.
- * If a custom image_url is stored in database, it takes precedence;
- * otherwise it pulls from the verified open-license registry.
+ * Finds the matching record in the exercise video database using a 4-tier strategy:
+ * 1. Curated alias mapping
+ * 2. Exact match (by normalized name or alias)
+ * 3. Substring match
+ * 4. ID lookup
+ */
+export function findExerciseDbRecord(queryOrExercise: string | Exercise | null | undefined): ExerciseDbRecord | null {
+  if (!queryOrExercise) return null
+
+  let queryName = ''
+  let querySlug = ''
+
+  if (typeof queryOrExercise === 'string') {
+    queryName = queryOrExercise.trim()
+    querySlug = queryOrExercise.trim().toLowerCase().replace(/[\s_]+/g, '-')
+  } else {
+    queryName = queryOrExercise.name
+    querySlug = queryOrExercise.slug || queryOrExercise.id.replace(/^ex-/, '')
+  }
+
+  const cacheKey = `${querySlug}:${queryName.toLowerCase()}`
+  if (detailsCache.has(cacheKey)) {
+    return detailsCache.get(cacheKey) || null
+  }
+
+  // Tier 1: Curated alias mapping by slug or normalized name
+  const explicitTarget = EXERCISE_ALIASES[querySlug] || EXERCISE_ALIASES[normalizeString(queryName)]
+  if (explicitTarget) {
+    const targetNorm = normalizeString(explicitTarget)
+    const match = EXERCISE_DB.find(d => normalizeString(d.name) === targetNorm)
+    if (match) {
+      detailsCache.set(cacheKey, match)
+      return match
+    }
+  }
+
+  const normQuery = normalizeString(queryName)
+
+  // Tier 2: Exact normalized name or alias match
+  let matched = EXERCISE_DB.find(d => {
+    if (normalizeString(d.name) === normQuery) return true
+    if (d.aliases && d.aliases.some(a => normalizeString(a) === normQuery)) return true
+    return false
+  })
+
+  // Tier 3: Substring / token matching
+  if (!matched) {
+    matched = EXERCISE_DB.find(d => {
+      const dn = normalizeString(d.name)
+      if (dn.includes(normQuery) || normQuery.includes(dn)) return true
+      if (d.aliases && d.aliases.some(a => {
+        const an = normalizeString(a)
+        return an.includes(normQuery) || normQuery.includes(an)
+      })) return true
+      return false
+    })
+  }
+
+  // Tier 4: ID match (e.g. 2137)
+  if (!matched && /^\d+$/.test(queryName)) {
+    matched = EXERCISE_DB.find(d => d.id === queryName)
+  }
+
+  detailsCache.set(cacheKey, matched || null)
+  return matched || null
+}
+
+/**
+ * Resolves full ExerciseMedia for any exercise or query string.
+ */
+export function resolveExerciseMedia(queryOrExercise: string | Exercise | null | undefined): ExerciseMedia | null {
+  if (!queryOrExercise) return null
+
+  const key = typeof queryOrExercise === 'string' 
+    ? queryOrExercise.trim().toLowerCase() 
+    : (queryOrExercise.slug || queryOrExercise.id)
+
+  if (mediaCache.has(key)) {
+    return mediaCache.get(key) || null
+  }
+
+  const record = findExerciseDbRecord(queryOrExercise)
+  if (!record) {
+    mediaCache.set(key, null)
+    return null
+  }
+
+  const maleVideo = record.videos?.male || undefined
+  const femaleVideo = record.videos?.female || undefined
+  const defaultVideo = maleVideo || femaleVideo || undefined
+
+  const malePoster = record.thumbnails?.male || undefined
+  const femalePoster = record.thumbnails?.female || undefined
+  const defaultPoster = malePoster || femalePoster || undefined
+
+  const media: ExerciseMedia = {
+    exerciseId: record.id,
+    videoUrl: defaultVideo,
+    maleVideoUrl: maleVideo,
+    femaleVideoUrl: femaleVideo,
+    thumbnailUrl: defaultPoster,
+    posterUrl: defaultPoster,
+    source: 'Free Exercise DB with Videos',
+    sourceLicense: 'MIT'
+  }
+
+  mediaCache.set(key, media)
+  return media
+}
+
+/**
+ * Legacy compatibility helper: returns demonstration video or thumbnail URL.
  */
 export function getExerciseVisual(slug?: string, storedImageUrl?: string | null): string | null {
-  if (storedImageUrl && storedImageUrl.startsWith('http')) {
+  if (storedImageUrl && storedImageUrl.startsWith('http') && !storedImageUrl.includes('upload.wikimedia.org')) {
     return storedImageUrl
   }
   if (!slug) return null
-  const cleanSlug = slug.toLowerCase().trim()
-  return EXERCISE_MEDIA_REGISTRY[cleanSlug]?.demonstrationUrl || null
+  const media = resolveExerciseMedia(slug)
+  return media?.thumbnailUrl || media?.posterUrl || null
 }
 
-export function getExerciseMediaMeta(slug?: string): ExerciseMediaAsset | null {
-  if (!slug) return null
-  return EXERCISE_MEDIA_REGISTRY[slug.toLowerCase().trim()] || null
+/**
+ * Legacy compatibility helper: returns metadata for attribution if needed.
+ */
+export function getExerciseMediaMeta(slug?: string) {
+  const media = resolveExerciseMedia(slug)
+  if (!media) return null
+  return {
+    demonstrationUrl: media.videoUrl || '',
+    thumbnailUrl: media.thumbnailUrl || '',
+    attribution: media.source || 'Free Exercise DB',
+    license: media.sourceLicense || 'MIT'
+  }
 }

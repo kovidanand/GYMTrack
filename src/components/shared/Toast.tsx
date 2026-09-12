@@ -9,9 +9,9 @@ interface ToastContextType {
   toasts: ToastMessage[]
   addToast: (toast: Omit<ToastMessage, 'id'>) => void
   removeToast: (id: string) => void
-  success: (title: string, description?: string) => void
+  success: (title: string, description?: string, action?: { label: string; onClick: () => void }) => void
   error: (title: string, description?: string) => void
-  info: (title: string, description?: string) => void
+  info: (title: string, description?: string, action?: { label: string; onClick: () => void }) => void
   warning: (title: string, description?: string) => void
 }
 
@@ -38,20 +38,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts(prev => [...prev, newToast])
 
     // Auto-dismiss
-    const duration = toast.duration ?? (toast.type === 'error' ? 6000 : 4000)
+    const duration = toast.duration ?? (toast.type === 'error' ? 6000 : (toast.action ? 5000 : 4000))
     setTimeout(() => removeToast(id), duration)
   }, [removeToast])
 
-  const success = useCallback((title: string, description?: string) => {
-    addToast({ type: 'success', title, description })
+  const success = useCallback((title: string, description?: string, action?: { label: string; onClick: () => void }) => {
+    addToast({ type: 'success', title, description, action })
   }, [addToast])
 
   const error = useCallback((title: string, description?: string) => {
     addToast({ type: 'error', title, description })
   }, [addToast])
 
-  const info = useCallback((title: string, description?: string) => {
-    addToast({ type: 'info', title, description })
+  const info = useCallback((title: string, description?: string, action?: { label: string; onClick: () => void }) => {
+    addToast({ type: 'info', title, description, action })
   }, [addToast])
 
   const warning = useCallback((title: string, description?: string) => {
@@ -131,6 +131,20 @@ function ToastItem({ toast, onRemove }: { toast: ToastMessage; onRemove: (id: st
         <p className="text-sm font-semibold text-surface-900">{toast.title}</p>
         {toast.description && (
           <p className="text-xs text-surface-500 mt-0.5">{toast.description}</p>
+        )}
+        {toast.action && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => {
+                toast.action?.onClick()
+                handleRemove()
+              }}
+              className="text-xs font-bold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-2.5 py-1 rounded-md transition-colors"
+            >
+              {toast.action.label}
+            </button>
+          </div>
         )}
       </div>
       <button

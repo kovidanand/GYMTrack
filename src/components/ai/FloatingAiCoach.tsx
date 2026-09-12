@@ -182,6 +182,8 @@ export function FloatingAiCoach() {
                     <AiResponseRenderer 
                       content={sanitizeAiContent(msg.content)} 
                       imageUrl={msg.imageUrl}
+                      structuredGuidance={msg.structuredGuidance}
+                      structuredRecommendation={msg.structuredRecommendation}
                     />
                   ) : (
                     <div className="whitespace-pre-line break-words">

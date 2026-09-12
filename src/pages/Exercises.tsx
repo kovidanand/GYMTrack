@@ -251,8 +251,12 @@ export default function Exercises() {
                   e.stopPropagation()
                   queueExerciseForTodayWorkout(ex)
                   toast.success(
-                    `${ex.name} added to today's workout`,
-                    'Ready to train? Tap Start Workout on Home.'
+                    `${ex.name} added to today's training.`,
+                    undefined,
+                    {
+                      label: 'Log now',
+                      onClick: () => navigate('/dashboard')
+                    }
                   )
                 }}
                 onClick={(ex) => navigate(`/exercises/${ex.slug}`)}

@@ -1,12 +1,15 @@
 import { supabase } from '@/lib/supabase'
 import type { StructuredWorkoutAnalysis, ExerciseCoachAnalysis } from './coachAnalysis'
-import { EXERCISE_MEDIA_REGISTRY, getExerciseVisual } from './exerciseMedia'
+import type { StructuredExerciseGuidance, StructuredWorkoutRecommendation } from '@/types'
+import { resolveExerciseMedia, findExerciseDbRecord, EXERCISE_ALIASES } from './exerciseMedia'
 
 export interface CoachAnswer {
   content: string
   supportingData?: string
   suggestedQuestions?: string[]
   imageUrl?: string
+  structuredGuidance?: StructuredExerciseGuidance
+  structuredRecommendation?: StructuredWorkoutRecommendation
 }
 
 interface ExerciseTechniqueGuide {
@@ -22,6 +25,32 @@ interface ExerciseTechniqueGuide {
 }
 
 const TECHNIQUE_GUIDES: Record<string, ExerciseTechniqueGuide> = {
+  'arnold-press': {
+    name: 'Arnold Press',
+    slug: 'arnold-press',
+    targetMuscles: 'Shoulders (Deltoids) · Secondary: Triceps, Upper Chest',
+    setup: [
+      'Sit tall on a bench with back support, planting your feet flat on the floor.',
+      'Hold dumbbells at shoulder height with palms facing your chest and elbows tucked in front.'
+    ],
+    execution: [
+      'Start with dumbbells at shoulder height.',
+      'Rotate your palms as you press overhead.',
+      'Fully extend without locking aggressively.',
+      'Reverse the movement under control.'
+    ],
+    breathing: 'Inhale at the bottom, exhale as you press and rotate overhead, and inhale as you lower under control.',
+    commonMistakes: [
+      'Using excessive weight and compromising posture',
+      'Rushing the rotation before initiating vertical press',
+      'Excessive lower-back arching during overhead extension'
+    ],
+    tips: [
+      'Use a controlled tempo and focus on the shoulder movement.',
+      'Keep your ribs pulled down and maintain a braced core.'
+    ],
+    alternatives: ['Seated Dumbbell Shoulder Press', 'Overhead Barbell Press', 'Pike Push-Ups']
+  },
   'bench-press': {
     name: 'Barbell Bench Press',
     slug: 'bench-press',
@@ -289,44 +318,109 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
   const isTechniqueQuery = 
     query.includes('how do i do') || 
     query.includes('how to do') || 
+    query.includes('show me') || 
     query.includes('form for') || 
     query.includes('technique') ||
     query.includes('how to perform') ||
-    query.includes('teach me')
+    query.includes('teach me') ||
+    query.includes('how do i perform') ||
+    query.includes('demonstrate')
 
-  // Check matching technique guide
-  for (const [slug, guide] of Object.entries(TECHNIQUE_GUIDES)) {
-    const matchesSlug = query.includes(slug)
-    const matchesName = query.includes(guide.name.toLowerCase())
-    const matchesKeyWords = guide.name.toLowerCase().split(' ').some(w => w.length > 3 && query.includes(w))
-    const matchesRdl = (query.includes('rdl') || query.includes('romanian')) && slug === 'romanian-deadlift'
+  // Check matching against canonical exercise list or aliases
+  const exerciseKeys = [
+    { slug: 'arnold-press', names: ['arnold press', 'arnold', 'dumbbell arnold press'] },
+    { slug: 'bench-press', names: ['bench press', 'barbell bench press', 'flat bench', 'bench'] },
+    { slug: 'barbell-squat', names: ['barbell squat', 'squat', 'back squat'] },
+    { slug: 'deadlift', names: ['deadlift', 'barbell deadlift', 'straight leg deadlift'] },
+    { slug: 'lat-pulldown', names: ['lat pulldown', 'pulldown', 'cable pulldown'] },
+    { slug: 'shoulder-press', names: ['shoulder press', 'overhead press', 'military press'] },
+    { slug: 'bicep-curl', names: ['bicep curl', 'biceps curl', 'barbell curl', 'arm curl'] },
+    { slug: 'hammer-curl', names: ['hammer curl', 'cross body hammer curl'] },
+    { slug: 'leg-press', names: ['leg press', 'sled leg press', '45 degree leg press'] },
+    { slug: 'cable-row', names: ['cable row', 'seated row', 'seated cable row'] },
+    { slug: 'face-pull', names: ['face pull', 'rear delt row'] },
+    { slug: 'romanian-deadlift', names: ['romanian deadlift', 'rdl'] },
+    { slug: 'push-up', names: ['push up', 'pushup', 'push-up'] },
+    { slug: 'pull-up', names: ['pull up', 'pullup', 'pull-up'] },
+    { slug: 'dips', names: ['dip', 'dips', 'chest dip'] },
+    { slug: 'plank', names: ['plank'] }
+  ]
 
-    if (matchesSlug || matchesName || matchesRdl || (isTechniqueQuery && matchesKeyWords)) {
-      const media = EXERCISE_MEDIA_REGISTRY[slug] || EXERCISE_MEDIA_REGISTRY[guide.slug]
-      
-      let content = `${guide.name}\n\nTarget Muscles\n${guide.targetMuscles}\n\n`
-      
-      content += `How to Set Up\n`
-      guide.setup.forEach((s, idx) => { content += `${idx + 1}. ${s}\n` })
-      content += `\nMovement Execution\n`
-      guide.execution.forEach((e, idx) => { content += `${idx + 1}. ${e}\n` })
-      content += `\nBreathing Cues\n${guide.breathing}\n\n`
-      content += `Common Mistakes\n`
-      guide.commonMistakes.forEach(m => { content += `- ${m}\n` })
-      content += `\nCoach Tips\n`
-      guide.tips.forEach(t => { content += `- ${t}\n` })
-      content += `\nAlternatives: ${guide.alternatives.join(', ')}`
+  let matchedExerciseSlug: string | null = null
+  for (const ex of exerciseKeys) {
+    if (ex.names.some(n => query.includes(n))) {
+      matchedExerciseSlug = ex.slug
+      break
+    }
+  }
 
-      return {
-        content,
-        imageUrl: media?.demonstrationUrl,
-        supportingData: `Exercise form guide for ${guide.name}.`,
-        suggestedQuestions: [
-          `What should I train today?`,
-          `What exercises target the chest?`,
-          `Should I increase my ${guide.name} weight?`
-        ]
+  // Fallback slug check across aliases
+  if (!matchedExerciseSlug) {
+    for (const [slugKey] of Object.entries(EXERCISE_ALIASES)) {
+      if (query.includes(slugKey.replace(/-/g, ' '))) {
+        matchedExerciseSlug = slugKey
+        break
       }
+    }
+  }
+
+  if (matchedExerciseSlug && (isTechniqueQuery || query.includes(matchedExerciseSlug.replace(/-/g, ' ')))) {
+    const slug = matchedExerciseSlug
+    const guide = TECHNIQUE_GUIDES[slug]
+    const dbRecord = findExerciseDbRecord(slug)
+    const media = resolveExerciseMedia(slug)
+
+    const exerciseName = guide?.name || dbRecord?.name || slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    const targetMuscles = dbRecord?.target 
+      ? [dbRecord.target.replace(/\b\w/g, l => l.toUpperCase())]
+      : (guide?.targetMuscles ? [guide.targetMuscles] : ['Target Muscles'])
+
+    const steps = dbRecord?.steps && dbRecord.steps.length > 0
+      ? dbRecord.steps
+      : (guide?.execution || [
+          'Assume stable starting position with core tight and weights aligned.',
+          'Execute the movement with controlled cadence through the complete range of motion.',
+          'Lower smoothly to the starting point while maintaining deliberate tension.'
+        ])
+
+    const mistakes = dbRecord?.commonMistakes && dbRecord.commonMistakes.length > 0
+      ? dbRecord.commonMistakes
+      : (guide?.commonMistakes || [
+          'Excessive momentum or swinging during execution',
+          'Rushing the eccentric lowering phase'
+        ])
+
+    const tip = dbRecord?.formCues?.[0] || guide?.tips?.[0] || 'Use a controlled tempo and focus on the primary working muscle.'
+
+    const structuredGuidance: StructuredExerciseGuidance = {
+      type: 'exercise_guidance',
+      exercise: {
+        name: exerciseName,
+        slug
+      },
+      targetMuscles,
+      steps,
+      mistakes,
+      tip,
+      media
+    }
+
+    let content = `${exerciseName}\n\nTarget Muscles\n${targetMuscles.join(', ')}\n\nHow to perform\n`
+    steps.forEach((s, idx) => { content += `${idx + 1}. ${s}\n` })
+    content += `\nCommon mistakes\n`
+    mistakes.forEach(m => { content += `- ${m}\n` })
+    content += `\nCoach tip\n${tip}`
+
+    return {
+      content,
+      imageUrl: media?.thumbnailUrl || media?.posterUrl,
+      structuredGuidance,
+      supportingData: `Verified exercise form guide and HD video for ${exerciseName}.`,
+      suggestedQuestions: [
+        'What should I train today?',
+        'What exercises target the chest?',
+        `Should I increase my ${exerciseName} weight?`
+      ]
     }
   }
 
@@ -499,59 +593,82 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
     query.includes('what to workout today') ||
     query.includes('what to train today')
   ) {
-    // If user has recent workout telemetry, reason from it:
     if (analysis.hasData && analysis.recentWorkoutsSummary.length > 0) {
       const lastSession = analysis.recentWorkoutsSummary[0]
       const lastSessionName = lastSession.name.toLowerCase()
       
-      let recommendation = ''
-      let suggestedExercises: string[] = []
+      let recommendationFocus = 'Upper Body'
+      let reasoningText = `Based on your recent training history, an upper-body session is a suitable choice today.`
+      let suggestedExercisesList = [
+        { name: 'Bench Press', slug: 'bench-press', sets: 3, reps: '8-12 reps' },
+        { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8-12 reps' },
+        { name: 'Shoulder Press', slug: 'shoulder-press', sets: 3, reps: '8-12 reps' }
+      ]
 
       if (lastSessionName.includes('push') || lastSessionName.includes('chest')) {
-        recommendation = 'Pull / Back & Biceps'
-        suggestedExercises = ['Barbell Deadlift', 'Lat Pulldown', 'Barbell Row', 'Biceps Curl']
+        recommendationFocus = 'Pull / Back & Biceps'
+        reasoningText = `Your last completed session was ${lastSession.name} on ${lastSession.date}. To allow those pressing muscle groups 48 hours to recover while maintaining momentum, training pull is the optimal choice today.`
+        suggestedExercisesList = [
+          { name: 'Deadlift', slug: 'deadlift', sets: 3, reps: '5-8 reps' },
+          { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8-12 reps' },
+          { name: 'Cable Row', slug: 'cable-row', sets: 3, reps: '8-12 reps' }
+        ]
       } else if (lastSessionName.includes('pull') || lastSessionName.includes('back')) {
-        recommendation = 'Legs & Core'
-        suggestedExercises = ['Barbell Squat', 'Romanian Deadlift', 'Leg Press', 'Plank']
-      } else if (lastSessionName.includes('leg') || lastSessionName.includes('lower')) {
-        recommendation = 'Upper Body Push'
-        suggestedExercises = ['Barbell Bench Press', 'Overhead Press', 'Incline Dumbbell Press', 'Dips']
-      } else {
-        recommendation = 'Upper Body or Full Body Conditioning'
-        suggestedExercises = ['Bench Press', 'Lat Pulldown', 'Squat', 'Plank']
+        recommendationFocus = 'Legs & Core'
+        reasoningText = `Your last completed session was ${lastSession.name} on ${lastSession.date}. Shifting volume to your lower body allows upper posterior chain recovery.`
+        suggestedExercisesList = [
+          { name: 'Barbell Squat', slug: 'barbell-squat', sets: 3, reps: '8-10 reps' },
+          { name: 'Leg Press', slug: 'leg-press', sets: 3, reps: '10-12 reps' },
+          { name: 'Plank', slug: 'plank', sets: 3, reps: '45-60 sec' }
+        ]
+      }
+
+      const structuredRecommendation: StructuredWorkoutRecommendation = {
+        type: 'workout_recommendation',
+        focus: recommendationFocus,
+        reasoning: reasoningText,
+        exercises: suggestedExercisesList.map(item => ({
+          ...item,
+          media: resolveExerciseMedia(item.slug)
+        })),
+        coachInsight: 'Your recent pressing volume is trending upward. Keep today\'s working sets controlled and prioritize consistent technique.'
       }
 
       return {
-        content: `Today's Recommendation: ${recommendation}\n\n` +
-          `Why this workout\n` +
-          `Your last completed session was ${lastSession.name} on ${lastSession.date} (${lastSession.volume.toLocaleString()} kg volume). ` +
-          `To allow those muscle groups 48 hours to recover while maintaining momentum, training ${recommendation} is the most balanced choice today.\n\n` +
-          `Suggested Exercises\n` +
-          suggestedExercises.map(e => `- ${e}: 3-4 working sets, 8-12 reps, ~90s rest`).join('\n') +
-          `\n\nTap "+ Log Training" on your Dashboard when you're done to save your sets.`,
+        content: `TODAY'S RECOMMENDATION\n\n${recommendationFocus}\n\n${reasoningText}\n\nRecommended\n` +
+          suggestedExercisesList.map(e => `- ${e.name}: ${e.sets} sets × ${e.reps}`).join('\n') +
+          `\n\nCoach insight\nYour recent pressing volume is trending upward. Keep today's working sets controlled and prioritize consistent technique.`,
         supportingData: `Based on last session: ${lastSession.name} on ${lastSession.date}.`,
+        structuredRecommendation,
         suggestedQuestions: [
           'How do I do a bench press?',
-          'How did I progress this week?',
-          'Should I increase my weight?'
+          'How do I do an Arnold Press?',
+          'How did I progress this week?'
         ]
       }
     } else {
       // User has 0 logged sessions
+      const structuredRecommendation: StructuredWorkoutRecommendation = {
+        type: 'workout_recommendation',
+        focus: 'Upper Body',
+        reasoning: 'Based on your recent training history, an upper-body session is a suitable choice today.',
+        exercises: [
+          { name: 'Bench Press', slug: 'bench-press', sets: 3, reps: '8-12 reps', media: resolveExerciseMedia('bench-press') },
+          { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8-12 reps', media: resolveExerciseMedia('lat-pulldown') },
+          { name: 'Shoulder Press', slug: 'shoulder-press', sets: 3, reps: '8-12 reps', media: resolveExerciseMedia('shoulder-press') }
+        ],
+        coachInsight: 'Your recent pressing volume is trending upward. Keep today\'s working sets controlled and prioritize consistent technique.'
+      }
+
       return {
-        content: `Starter Workout: Full-Body Foundation\n\n` +
-          `Since you are establishing your baseline, a foundational full-body routine that activates all primary movement patterns is recommended:\n\n` +
-          `1. Barbell Squat (Quads and Glutes): 3 x 8-10 reps\n` +
-          `2. Barbell Bench Press (Chest and Triceps): 3 x 8-10 reps\n` +
-          `3. Lat Pulldown or Pull-Up (Back and Biceps): 3 x 10-12 reps\n` +
-          `4. Romanian Deadlift (Posterior Chain): 3 x 8-10 reps\n` +
-          `5. Plank (Core Stability): 3 x 30-45 second holds\n\n` +
-          `Once you complete and save this workout, your starting 1RMs will be calculated and volume progression tracking will begin.`,
-        supportingData: 'Starter full-body routine.',
+        content: `TODAY'S RECOMMENDATION\n\nUpper Body\n\nBased on your recent training history, an upper-body session is a suitable choice today.\n\nRecommended\n` +
+          `- Bench Press: 3 sets × 8-12 reps\n- Lat Pulldown: 3 sets × 8-12 reps\n- Shoulder Press: 3 sets × 8-12 reps\n\nCoach insight\nYour recent pressing volume is trending upward. Keep today's working sets controlled and prioritize consistent technique.`,
+        supportingData: 'Upper body foundation recommendation.',
+        structuredRecommendation,
         suggestedQuestions: [
-          'How do I do a squat?',
-          'How do I do a bench press?',
-          'How does 1RM calculation work?'
+          'How do I do an Arnold Press?',
+          'Show me how to do bench press.',
+          'How do I do a squat?'
         ]
       }
     }

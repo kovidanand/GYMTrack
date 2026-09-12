@@ -317,6 +317,8 @@ export default function AiCoach() {
                         <AiResponseRenderer 
                           content={sanitizeAiContent(msg.content)} 
                           imageUrl={msg.imageUrl}
+                          structuredGuidance={msg.structuredGuidance}
+                          structuredRecommendation={msg.structuredRecommendation}
                         />
                       ) : (
                         <span>{msg.content}</span>

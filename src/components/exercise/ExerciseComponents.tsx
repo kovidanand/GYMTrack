@@ -1,8 +1,9 @@
+import { useState, useRef, useEffect } from 'react'
 import { cn, getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel } from '@/lib/utils'
 import type { Exercise } from '@/types'
 import { MuscleGroupBadge } from '@/components/shared'
 import { Dumbbell, Heart, Plus } from 'lucide-react'
-import { getExerciseVisual } from '@/lib/exerciseMedia'
+import { getExerciseVisual, resolveExerciseMedia } from '@/lib/exerciseMedia'
 
 // ─── Muscle Group Visual ────────────────────────────────────────────────────────
 
@@ -44,12 +45,54 @@ interface ExerciseCardProps {
 
 export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, onAddToWorkout, onClick }: ExerciseCardProps) {
   const difficultyClass = getDifficultyColor(exercise.difficulty)
-  const visualUrl = getExerciseVisual(exercise.slug, exercise.image_url)
+  const media = resolveExerciseMedia(exercise)
+  const videoUrl = media?.videoUrl || media?.maleVideoUrl || media?.femaleVideoUrl
+  const posterUrl = media?.posterUrl || media?.thumbnailUrl || getExerciseVisual(exercise.slug, exercise.image_url)
+
+  const cardRef = useRef<HTMLElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [isVisible, setIsVisible] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const [videoError, setVideoError] = useState(false)
+
+  // IntersectionObserver to only load/play video when in viewport
+  useEffect(() => {
+    const cardEl = cardRef.current
+    if (!cardEl || !videoUrl) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries
+        setIsVisible(entry.isIntersecting)
+      },
+      { threshold: 0.3 }
+    )
+
+    observer.observe(cardEl)
+    return () => observer.disconnect()
+  }, [videoUrl])
+
+  // Manage playback based on visibility or hover
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || videoError) return
+
+    if (isVisible || isHovered) {
+      video.play().catch(() => {
+        // Autoplay may be restricted or pending interaction
+      })
+    } else {
+      video.pause()
+    }
+  }, [isVisible, isHovered, videoError])
 
   return (
     <article
+      ref={cardRef}
       className="card card-hover cursor-pointer group overflow-hidden animate-fade-in relative flex flex-col justify-between"
       onClick={() => onClick(exercise)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       role="button"
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick(exercise)}
@@ -70,24 +113,40 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
       )}
 
       <div>
-        {/* Visual Media or Illustration area */}
-        <div className="h-32 mb-3 -mx-5 -mt-5 rounded-t-xl overflow-hidden bg-surface-100 flex items-center justify-center relative">
-          {visualUrl ? (
+        {/* Visual Media Video Preview area */}
+        <div className="h-36 mb-3 -mx-5 -mt-5 rounded-t-xl overflow-hidden bg-surface-900 flex items-center justify-center relative">
+          {videoUrl && !videoError ? (
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              poster={posterUrl || undefined}
+              muted
+              loop
+              playsInline
+              preload="none"
+              onError={() => setVideoError(true)}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              aria-label={`${exercise.name} preview demonstration`}
+            />
+          ) : posterUrl ? (
             <img
-              src={visualUrl}
+              src={posterUrl}
               alt={exercise.name}
-              className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               loading="lazy"
-              onError={(e) => {
-                // Fallback to illustration on error
-                e.currentTarget.style.display = 'none'
-              }}
             />
           ) : (
             <ExerciseIllustration
               muscleGroup={exercise.muscle_group}
               className="w-full h-full rounded-none"
             />
+          )}
+
+          {/* Subtle Video badge */}
+          {videoUrl && !videoError && (
+            <div className="absolute bottom-1.5 left-2 z-10 bg-black/50 backdrop-blur-xs text-[9px] font-semibold text-white/90 px-1.5 py-0.5 rounded">
+              HD
+            </div>
           )}
         </div>
 

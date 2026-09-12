@@ -56,6 +56,17 @@ export interface Exercise {
   updated_at: string
 }
 
+export interface ExerciseMedia {
+  exerciseId: string
+  videoUrl?: string
+  maleVideoUrl?: string
+  femaleVideoUrl?: string
+  thumbnailUrl?: string
+  posterUrl?: string
+  source?: string
+  sourceLicense?: string
+}
+
 export interface UserFavoriteExercise {
   id: string
   user_id: string
@@ -445,4 +456,38 @@ export interface ToastMessage {
   title: string
   description?: string
   duration?: number
+  action?: {
+    label: string
+    onClick: () => void
+  }
 }
+
+// ─── Structured AI Coach Guidance ─────────────────────────────────────────────
+
+export interface StructuredExerciseGuidance {
+  type: 'exercise_guidance'
+  exercise: {
+    name: string
+    slug: string
+  }
+  targetMuscles: string[]
+  steps: string[]
+  mistakes: string[]
+  tip: string
+  media?: ExerciseMedia | null
+}
+
+export interface StructuredWorkoutRecommendation {
+  type: 'workout_recommendation'
+  focus: string
+  reasoning: string
+  exercises: Array<{
+    name: string
+    slug: string
+    sets: number
+    reps: string
+    media?: ExerciseMedia | null
+  }>
+  coachInsight: string
+}
+
