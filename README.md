@@ -1,9 +1,9 @@
 <div align="center">
 
 # ⚡ GYMTrack
-### Next-Generation Fitness Intelligence & Offline-First Strength Tracking
+### Full-Stack Fitness Intelligence, HD Video Demonstrations & Offline-First Strength Tracking
 
-*Log what you trained. Zero friction. Zero data loss in the gym basement.*
+*Log every set. Perfect your form with continuous HD video demos. Zero data loss in the gym basement.*
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-gymtrack--fitness--kovid.vercel.app-00E599?style=for-the-badge&logo=vercel&logoColor=black)](https://gymtrack-fitness-kovid.vercel.app)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
@@ -21,58 +21,70 @@
 
 ## 💡 The Problem & The GYMTrack Vision
 
-Most workout apps fall into one of two traps:
-1. **They fail in underground basements**: When cell signals drop between concrete walls, cloud-dependent trackers freeze, spin indefinitely, or lose entire workout sessions.
-2. **They feel like bloated spreadsheets**: Convoluted menu hierarchies, mandatory stopwatch modes, and clunky sidebars turn what should be a 5-second log into a workout interruption.
+Most fitness applications fail lifters in two critical ways:
+1. **The Gym Basement Failure**: Underground strength facilities and gym basements have poor or nonexistent cellular connectivity. Cloud-dependent apps freeze, spin endlessly, or drop workout logs when network connectivity drops.
+2. **The Spreadsheet Friction & Placeholder Problem**: Clunky menu hierarchies turn a 5-second set log into a chore, while exercise libraries rely on static illustrations or broken image placeholders instead of real, fluid movement demonstrations.
 
-**GYMTrack re-imagines the fitness tracking workflow:**
+**GYMTrack eliminates both bottlenecks:**
+
 ```
-  ┌─────────────┐       ┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-  │  OPEN APP   │  ──▶  │  SEE TODAY  │  ──▶  │    TAP +    │  ──▶  │ CONFIRM LOG │
-  └─────────────┘       └─────────────┘       └─────────────┘       └─────────────┘
-                                                                           │
-                                                                           ▼
-                                                               ┌──────────────────────┐
-                                                               │  DASHBOARD UPDATES   │
-                                                               │  (VOLUME & 1RM PRs)  │
-                                                               └──────────────────────┘
+  ┌────────────────┐       ┌────────────────┐       ┌────────────────┐       ┌────────────────┐
+  │  OPEN DASHBOARD│  ──▶  │ SEE TODAY'S LOG│  ──▶  │   TAP 1-STEP   │  ──▶  │ RECORD SET/REPS│
+  └────────────────┘       └────────────────┘       └────────────────┘       └────────────────┘
+                                                                                      │
+                                                                                      ▼
+  ┌────────────────┐       ┌────────────────┐       ┌────────────────┐       ┌────────────────┐
+  │  AI COACH TIPS │  ◀──  │ MUSCLE BALANCE │  ◀──  │ PERIOD METRICS │  ◀──  │ REAL-TIME EVENT│
+  │  & FORM ADVICE │       │  DISTRIBUTION  │       │  & PR TRACKING │       │  BUS DISPATCH  │
+  └────────────────┘       └────────────────┘       └────────────────┘       └────────────────┘
 ```
 
-Built with modern consumer UX principles—a clean top navigation bar, glassmorphism design tokens, instant one-tap exercise logging, set-accurate volume aggregation, and an evidence-grounded AI coach that never hallucinates.
+Built with modern consumer UX principles: a clean top navigation bar, glassmorphism design tokens, full-HD continuous video demonstrations, set-accurate volume analytics, and an evidence-grounded AI coach that never hallucinates.
 
 ---
 
-## ✨ Core Feature Highlights
+## ✨ Core Pillars & Architectural Highlights
 
-### 1. ⚡ Consumer-Grade Frictionless Logging
-- **Instant Top-Level Action**: Direct access to `+ Log Training` without navigating nested submenus.
-- **Accurate Set Analytics**: Daily volume calculated directly from completed sets ($\text{weight} \times \text{reps}$) with dynamic session aggregations.
-- **Interactive Daily Stream**: Click any exercise row to inspect history, tap metric tiles (Exercises, Sets, Volume, Duration) to jump directly into deep progress analytics, and select weekly calendar days for instant logs.
-- **Contextual Daily Insights**: Grounded coaching summaries that analyze actual training deltas against prior sessions.
+### 1. 🎥 Real HD Exercise Video Demonstrations (100% Coverage)
+- **Continuous Demonstration Playback**: Every single exercise in the library features an authentic, continuously looping Full-HD video demonstration showing a lifter executing the exact movement with proper biomechanics.
+- **Dual-Angle Perspectives**: Instant toggle between male and female movement models with zero playback interruption.
+- **Smart Viewport Streaming**: Cards utilize `IntersectionObserver` to trigger playback only when scrolled into the active viewport, conserving mobile bandwidth and battery life while enabling instantaneous hover previews on desktop.
+- **Strict 16:9 Media Architecture**: Eliminates awkward letterboxing, container overflow, and cropped titles across both mobile and multi-column desktop grids.
+- **Zero-Placeholder Guarantee**: No purple fallback blocks or generic dummy illustrations—comprehensive biomechanical instructions, primary & secondary target muscles, and common mistake warnings for every movement.
 
 ### 2. 📶 "Basement Mode" — Zero-Loss Offline Resilience
-- **Persistent IndexedDB Engine**: Operates independently of network availability via local `sync_queue`, `cached_workouts`, and `active_sessions`.
-- **Automatic Network Reconnection**: Detects network transitions with an interactive sync indicator badge.
+- **Persistent IndexedDB Engine**: Operates independently of network availability via local stores: `sync_queue`, `cached_workouts`, and `active_sessions`.
+- **Automatic Network Reconnection**: Interactive connection badge reflects network transitions in real time.
 - **Idempotent Queue Replay**: Retries pending mutations sequentially upon reconnection, deduplicating inflight payloads to ensure zero duplicate sessions.
 - **Session Continuity**: Active workouts persist seamlessly across tab refreshes, background suspensions, and accidental closures.
 
-### 3. 📈 Precision 1RM & Overload Analytics
-- **Standardized Epley Progression Formula**:
-  $$\text{1RM} = \text{weight} \times \left(1 + \frac{\text{reps}}{30}\right)$$
-- **Transparent Velocity Metrics**: Real math-backed estimations rather than arbitrary proprietary fatigue scores.
-- **Differentiated Movement Classification**: Distinguishes weighted barbell/dumbbell movements from bodyweight, assisted, and duration-based exercises.
-- **All-Time PR Celebrations**: Automatically flags, archives, and displays Personal Records by weight, volume, and estimated 1RM.
+### 3. ⚡ Reactive Event-Driven Architecture
+- **In-Memory Event Bus**: Decouples UI components from storage writes using typed events (`gymtrack:sets_logged`, `gymtrack:session_completed`, `gymtrack:workout_updated`, `gymtrack:sync_completed`).
+- **Instant Cross-Component Synchronization**: Logging a set in the modal instantly updates the Dashboard session overview and Progress analytics without full-page reloads or network waterfalls.
+- **Stabilized Hook Lifecycle**: Throttled window focus refetches and memoized date boundaries guarantee zero infinite re-render loops or CDP attachment lockups.
 
-### 4. 🧠 Grounded AI Coach & Structured UI Renderer
-- **Dual-Engine Architecture**: Powered by **Google Gemini 1.5 Flash** (via Supabase Edge Functions) with a robust, rule-based **Deterministic Local Engine** fallback when offline.
-- **Strict Guardrails**: Operates strictly on authentic user log data. No fabricated recovery stats or synthetic HRV claims.
-- **Native `AiResponseRenderer`**: Completely eliminates raw markdown formatting (`###`, `**`, `*`) and decorative sparkles in favor of native, responsive UI components:
-  - Clean typographic hierarchy (`h3`, `h4`, styled lists, parameter chips)
-  - Interactive exercise cards with anatomical target badges and visual guides
-  - Biomechanical cues and structured progression tables
+### 4. 📊 Multi-Period Analytics & Volume Intelligence
+- **Unified Period Filtering**: Toggle between **7 Days**, **30 Days**, and **All Time** with instantaneous, synchronous recalculation across all charts and statistical summaries.
+- **Period Comparison Engine**: Side-by-side comparative analysis of current vs. previous training cycles:
+  - Total Training Volume ($\sum \text{weight} \times \text{reps}$) with color-coded percentage delta badges ($\pm \% \Delta$).
+  - Training Frequency (completed session counts and consistency indicators).
+  - First-period baseline handling that gracefully adapts when previous historical records are not yet logged.
+- **Target Muscle Group Distribution**: Interactive horizontal breakdown measuring set allocation percentages across chest, back, shoulders, arms, legs, and core to identify neglected muscle groups.
+- **Volume Progression AreaChart**: SVG-rendered volume trajectory charting progressive overload over chosen training periods.
+- **Precision 1RM Calculation (Epley Formula)**:
+  $$\text{1RM} = \text{weight} \times \left(1 + \frac{\text{reps}}{30}\right)$$
+  Tracks all-time Personal Records (PRs) per exercise with instant badge indicators.
+
+### 5. 🧠 Grounded AI Coach & Structured UI Renderer
+- **Dual-Engine Intelligence**: Powered by **Google Gemini 1.5 Flash** (via Supabase Edge Functions) with a robust, rule-based **Deterministic Local Engine** fallback when offline.
+- **Strict Data Grounding**: The AI Coach operates exclusively on authentic logged workouts, volume differentials, and muscle distributions. No synthetic recovery estimates or hallucinated metrics.
+- **Native `AiResponseRenderer`**: Completely eliminates raw markdown clutter (`###`, `**`, `*`) and decorative sparkles in favor of native UI components:
+  - Clean typographic hierarchy and parameter chips.
+  - Interactive exercise recommendation cards with HD video previews and 1-tap `+ Add` actions.
+  - Biomechanical cues and structured progression guidelines.
 - **Dual Form Factor**: Available as an unobtrusive **Floating Mobile Drawer** across all screens or as a dedicated **Full-Page Intelligence Workspace**.
 
-### 5. 🛡️ Enterprise Security & Multi-Tenant Privacy
+### 6. 🛡️ Enterprise Security & Multi-Tenant Privacy
 - **Row Level Security (RLS)**: PostgreSQL enforces strict user isolation (`auth.uid() = user_id`) across all tables.
 - **RFC 7636 PKCE OAuth**: Hardened authorization code exchange for Google Sign-In and passwordless Email OTP verification.
 - **Zero Token Leakage**: Tokens and secrets are never cached inside IndexedDB. API keys remain securely vaulted inside Supabase Edge Function environment variables.
@@ -87,8 +99,10 @@ Built with modern consumer UX principles—a clean top navigation bar, glassmorp
 ├───────────────────┬───────────────────────────────┬─────────────────────────┤
 │    Auth Layer     │      State & UI Engine        │   Local Offline Engine  │
 │  - Supabase Auth  │  - Top Navigation & Dashboard │   - IndexedDB Storage   │
-│  - PKCE / OTP     │  - 1RM Epley Analytics        │   - Sync Queue Replay   │
-│  - Protected Route│  - AiResponseRenderer         │   - Network Listeners   │
+│  - PKCE / OTP     │  - 16:9 HD Video Player Engine│   - Sync Queue Replay   │
+│  - Protected Route│  - Reactive Event Bus (pub/sub)│  - Network Listeners   │
+│                   │  - 1RM & Period Analytics     │                         │
+│                   │  - AiResponseRenderer         │                         │
 └─────────┬─────────┴───────────────┬───────────────┴────────────┬────────────┘
           │                         │                            │
           ▼                         ▼                            ▼
@@ -105,15 +119,15 @@ Built with modern consumer UX principles—a clean top navigation bar, glassmorp
 
 | Domain | Technology | Purpose & Implementation |
 |---|---|---|
-| **Frontend Framework** | [React 18.3](https://react.dev) | High-performance component model with functional hooks |
-| **Language** | [TypeScript 5.5](https://www.typescriptlang.org) | End-to-end type safety, strict compile checks, zero-lint debt |
-| **Build & Dev Server** | [Vite 5.4](https://vitejs.dev) | Lightning-fast HMR and optimized production Rollup bundling |
-| **Styling & Design** | [Tailwind CSS 3.4](https://tailwindcss.com) | Curated dark-mode theme, glassmorphism, responsive grid system |
-| **UI Primitives** | [Radix UI](https://www.radix-ui.com) & [Lucide Icons](https://lucide.dev) | Accessible, unstyled UI primitives and consistent iconography |
-| **Charts & Visuals** | [Recharts](https://recharts.org) | SVG-rendered volume loads, frequency trends, and PR progression curves |
-| **Offline Persistence** | [IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) | Low-level browser database for offline logging & sync queue |
-| **Cloud Database** | [Supabase PostgreSQL 15](https://supabase.com) | Enterprise relational storage with Row Level Security (RLS) policies |
-| **Authentication** | [Supabase GoTrue](https://supabase.com/docs/guides/auth) | Google OAuth (PKCE flow), Email OTP, and automatic session refresh |
+| **Frontend Framework** | [React 18.3](https://react.dev) | High-performance component model with functional hooks & memoization |
+| **Language** | [TypeScript 5.5](https://www.typescriptlang.org) | End-to-end strict type safety, zero compile errors, robust domain models |
+| **Build & Tooling** | [Vite 5.4](https://vitejs.dev) | Lightning-fast HMR and optimized production Rollup bundling |
+| **Styling & Tokens** | [Tailwind CSS 3.4](https://tailwindcss.com) | Curated dark/light theme tokens, glassmorphism, responsive grid architecture |
+| **Exercise Media** | [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) | 593 Full-HD demonstration videos with male/female angles and high-res posters |
+| **Charts & Visuals** | [Recharts](https://recharts.org) | SVG-rendered volume progression curves, frequency trends, and period graphs |
+| **Offline Persistence** | [IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) | Low-level browser database for offline logging & sync queue replay |
+| **Cloud Database** | [Supabase PostgreSQL 15](https://supabase.com) | Relational storage with Row Level Security (RLS) policies |
+| **Authentication** | [Supabase GoTrue](https://supabase.com/docs/guides/auth) | Google OAuth (PKCE flow), Email OTP, and session refresh |
 | **Serverless AI** | [Supabase Edge Functions](https://supabase.com/docs/guides/functions) | Deno-based secure proxy communicating with Google Gemini 1.5 Flash |
 | **Deployment** | [Vercel](https://vercel.com) | Automated CI/CD pipeline, global CDN edge distribution, SPA routing |
 
@@ -123,30 +137,44 @@ Built with modern consumer UX principles—a clean top navigation bar, glassmorp
 
 ```
 GYMTrack/
-├── public/                     # Static assets & web manifest
+├── public/                     # Static assets, web manifest, exercise video references
 ├── src/
 │   ├── components/
 │   │   ├── ai/                 # AI Assistant components
 │   │   │   ├── AiResponseRenderer.tsx  # Structured UI Markdown transformer
-│   │   │   └── FloatingAiCoach.tsx     # Contextual mobile/desktop floating panel
-│   │   ├── auth/               # Authentication modals & forms (OTP, Google)
-│   │   ├── common/             # Reusable UI primitives (Buttons, Cards, Modals)
-│   │   ├── navigation/         # Responsive Top Navigation & Mobile Bar
-│   │   └── workouts/           # Training Logger, Set Inputs, Exercise Selector
-│   ├── hooks/                  # Custom React hooks (useAuth, useProgress, useAiCoach)
-│   ├── lib/                    # Core application libraries
-│   │   ├── coachProvider.ts    # Dual-mode AI Coach & deterministic heuristics
-│   │   ├── indexedDb.ts        # Offline storage & sync queue management
+│   │   │   └── FloatingAiCoach.tsx     # Contextual floating AI assistant
+│   │   ├── auth/               # Authentication modals & forms (OTP, Google, demo)
+│   │   ├── exercise/           # Exercise Library & Video demonstration components
+│   │   │   ├── ExerciseComponents.tsx  # 16:9 cards, responsive grid, visual badges
+│   │   │   ├── ExerciseDetailModal.tsx # Full modal inspection with video demo
+│   │   │   └── ExerciseVideoPlayer.tsx # Autoplay, looped, dual-angle video player
+│   │   ├── navigation/         # Top Navigation, mobile drawer, and sync badges
+│   │   ├── progress/           # Advanced analytics components
+│   │   │   ├── AiCoachInsightsPanel.tsx   # Grounded AI analytics summaries
+│   │   │   ├── MuscleDistributionChart.tsx# Target muscle breakdown bars
+│   │   │   └── PeriodComparison.tsx       # Current vs. previous period volume & sessions
+│   │   ├── shared/             # Reusable UI primitives (StatCards, Badges, Modals)
+│   │   └── workout/            # Training Logger, Set inputs, live session modals
+│   ├── context/                # React Contexts (AuthContext, OfflineContext)
+│   ├── data/                   # Default exercises catalog & movement metadata
+│   ├── hooks/                  # Custom React hooks (useProgress, useWorkouts, useAuth)
+│   ├── lib/                    # Core engineering modules
+│   │   ├── ai.ts               # Edge function client for Gemini AI Coach
+│   │   ├── coachAnalysis.ts    # Biomechanical rules & deterministic fallbacks
+│   │   ├── events.ts           # In-memory reactive pub/sub event bus
+│   │   ├── exerciseMedia.ts    # HD demonstration video resolver & alias matching
+│   │   ├── offline/            # IndexedDB sync queue & storage engine
+│   │   ├── progress.ts         # Volume, 1RM Epley, PR detection, history queries
 │   │   ├── supabase.ts         # Supabase client singleton & auth helpers
-│   │   └── utils.ts            # Formatting, calculations (Epley 1RM, volume)
-│   ├── pages/                  # Main route pages
-│   │   ├── Dashboard.tsx       # Primary action dashboard & daily activity stream
-│   │   ├── AiCoach.tsx         # Full-page interactive AI intelligence portal
-│   │   ├── Workouts.tsx        # Workout routine builder & exercise library
-│   │   ├── Progress.tsx        # In-depth analytics, PR timelines & charts
-│   │   └── Profile.tsx         # Account settings & data export
-│   ├── types/                  # TypeScript domain declarations
-│   ├── App.tsx                 # Route declarations & global providers
+│   │   └── utils.ts            # Formatting, calculations, style helpers
+│   ├── pages/                  # Top-level view routes
+│   │   ├── Dashboard.tsx       # Daily live training overview & quick action hub
+│   │   ├── ExerciseDetail.tsx  # Dedicated exercise page with hero video player
+│   │   ├── Exercises.tsx       # Searchable, filterable exercise library
+│   │   ├── Progress.tsx        # Period comparison, volume charts, muscle distribution
+│   │   └── Workouts.tsx        # Workout routine builder & starter routines
+│   ├── types/                  # TypeScript domain models and Supabase schemas
+│   ├── App.tsx                 # Route declarations & global layout wrapper
 │   └── main.tsx                # Application mount point
 ├── supabase/
 │   ├── functions/ai-coach/     # Deno edge function integrating Google Gemini
@@ -200,12 +228,12 @@ Visit `http://localhost:5173` to explore GYMTrack locally.
 
 ---
 
-## 🧪 Quality Assurance & Build Checks
+## 🧪 Quality Assurance & Build Verification
 
 To verify code integrity, strict type contracts, and production assets:
 
 ```bash
-# TypeScript strict type checking
+# TypeScript strict type checking (0 errors)
 npx tsc --noEmit
 
 # Production bundle compilation
@@ -220,8 +248,9 @@ npm run preview
 ## 🔒 Security & Data Integrity
 
 - **Row Level Security (RLS)**: No client can read, update, or delete records belonging to another `user_id`. PostgreSQL verifies `auth.uid() = user_id` at the database kernel level.
-- **Edge Function Secrets**: Client bundles only contain the public anon key. The `GEMINI_API_KEY` is securely injected in the edge runtime and never exposed to browser memory.
+- **Edge Function Secrets**: Client bundles only contain the public anon key. The `GEMINI_API_KEY` is securely injected into the edge runtime and never exposed to browser memory.
 - **Sanitized Inputs**: All user inputs undergo client and schema-level validation to prevent injection or invalid numeric formats.
+- **Idempotent Sync Mutations**: IndexedDB sync queue requests are tagged with UUIDs to guarantee that retrying network operations never creates duplicate sessions or sets.
 
 ---
 
@@ -244,7 +273,7 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 <div align="center">
 
-**Built with passion for strength athletes and lifters worldwide.**  
+**Built for strength athletes, lifters, and fitness enthusiasts worldwide.**  
 [Live App](https://gymtrack-fitness-kovid.vercel.app) • [Report Issue](https://github.com/kovidanand/GYMTrack/issues)
 
 </div>
