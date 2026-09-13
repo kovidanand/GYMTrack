@@ -7,6 +7,7 @@ import { ExerciseSkeleton } from '@/components/exercise/ExerciseSkeleton'
 import { useExercises, type SortOption } from '@/hooks/useExercises'
 import { useToast } from '@/components/shared/Toast'
 import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
+import { emitGymtrackEvent } from '@/lib/events'
 import type { Exercise } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -250,6 +251,7 @@ export default function Exercises() {
                 onAddToWorkout={(ex, e) => {
                   e.stopPropagation()
                   queueExerciseForTodayWorkout(ex)
+                  emitGymtrackEvent('gymtrack:workout_updated', { exerciseId: ex.id })
                   toast.success(
                     `${ex.name} added to today's training.`,
                     undefined,

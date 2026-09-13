@@ -1,5 +1,6 @@
 import type { CoachContext } from '@/types'
 import { getWorkoutHistory, getProgressStats, getPersonalRecords } from './progress'
+import { resolveExerciseName } from './dashboardData'
 
 /**
  * Builds a compact, token-efficient context object for the AI Coach
@@ -16,17 +17,23 @@ export async function buildCoachContext(profile: any, userId: string): Promise<C
 
     // Create a lean history summary
     // Limit history to 10 on the client side
-    const recentWorkouts = (historyRes.data || []).slice(0, 10).map((session: any) => ({
-      name: session.workout_name,
-      date: session.started_at,
-      duration_seconds: session.duration_seconds,
-      total_volume: session.total_volume,
-      total_exercises: session.total_exercises,
-      completed_sets: session.completed_sets,
-      // Group exercises to show what they did, without bloating context with every single set
-      exercises: (session.workout_session_sets || []).map((set: any) => set.exercise_name)
-        .filter((value: string, index: number, self: string[]) => self.indexOf(value) === index) // Unique exercise names
-    }))
+    const recentWorkouts = (historyRes.data || []).slice(0, 10).map((session: any) => {
+      const distinctNames = (session.workout_session_sets || [])
+        .map((set: any) => resolveExerciseName(set, session.workout_name))
+        .filter((value: string, index: number, self: string[]) => Boolean(value) && self.indexOf(value) === index)
+
+      const totalEx = session.total_exercises || distinctNames.length || (session.completed_sets ? 1 : 0)
+
+      return {
+        name: session.workout_name,
+        date: session.started_at,
+        duration_seconds: session.duration_seconds,
+        total_volume: session.total_volume,
+        total_exercises: totalEx,
+        completed_sets: session.completed_sets,
+        exercises: distinctNames
+      }
+    })
 
     const topPrs = (prsRes.data || []).map((pr: any) => ({
       exercise: pr.exerciseName,

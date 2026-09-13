@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { cn, getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel } from '@/lib/utils'
 import type { Exercise } from '@/types'
 import { MuscleGroupBadge } from '@/components/shared'
-import { Dumbbell, Heart, Plus, PlayCircle } from 'lucide-react'
+import { Dumbbell, Heart, Plus } from 'lucide-react'
 import { getExerciseVisual, resolveExerciseMedia } from '@/lib/exerciseMedia'
 
 // ─── Muscle Group Visual ────────────────────────────────────────────────────────
@@ -127,14 +127,6 @@ export function ExerciseMedia({ exercise, variant = 'card' }: ExerciseMediaProps
           muscleGroup={exercise.muscle_group}
           className="absolute inset-0 w-full h-full rounded-none"
         />
-      )}
-
-      {/* HD badge */}
-      {videoUrl && !videoError && (
-        <div className="absolute bottom-1.5 left-2 z-10 bg-black/50 backdrop-blur-sm text-[9px] font-bold text-white/90 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-          <PlayCircle size={8} className="opacity-80" aria-hidden="true" />
-          HD
-        </div>
       )}
     </div>
   )

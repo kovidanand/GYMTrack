@@ -22,7 +22,7 @@ import {
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/shared/Toast'
-import { enqueueSyncOperation, generateUUID } from '@/lib/offline/db'
+import { enqueueSyncOperation, generateUUID, getQueuedExercisesForTodayWorkout, clearQueuedExercisesForTodayWorkout } from '@/lib/offline/db'
 import { syncEngine } from '@/lib/offline/syncEngine'
 import { emitGymtrackEvent } from '@/lib/events'
 import { cn } from '@/lib/utils'
@@ -130,6 +130,34 @@ export function TrainingLoggerModal({
           ])
           return
         }
+      }
+
+      // Check if user queued exercises from the Library (+ Add button)
+      const queued = getQueuedExercisesForTodayWorkout()
+      if (queued.length > 0) {
+        const items: LoggedExerciseItem[] = queued.map(q => {
+          const isBw = q.exercise?.equipment.includes('bodyweight') || q.exercise?.equipment.includes('none')
+          const defaultW = isBw ? 0 : (Number(q.weight) || 50)
+          const parsedReps = parseInt(q.reps || '10', 10) || 10
+          const setsCount = q.sets || 3
+          const sets: LoggedExerciseSet[] = []
+          for (let s = 1; s <= setsCount; s++) {
+            sets.push({
+              id: generateUUID(),
+              set_number: s,
+              weight: defaultW,
+              reps: parsedReps,
+              completed: true
+            })
+          }
+          return {
+            id: generateUUID(),
+            exercise: q.exercise || (DEFAULT_EXERCISES.find(e => e.id === q.exercise_id) || DEFAULT_EXERCISES[0]),
+            sets
+          }
+        })
+        setLoggedItems(items)
+        return
       }
 
       // Default with first exercise if none provided
@@ -328,9 +356,11 @@ export function TrainingLoggerModal({
     }
 
     // 3. Extract reps
-    // Match "10 reps", "10 times", "for 10", "x 10"
+    // Match "10 reps", "10 times", "for 10", "x 10", "sets of 10", "of 10"
     let extractedReps: number | null = null
-    const repsMatch = lower.match(/(\d+)\s*(?:reps?|times?)/i) ||
+    const repsMatch = lower.match(/(?:sets?\s+of\s+)(\d+)/i) ||
+                      lower.match(/(?:of\s+)(\d+)\s*(?:reps?)?/i) ||
+                      lower.match(/(\d+)\s*(?:reps?|times?)/i) ||
                       lower.match(/(?:for)\s*(\d+)/i) ||
                       lower.match(/(?:x|times)\s*(\d+)/i)
     if (repsMatch) {
@@ -521,9 +551,10 @@ export function TrainingLoggerModal({
             id: generateUUID(),
             session_id: sessionId,
             exercise_id: item.exercise.id,
+            exercise_name: item.exercise.name,
             set_number: s.set_number,
-            weight: s.weight,
-            reps: s.reps,
+            weight: Number(s.weight) || 0,
+            reps: Number(s.reps) || 0,
             completed: true
           })
         })
@@ -551,8 +582,12 @@ export function TrainingLoggerModal({
         })
       }
 
-      // 3. Emit reactive event to immediately update Dashboard, Progress, and History
+      // Clear any queued exercises from library
+      clearQueuedExercisesForTodayWorkout()
+
+      // 3. Emit reactive events to immediately update Dashboard, Progress, and History
       emitGymtrackEvent('gymtrack:session_completed', { sessionId })
+      emitGymtrackEvent('gymtrack:sets_logged', { sessionId })
 
       toast.success(
         'Workout Logged Successfully!',

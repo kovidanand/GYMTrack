@@ -11,15 +11,20 @@ import {
   Trophy, 
   Mic, 
   Info,
-  Calendar,
-  TrendingUp
+  Calendar
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProgress } from '@/hooks/useProgress'
-import { useWorkouts } from '@/hooks/useWorkouts'
 import { TrainingLoggerModal } from '@/components/workout/TrainingLoggerModal'
 import { cn } from '@/lib/utils'
 import { subscribeGymtrackEvent } from '@/lib/events'
+import {
+  filterTodaySessions,
+  aggregateTodayMetrics,
+  isSameDayLocal,
+  type TodayMetrics
+} from '@/lib/dashboardData'
+import { getQueuedExercisesForTodayWorkout } from '@/lib/offline/db'
 
 function getLocalGreeting(date = new Date()): string {
   const h = date.getHours()
@@ -29,19 +34,10 @@ function getLocalGreeting(date = new Date()): string {
   return 'Good night'
 }
 
-function isSameDay(d1: Date, d2: Date): boolean {
-  return (
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate()
-  )
-}
-
 export default function Dashboard() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
 
-  const { workouts, activePlan } = useWorkouts()
   const { history, personalRecords, loading, refresh } = useProgress()
 
   // Training logger modal state
@@ -49,7 +45,21 @@ export default function Dashboard() {
   const [loggerMode, setLoggerMode] = useState<'manual' | 'voice'>('manual')
 
   const firstName = profile?.first_name || user?.email?.split('@')[0] || 'Athlete'
-  const today = useMemo(() => new Date(), [])
+  
+  // Current local date with midnight-reset detection
+  const [currentDate, setCurrentDate] = useState(() => new Date())
+
+  // Midnight day-reset timer: auto resets daily view at 00:00:00 local time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date()
+      if (!isSameDayLocal(now, currentDate)) {
+        setCurrentDate(now)
+        refreshRef.current?.()
+      }
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [currentDate])
 
   // Stable reference to refresh for event listeners and focus handlers
   const refreshRef = useRef(refresh)
@@ -61,8 +71,8 @@ export default function Dashboard() {
   useEffect(() => {
     let lastFocusRefresh = Date.now()
     const onFocus = () => {
-      // Throttle window focus refresh to at most once every 10 seconds
-      if (Date.now() - lastFocusRefresh > 10000) {
+      // Throttle window focus refresh to at most once every 5 seconds
+      if (Date.now() - lastFocusRefresh > 5000) {
         lastFocusRefresh = Date.now()
         refreshRef.current?.()
       }
@@ -70,18 +80,24 @@ export default function Dashboard() {
     window.addEventListener('focus', onFocus)
     const unsub1 = subscribeGymtrackEvent('gymtrack:sets_logged', () => refreshRef.current?.())
     const unsub2 = subscribeGymtrackEvent('gymtrack:session_completed', () => refreshRef.current?.())
+    const unsub3 = subscribeGymtrackEvent('gymtrack:workout_updated', () => {
+      refreshRef.current?.()
+      setQueuedExercises(getQueuedExercisesForTodayWorkout())
+    })
+    const unsub4 = subscribeGymtrackEvent('gymtrack:sync_completed', () => refreshRef.current?.())
     return () => {
       window.removeEventListener('focus', onFocus)
       unsub1()
       unsub2()
+      unsub3()
+      unsub4()
     }
   }, [])
 
   // ── Scoped Strictly to TODAY ONLY (resets at local midnight) ──
   const todaySessions = useMemo(() => {
-    const now = new Date()
-    return history.filter(s => isSameDay(new Date(s.started_at), now))
-  }, [history])
+    return filterTodaySessions(history, currentDate)
+  }, [history, currentDate])
 
   const activeTodaySession = todaySessions.find(s => s.status === 'in_progress')
   const completedTodaySessions = todaySessions.filter(s => s.status === 'completed')
@@ -92,68 +108,25 @@ export default function Dashboard() {
     ? 'Completed'
     : 'Not started'
 
-  // ── Volume: Direct computation from workout_session_sets (weight × reps) ──
-  const todayMetrics = useMemo(() => {
-    let exercises = 0
-    let sets = 0
-    let volume = 0
-    let durationSecs = 0
-    const exerciseNames = new Set<string>()
-
-    for (const session of todaySessions) {
-      durationSecs += session.duration_seconds || 0
-
-      if (session.workout_session_sets && session.workout_session_sets.length > 0) {
-        for (const s of session.workout_session_sets) {
-          if (!s.completed) continue
-          sets += 1
-          volume += (Number(s.weight) || 0) * (Number(s.reps) || 0)
-          if (s.exercise_name) exerciseNames.add(s.exercise_name)
-        }
-      } else {
-        // Fallback to session-level aggregates if sets aren't loaded
-        sets += session.completed_sets || 0
-        volume += session.total_volume || 0
-        exercises += session.total_exercises || 0
-      }
-    }
-
-    // If we counted from sets, use the unique exercise names
-    if (exerciseNames.size > 0) {
-      exercises = exerciseNames.size
-    }
-
-    return {
-      exercises,
-      sets,
-      volume,
-      durationMins: Math.round(durationSecs / 60)
-    }
+  // ── Unified Data Aggregation Layer: single source of truth for all 4 metrics ──
+  const todayMetrics: TodayMetrics = useMemo(() => {
+    return aggregateTodayMetrics(todaySessions)
   }, [todaySessions])
 
   // Activity breakdown for today's completed session(s)
-  const todayExercisesBreakdown = useMemo(() => {
-    const map = new Map<string, { name: string; sets: number; maxWeight: number; volume: number }>()
-    for (const session of completedTodaySessions) {
-      if (!session.workout_session_sets) continue
-      for (const set of session.workout_session_sets) {
-        if (!set.completed) continue
-        const name = set.exercise_name || 'Exercise'
-        const cur = map.get(name) || { name, sets: 0, maxWeight: 0, volume: 0 }
-        cur.sets += 1
-        const w = Number(set.weight) || 0
-        const r = Number(set.reps) || 0
-        if (w > cur.maxWeight) cur.maxWeight = w
-        cur.volume += w * r
-        map.set(name, cur)
-      }
+  const todayExercisesBreakdown = todayMetrics.exerciseBreakdown
+
+  // Check for any queued exercises from library
+  const [queuedExercises, setQueuedExercises] = useState(() => getQueuedExercisesForTodayWorkout())
+  useEffect(() => {
+    if (!isLoggerOpen) {
+      setQueuedExercises(getQueuedExercisesForTodayWorkout())
     }
-    return Array.from(map.values())
-  }, [completedTodaySessions])
+  }, [isLoggerOpen])
 
   // ── 7-Day Weekly Snapshot (Mon to Sun) ──
   const weeklyDays = useMemo(() => {
-    const curr = new Date(today)
+    const curr = new Date(currentDate)
     const dayOfWeek = curr.getDay()
     const mondayDiff = (dayOfWeek + 6) % 7
     const monday = new Date(curr)
@@ -166,9 +139,9 @@ export default function Dashboard() {
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday)
       d.setDate(monday.getDate() + i)
-      const isTodayDate = isSameDay(d, today)
+      const isTodayDate = isSameDayLocal(d, currentDate)
       const daySessionIds = history
-        .filter(s => s.status === 'completed' && isSameDay(new Date(s.started_at), d))
+        .filter(s => s.status === 'completed' && isSameDayLocal(s.started_at, d))
         .map(s => s.id)
       days.push({
         label: dayLabels[i],
@@ -180,7 +153,7 @@ export default function Dashboard() {
       })
     }
     return days
-  }, [history, today])
+  }, [history, currentDate])
 
   const weeklySessionCount = weeklyDays.filter(d => d.hasWorkout).length
 
@@ -201,7 +174,7 @@ export default function Dashboard() {
     if (todayStatus === 'Completed' && todayMetrics.volume > 0) {
       // Compare against previous session's volume
       const previousCompletedSessions = history
-        .filter(s => s.status === 'completed' && !isSameDay(new Date(s.started_at), today))
+        .filter(s => s.status === 'completed' && !isSameDayLocal(s.started_at, currentDate))
         .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())
       
       if (previousCompletedSessions.length > 0) {
@@ -209,17 +182,17 @@ export default function Dashboard() {
         if (prevVolume > 0) {
           const diff = Math.round(((todayMetrics.volume - prevVolume) / prevVolume) * 100)
           if (diff > 0) {
-            return `Today's volume is ${diff}% higher than your previous session. ${todayMetrics.exercises} exercises, ${todayMetrics.sets} sets completed.`
+            return `Today's volume is ${diff}% higher than your previous session. ${todayMetrics.exercises} ${todayMetrics.exercises === 1 ? 'exercise' : 'exercises'}, ${todayMetrics.sets} sets completed.`
           } else if (diff < -5) {
-            return `${todayMetrics.exercises} exercises completed today. Volume is lighter than your previous session — recovery-focused sessions count too.`
+            return `${todayMetrics.exercises} ${todayMetrics.exercises === 1 ? 'exercise' : 'exercises'} completed today. Volume is lighter than your previous session — recovery-focused sessions count too.`
           }
         }
       }
-      return `Solid effort today — ${todayMetrics.exercises} exercises, ${todayMetrics.sets} sets, ${todayMetrics.volume.toLocaleString()} kg total volume.`
+      return `Solid effort today — ${todayMetrics.exercises} ${todayMetrics.exercises === 1 ? 'exercise' : 'exercises'}, ${todayMetrics.sets} sets, ${todayMetrics.volume.toLocaleString()} kg total volume.`
     }
 
     if (todayStatus === 'Completed') {
-      return `You've completed ${todayMetrics.exercises} exercises across ${todayMetrics.sets} sets today.`
+      return `You've completed ${todayMetrics.exercises} ${todayMetrics.exercises === 1 ? 'exercise' : 'exercises'} across ${todayMetrics.sets} sets today.`
     }
 
     if (weeklySessionCount >= 3) {
@@ -229,7 +202,7 @@ export default function Dashboard() {
     }
 
     return "No workouts recorded yet this week. Log your training in seconds."
-  }, [history, todayStatus, todayMetrics, weeklySessionCount, today])
+  }, [history, todayStatus, todayMetrics, weeklySessionCount, currentDate])
 
   const handleOpenManualLog = () => {
     setLoggerMode('manual')
@@ -259,7 +232,7 @@ export default function Dashboard() {
             {getLocalGreeting()}, {firstName}
           </h1>
           <p className="text-xs sm:text-sm text-surface-500 font-semibold">
-            {today.toLocaleDateString(undefined, {
+            {currentDate.toLocaleDateString(undefined, {
               weekday: 'long',
               month: 'long',
               day: 'numeric',
@@ -326,7 +299,7 @@ export default function Dashboard() {
                 Today&rsquo;s Activity
               </h2>
               <p className="text-xs text-surface-500 mt-0.5">
-                {today.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                {currentDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
               </p>
             </div>
 
@@ -344,6 +317,25 @@ export default function Dashboard() {
             </span>
           </div>
 
+          {/* Queued from Library Banner if user added exercises */}
+          {queuedExercises.length > 0 && todayStatus !== 'Completed' && (
+            <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl flex items-center justify-between text-xs text-brand-900">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-500 flex-shrink-0" />
+                <span>
+                  Ready to log: <strong>{queuedExercises.map(q => q.exercise?.name).filter(Boolean).join(', ')}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenManualLog}
+                className="font-bold text-brand-700 hover:underline ml-2 whitespace-nowrap"
+              >
+                Log sets &rarr;
+              </button>
+            </div>
+          )}
+
           {todayStatus === 'Completed' && completedTodaySessions.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -353,10 +345,10 @@ export default function Dashboard() {
                     <span className="text-xs font-bold">Session Logged</span>
                   </div>
                   <h3 className="text-lg font-bold text-surface-900">
-                    {completedTodaySessions[0].workout_name || 'Completed Workout'}
+                    {todayMetrics.workoutName || completedTodaySessions[0]?.workout_name || 'Completed Workout'}
                   </h3>
                   <p className="text-xs text-surface-500">
-                    {todayMetrics.exercises} exercises &middot; {todayMetrics.sets} sets &middot; {todayMetrics.volume.toLocaleString()} kg total volume
+                    {todayMetrics.exercises} {todayMetrics.exercises === 1 ? 'exercise' : 'exercises'} &middot; {todayMetrics.sets} {todayMetrics.sets === 1 ? 'set' : 'sets'} &middot; {todayMetrics.volume.toLocaleString()} kg total volume
                   </p>
                 </div>
 
@@ -385,19 +377,18 @@ export default function Dashboard() {
               {todayExercisesBreakdown.length > 0 && (
                 <div className="divide-y divide-surface-100 border-t border-surface-100 pt-2">
                   {todayExercisesBreakdown.map((ex, idx) => (
-                    <button
+                    <div
                       key={idx}
-                      onClick={() => navigate('/progress')}
                       className="w-full py-2.5 flex items-center justify-between text-xs sm:text-sm hover:bg-surface-50 -mx-1 px-1 rounded-lg transition-colors text-left"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-500 flex-shrink-0" />
                         <span className="font-bold text-surface-900 truncate">{ex.name}</span>
                       </div>
-                      <span className="text-surface-500 font-mono text-xs">
-                        {ex.sets} sets {ex.maxWeight > 0 ? `· max ${ex.maxWeight} kg` : ''}
+                      <span className="text-surface-500 font-mono text-xs text-right whitespace-nowrap ml-2">
+                        {ex.sets} {ex.sets === 1 ? 'set' : 'sets'} {ex.weightDisplay ? `· ${ex.weightDisplay}` : ''} {ex.volume > 0 ? `· ${ex.volume.toLocaleString()} kg` : ''}
                       </span>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -422,9 +413,9 @@ export default function Dashboard() {
           ) : (
             <div className="p-4 rounded-xl bg-surface-50 border border-surface-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold text-surface-800">No training recorded today</p>
+                <p className="text-xs font-bold text-surface-800">No workout recorded yet today</p>
                 <p className="text-xs text-surface-500 mt-0.5">
-                  Start logging the exercises you complete today.
+                  Log your training to start today's record.
                 </p>
               </div>
               <button
@@ -447,7 +438,7 @@ export default function Dashboard() {
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">Today&rsquo;s Training</h2>
               <p className="text-[11px] text-surface-400 mt-0.5">
-                {today.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                {currentDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
               </p>
             </div>
             <span className={cn(

@@ -174,11 +174,6 @@ export function ExerciseVideoPlayer({
           {isPlaying ? <Pause size={14} /> : <Play size={14} className="translate-x-0.5" />}
         </button>
       )}
-
-      {/* Subtle indicator tag */}
-      <div className="absolute bottom-3 left-3 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-xs text-[10px] text-white/80 px-2 py-0.5 rounded-md">
-        Continuous Demo · HD
-      </div>
     </div>
   )
 }

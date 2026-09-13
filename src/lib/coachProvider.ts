@@ -415,7 +415,7 @@ function generateDeterministicAnswer(query: string, analysis: StructuredWorkoutA
       content,
       imageUrl: media?.thumbnailUrl || media?.posterUrl,
       structuredGuidance,
-      supportingData: `Verified exercise form guide and HD video for ${exerciseName}.`,
+      supportingData: `Verified exercise form guide and demonstration video for ${exerciseName}.`,
       suggestedQuestions: [
         'What should I train today?',
         'What exercises target the chest?',

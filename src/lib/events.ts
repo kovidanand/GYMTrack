@@ -12,7 +12,7 @@ export type GymtrackEventType =
   | 'gymtrack:sets_logged'
 
 interface EventDetailMap {
-  'gymtrack:workout_updated': { workoutId?: string; action?: 'create' | 'update' | 'delete' | 'add_exercise' }
+  'gymtrack:workout_updated': { workoutId?: string; action?: 'create' | 'update' | 'delete' | 'add_exercise'; exerciseId?: string }
   'gymtrack:session_completed': { sessionId: string; workoutId?: string }
   'gymtrack:sync_completed': { syncedCount: number }
   'gymtrack:exercise_favorited': { exerciseId: string; isFavorite: boolean }

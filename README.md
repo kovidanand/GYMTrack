@@ -1,9 +1,9 @@
 <div align="center">
 
 # ⚡ GYMTrack
-### Full-Stack Fitness Intelligence, HD Video Demonstrations & Offline-First Strength Tracking
+### Full-Stack Fitness Intelligence, High-Performance Video Demonstrations & Offline-First Strength Tracking
 
-*Log every set. Perfect your form with continuous HD video demos. Zero data loss in the gym basement.*
+*Log every set. Perfect your form with continuous video demos. Zero data loss in the gym basement.*
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-gymtrack--fitness--kovid.vercel.app-00E599?style=for-the-badge&logo=vercel&logoColor=black)](https://gymtrack-fitness-kovid.vercel.app)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
@@ -39,29 +39,32 @@ Most fitness applications fail lifters in two critical ways:
   └────────────────┘       └────────────────┘       └────────────────┘       └────────────────┘
 ```
 
-Built with modern consumer UX principles: a clean top navigation bar, glassmorphism design tokens, full-HD continuous video demonstrations, set-accurate volume analytics, and an evidence-grounded AI coach that never hallucinates.
+Built with modern consumer UX principles: a clean top navigation bar, glassmorphism design tokens, full-motion continuous video demonstrations, set-accurate volume analytics, and an evidence-grounded AI coach that never hallucinates.
 
 ---
 
 ## ✨ Core Pillars & Architectural Highlights
 
-### 1. 🎥 Real HD Exercise Video Demonstrations (100% Coverage)
-- **Continuous Demonstration Playback**: Every single exercise in the library features an authentic, continuously looping Full-HD video demonstration showing a lifter executing the exact movement with proper biomechanics.
+### 1. 🎥 Real Exercise Video Demonstrations (100% Coverage)
+- **Continuous Demonstration Playback**: Every single exercise in the library features an authentic, continuously looping video demonstration showing a lifter executing the exact movement with proper biomechanics.
 - **Dual-Angle Perspectives**: Instant toggle between male and female movement models with zero playback interruption.
+- **Clean Aesthetic**: Zero distracting video badges or "HD" stickers; clean, focused viewports designed for learning proper form.
 - **Smart Viewport Streaming**: Cards utilize `IntersectionObserver` to trigger playback only when scrolled into the active viewport, conserving mobile bandwidth and battery life while enabling instantaneous hover previews on desktop.
 - **Strict 16:9 Media Architecture**: Eliminates awkward letterboxing, container overflow, and cropped titles across both mobile and multi-column desktop grids.
 - **Zero-Placeholder Guarantee**: No purple fallback blocks or generic dummy illustrations—comprehensive biomechanical instructions, primary & secondary target muscles, and common mistake warnings for every movement.
 
-### 2. 📶 "Basement Mode" — Zero-Loss Offline Resilience
+### 2. ⚡ Unified Home Dashboard Live Aggregation Layer
+- **Strict Local Calendar Boundaries**: Bounded to the user's local day with automatic midnight reset (`00:00:00`), preventing UTC boundary skew.
+- **Single Source of Truth**: Unique exercises, completed sets, total volume ($\sum \text{weight} \times \text{reps}$), and active duration are derived in unison from actual persisted session records.
+- **Instant Reactive Updates**: Modals dispatch reactive events (`gymtrack:session_completed`, `gymtrack:sets_logged`) so the Home dashboard updates immediately upon confirmation without a page refresh or manual sync.
+- **Zero-Drop Metric Safeguards**: Guarantees that completed sets never display `0 exercises` or `0 kg volume` for weighted movements, while handling bodyweight exercises correctly.
+- **Flexible Logging Inputs**: Fast manual set incrementers, quick voice logging with natural expression parsing (e.g. *"Bench press 50 kilos, 3 sets of 10"*), and 1-tap `+ Add` queuing from the Exercise Library.
+
+### 3. 📶 "Basement Mode" — Zero-Loss Offline Resilience
 - **Persistent IndexedDB Engine**: Operates independently of network availability via local stores: `sync_queue`, `cached_workouts`, and `active_sessions`.
 - **Automatic Network Reconnection**: Interactive connection badge reflects network transitions in real time.
 - **Idempotent Queue Replay**: Retries pending mutations sequentially upon reconnection, deduplicating inflight payloads to ensure zero duplicate sessions.
 - **Session Continuity**: Active workouts persist seamlessly across tab refreshes, background suspensions, and accidental closures.
-
-### 3. ⚡ Reactive Event-Driven Architecture
-- **In-Memory Event Bus**: Decouples UI components from storage writes using typed events (`gymtrack:sets_logged`, `gymtrack:session_completed`, `gymtrack:workout_updated`, `gymtrack:sync_completed`).
-- **Instant Cross-Component Synchronization**: Logging a set in the modal instantly updates the Dashboard session overview and Progress analytics without full-page reloads or network waterfalls.
-- **Stabilized Hook Lifecycle**: Throttled window focus refetches and memoized date boundaries guarantee zero infinite re-render loops or CDP attachment lockups.
 
 ### 4. 📊 Multi-Period Analytics & Volume Intelligence
 - **Unified Period Filtering**: Toggle between **7 Days**, **30 Days**, and **All Time** with instantaneous, synchronous recalculation across all charts and statistical summaries.
@@ -80,7 +83,7 @@ Built with modern consumer UX principles: a clean top navigation bar, glassmorph
 - **Strict Data Grounding**: The AI Coach operates exclusively on authentic logged workouts, volume differentials, and muscle distributions. No synthetic recovery estimates or hallucinated metrics.
 - **Native `AiResponseRenderer`**: Completely eliminates raw markdown clutter (`###`, `**`, `*`) and decorative sparkles in favor of native UI components:
   - Clean typographic hierarchy and parameter chips.
-  - Interactive exercise recommendation cards with HD video previews and 1-tap `+ Add` actions.
+  - Interactive exercise recommendation cards with demonstration video previews and 1-tap `+ Add` actions.
   - Biomechanical cues and structured progression guidelines.
 - **Dual Form Factor**: Available as an unobtrusive **Floating Mobile Drawer** across all screens or as a dedicated **Full-Page Intelligence Workspace**.
 
@@ -99,8 +102,9 @@ Built with modern consumer UX principles: a clean top navigation bar, glassmorph
 ├───────────────────┬───────────────────────────────┬─────────────────────────┤
 │    Auth Layer     │      State & UI Engine        │   Local Offline Engine  │
 │  - Supabase Auth  │  - Top Navigation & Dashboard │   - IndexedDB Storage   │
-│  - PKCE / OTP     │  - 16:9 HD Video Player Engine│   - Sync Queue Replay   │
-│  - Protected Route│  - Reactive Event Bus (pub/sub)│  - Network Listeners   │
+│  - PKCE / OTP     │  - 16:9 Video Player Engine   │   - Sync Queue Replay   │
+│  - Protected Route│  - Dashboard Aggregation Layer│   - Network Listeners   │
+│                   │  - Reactive Event Bus         │   - Queued Exercises    │
 │                   │  - 1RM & Period Analytics     │                         │
 │                   │  - AiResponseRenderer         │                         │
 └─────────┬─────────┴───────────────┬───────────────┴────────────┬────────────┘
@@ -161,8 +165,10 @@ GYMTrack/
 │   ├── lib/                    # Core engineering modules
 │   │   ├── ai.ts               # Edge function client for Gemini AI Coach
 │   │   ├── coachAnalysis.ts    # Biomechanical rules & deterministic fallbacks
+│   │   ├── dashboardData.ts    # Home dashboard aggregation & local day boundaries
 │   │   ├── events.ts           # In-memory reactive pub/sub event bus
-│   │   ├── exerciseMedia.ts    # HD demonstration video resolver & alias matching
+│   │   ├── exerciseMedia.ts    # Video demonstration resolver & media audit
+│   │   ├── exercises.ts        # Catalog filters & favorite management
 │   │   ├── offline/            # IndexedDB sync queue & storage engine
 │   │   ├── progress.ts         # Volume, 1RM Epley, PR detection, history queries
 │   │   ├── supabase.ts         # Supabase client singleton & auth helpers

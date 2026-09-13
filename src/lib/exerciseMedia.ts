@@ -1,12 +1,13 @@
 /**
  * GYMTrack Exercise Media Resolver Layer
  * 
- * Provides real demonstration videos (male & female Full-HD MP4s),
+ * Provides real demonstration videos (male & female MP4s),
  * high-resolution posters/thumbnails, instructions, form cues, and common mistakes
  * from the MIT-licensed open-source exercise database.
  */
 
 import type { Exercise, ExerciseMedia } from '@/types'
+import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 import rawDb from '@/data/freeExerciseDb.json'
 
 export interface ExerciseDbRecord {
@@ -247,3 +248,36 @@ export function getExerciseMediaMeta(slug?: string) {
     license: media.sourceLicense || 'MIT'
   }
 }
+
+/**
+ * Development-time validation that audits exercises for missing video demonstration assets.
+ * Logs report and prevents silent failures.
+ */
+export function validateExerciseMedia(exercises?: Exercise[]): { total: number; validCount: number; missing: string[] } {
+  const targetList = exercises || DEFAULT_EXERCISES
+  const missing: string[] = []
+
+  for (const ex of targetList) {
+    const media = resolveExerciseMedia(ex)
+    const hasVideo = Boolean(media?.videoUrl || media?.maleVideoUrl || media?.femaleVideoUrl)
+    if (!hasVideo) {
+      missing.push(ex.name || ex.slug || ex.id)
+    }
+  }
+
+  if (missing.length > 0) {
+    console.warn(
+      `[GYMTrack Media Audit] Missing demonstrations (${missing.length}/${targetList.length}):\n` +
+      missing.map(m => ` - ${m}`).join('\n')
+    )
+  } else {
+    console.info(`[GYMTrack Media Audit] 100% video demonstration coverage verified (${targetList.length}/${targetList.length} exercises).`)
+  }
+
+  return {
+    total: targetList.length,
+    validCount: targetList.length - missing.length,
+    missing
+  }
+}
+

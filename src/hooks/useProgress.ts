@@ -171,11 +171,13 @@ export function useProgress() {
     const unsub1 = subscribeGymtrackEvent('gymtrack:session_completed', () => fetchData())
     const unsub2 = subscribeGymtrackEvent('gymtrack:sync_completed', () => fetchData())
     const unsub3 = subscribeGymtrackEvent('gymtrack:workout_updated', () => fetchData())
+    const unsub4 = subscribeGymtrackEvent('gymtrack:sets_logged', () => fetchData())
 
     return () => {
       unsub1()
       unsub2()
       unsub3()
+      unsub4()
     }
   }, [fetchData])
 

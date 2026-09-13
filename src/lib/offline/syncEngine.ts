@@ -6,6 +6,7 @@ import {
   type SyncOperation
 } from './db'
 import { emitGymtrackEvent } from '@/lib/events'
+import { resolveExerciseName } from '@/lib/dashboardData'
 
 export type ConnectionStatus = 'ONLINE' | 'OFFLINE' | 'SYNCING' | 'SYNCED' | 'SYNC ERROR'
 
@@ -233,11 +234,12 @@ class SyncEngine {
 
           const existingSetIds = new Set(existingSets?.map(s => s.id) || [])
 
-          // Filter out any sets that have already been persisted
+          // Filter out any sets that have already been persisted and ensure exercise_name is valid
           const setsToInsert = setsData
             .filter(s => !s.id || !existingSetIds.has(s.id))
             .map(s => ({
               ...s,
+              exercise_name: s.exercise_name?.trim() || resolveExerciseName(s, 'Exercise'),
               session_id: sessionId
             }))
 
