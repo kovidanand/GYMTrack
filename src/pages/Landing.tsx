@@ -161,10 +161,10 @@ function DashboardPreview() {
           {/* Stats row */}
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: 'Workouts', value: '127' },
-              { label: 'Streak', value: '5 days' },
-              { label: 'This Week', value: '4 sessions' },
-              { label: 'Volume', value: '46k kg' },
+              { label: 'Exercises', value: '2' },
+              { label: 'Sets', value: '7' },
+              { label: 'Volume', value: '1,240 kg' },
+              { label: 'Duration', value: '42 min' },
             ].map(s => (
               <div key={s.label} className="bg-surface-50 rounded-lg p-2">
                 <p className="text-[10px] text-surface-500">{s.label}</p>
@@ -222,7 +222,7 @@ export default function Landing() {
                 id="hero-start-training"
                 className="btn-primary text-base px-7 py-3.5"
               >
-                Start Training
+                Start Tracking
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link
@@ -234,18 +234,26 @@ export default function Landing() {
               </Link>
             </div>
 
-            {/* Social proof */}
-            <div className="flex items-center gap-4 mt-8 pt-6 border-t border-surface-100">
-              <div className="flex -space-x-2">
-                {['KA','MB','SC','RJ'].map(initials => (
-                  <div key={initials} className="w-8 h-8 rounded-full bg-brand-100 border-2 border-white flex items-center justify-center text-xs font-bold text-brand-700">
-                    {initials}
-                  </div>
-                ))}
+            {/* Product capabilities guarantee */}
+            <div className="mt-8 pt-6 border-t border-surface-100 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-surface-400">Core Product Principles</p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-50 text-surface-700 text-xs font-medium border border-surface-200">
+                  <CheckCircle2 size={13} className="text-emerald-500" /> Track every set
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-50 text-surface-700 text-xs font-medium border border-surface-200">
+                  <CheckCircle2 size={13} className="text-emerald-500" /> Real volume analytics
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-50 text-surface-700 text-xs font-medium border border-surface-200">
+                  <CheckCircle2 size={13} className="text-emerald-500" /> Voice & manual logging
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-50 text-surface-700 text-xs font-medium border border-surface-200">
+                  <CheckCircle2 size={13} className="text-emerald-500" /> Offline-friendly
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-50 text-surface-700 text-xs font-medium border border-surface-200">
+                  <CheckCircle2 size={13} className="text-emerald-500" /> Zero fabricated data
+                </span>
               </div>
-              <p className="text-sm text-surface-500">
-                Join <span className="font-semibold text-surface-700">2,000+</span> athletes training smarter
-              </p>
             </div>
           </div>
 
@@ -436,7 +444,7 @@ export default function Landing() {
             id="landing-final-cta"
             className="inline-flex items-center gap-2 bg-white text-brand-700 font-bold text-base px-8 py-4 rounded-xl shadow-lg hover:bg-brand-50 transition-colors"
           >
-            Start Training
+            Start Tracking
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>

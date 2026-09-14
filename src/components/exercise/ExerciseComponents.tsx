@@ -27,9 +27,9 @@ const muscleIllustrationColors: Record<string, { bg: string; accent: string }> =
 export function ExerciseIllustration({ muscleGroup, className }: { muscleGroup: string; className?: string }) {
   const style = muscleIllustrationColors[muscleGroup] ?? { bg: 'bg-surface-50', accent: 'text-surface-300' }
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-2 rounded-lg', style.bg, className)}>
-      <Dumbbell className={cn('w-8 h-8 opacity-50', style.accent)} aria-hidden="true" />
-      <span className="text-[10px] font-medium text-surface-400">Demonstration unavailable</span>
+    <div className={cn('flex flex-col items-center justify-center gap-1.5 rounded-lg', style.bg, className)}>
+      <Dumbbell className={cn('w-8 h-8 opacity-60', style.accent)} aria-hidden="true" />
+      <span className="text-[10px] font-semibold text-surface-500 capitalize">{muscleGroup.replace('_', ' ')}</span>
     </div>
   )
 }

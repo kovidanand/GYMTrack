@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { User, Target, Dumbbell, Calendar, Ruler, Weight, Trophy, Loader2, Timer } from 'lucide-react'
 import { PageHeader, SectionHeader, Avatar, Badge } from '@/components/shared'
-import { personalRecords } from '@/data/progress'
+import { getPersonalRecords } from '@/lib/progress'
 import { capitalise } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { WorkoutTimerModal } from '@/components/workout/WorkoutTimerModal'
+import type { PersonalRecord } from '@/types'
 import type { FitnessGoal, ExperienceLevel } from '@/types/supabase'
 
 const fitnessGoalLabel: Record<string, string> = {
@@ -25,6 +26,8 @@ export default function Profile() {
   const [error, setError]         = useState<string | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [isTimerOpen, setIsTimerOpen] = useState(false)
+  const [userPRs, setUserPRs]     = useState<PersonalRecord[]>([])
+  const [loadingPRs, setLoadingPRs] = useState(true)
 
   // Form fields
   const [firstName, setFirstName] = useState('')
@@ -49,6 +52,25 @@ export default function Profile() {
       setFrequency(profile.training_frequency ? String(profile.training_frequency) : '')
     }
   }, [profile, isEditing])
+
+  // Load authentic personal records for the authenticated user
+  useEffect(() => {
+    if (!user) {
+      setUserPRs([])
+      setLoadingPRs(false)
+      return
+    }
+    let isCancelled = false
+    getPersonalRecords(user.id).then(({ data }) => {
+      if (!isCancelled) {
+        setUserPRs(data || [])
+        setLoadingPRs(false)
+      }
+    })
+    return () => {
+      isCancelled = true
+    }
+  }, [user])
 
   const handleSave = async () => {
     setError(null)
@@ -312,19 +334,30 @@ export default function Profile() {
         </div>
       </section>
 
-      {/* ── Personal Records (Mock data retained) ── */}
+      {/* ── Personal Records ── */}
       <section aria-label="Personal records">
         <SectionHeader title="Personal Records" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {personalRecords.map(pr => (
-            <div key={pr.id} className="card p-4 text-center">
-              <Trophy size={18} className="text-amber-400 mx-auto mb-2" aria-hidden="true" />
-              <p className="text-xs text-surface-500 mb-1 leading-snug">{pr.exerciseName}</p>
-              <p className="text-lg font-bold text-brand-600">{pr.value}</p>
-              <p className="text-xs text-surface-400">{pr.unit}</p>
-            </div>
-          ))}
-        </div>
+        {loadingPRs ? (
+          <div className="card p-6 flex justify-center items-center">
+            <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
+          </div>
+        ) : userPRs.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {userPRs.map(pr => (
+              <div key={pr.id} className="card p-4 text-center">
+                <Trophy size={18} className="text-amber-400 mx-auto mb-2" aria-hidden="true" />
+                <p className="text-xs text-surface-500 mb-1 leading-snug">{pr.exerciseName}</p>
+                <p className="text-lg font-bold text-brand-600">{pr.value}</p>
+                <p className="text-xs text-surface-400">{pr.unit}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="card p-6 text-center text-xs text-surface-500 space-y-1">
+            <p className="font-semibold text-surface-700">No personal records achieved yet</p>
+            <p>Log your exercises and sets in workouts to automatically track your all-time best lifts.</p>
+          </div>
+        )}
       </section>
 
       {/* ── Timer Modal ── */}

@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext'
 import { subscribeGymtrackEvent } from '@/lib/events'
 import { getStructuredWorkoutAnalysis, type StructuredWorkoutAnalysis } from '@/lib/coachAnalysis'
 import { askCoachQuestion, type CoachAnswer } from '@/lib/coachProvider'
+import { buildCoachContext } from '@/lib/contextBuilder'
 import type { StructuredExerciseGuidance, StructuredWorkoutRecommendation } from '@/types'
 
 export interface CoachChatMessage {
@@ -18,7 +19,7 @@ export interface CoachChatMessage {
 }
 
 export function useAiCoach() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [analysis, setAnalysis] = useState<StructuredWorkoutAnalysis | null>(null)
   const [messages, setMessages] = useState<CoachChatMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -96,7 +97,8 @@ export function useAiCoach() {
         recentWorkoutsSummary: []
       }
 
-      const answer = await askCoachQuestion(query, fallbackAnalysis)
+      const coachContext = user ? await buildCoachContext(profile, user.id) : null
+      const answer = await askCoachQuestion(query, fallbackAnalysis, coachContext, user?.id)
 
       const assistantMsg: CoachChatMessage = {
         id: assistantMsgId,
