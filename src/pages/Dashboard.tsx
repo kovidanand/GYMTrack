@@ -11,10 +11,13 @@ import {
   Trophy, 
   Mic, 
   Info,
-  Calendar
+  Calendar,
+  ArrowRight,
+  CalendarDays
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProgress } from '@/hooks/useProgress'
+import { useWorkouts } from '@/hooks/useWorkouts'
 import { TrainingLoggerModal } from '@/components/workout/TrainingLoggerModal'
 import { cn } from '@/lib/utils'
 import { subscribeGymtrackEvent } from '@/lib/events'
@@ -39,6 +42,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   const { history, personalRecords, loading, refresh } = useProgress()
+  const { activePlan, workouts: allWorkouts } = useWorkouts()
 
   // Training logger modal state
   const [isLoggerOpen, setIsLoggerOpen] = useState(false)
@@ -214,6 +218,34 @@ export default function Dashboard() {
     setIsLoggerOpen(true)
   }
 
+  // ── Active Plan Today Calculations ──
+  const todayDayNumber = useMemo(() => {
+    const d = currentDate.getDay()
+    return d === 0 ? 7 : d
+  }, [currentDate])
+
+  const activePlanTodayWorkout = useMemo(() => {
+    if (!activePlan) return null
+    return allWorkouts.find(w => w.plan_id === activePlan.id && w.day_number === todayDayNumber) || null
+  }, [activePlan, allWorkouts, todayDayNumber])
+
+  const activePlanWeekNumber = useMemo(() => {
+    if (!activePlan || !activePlan.started_at) return 1
+    const start = new Date(activePlan.started_at).getTime()
+    const diffWeeks = Math.floor((Date.now() - start) / (7 * 24 * 60 * 60 * 1000)) + 1
+    return Math.min(activePlan.duration_weeks || 12, Math.max(1, diffWeeks))
+  }, [activePlan])
+
+  const plannedExerciseCount = activePlanTodayWorkout?.workout_exercises?.length || 0
+  const completedPlannedExercisesCount = useMemo(() => {
+    if (!activePlanTodayWorkout?.workout_exercises || todayMetrics.exerciseBreakdown.length === 0) return 0
+    const todayExerciseNames = new Set(todayMetrics.exerciseBreakdown.map(e => e.name.toLowerCase()))
+    return activePlanTodayWorkout.workout_exercises.filter(we => {
+      const exName = we.exercise?.name.toLowerCase()
+      return exName ? todayExerciseNames.has(exName) : false
+    }).length
+  }, [activePlanTodayWorkout, todayMetrics])
+
   if (loading && history.length === 0) {
     return (
       <div className="py-20 text-center text-surface-500 text-sm font-medium animate-pulse space-y-2">
@@ -289,6 +321,72 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* ── 2.5 YOUR ACTIVE PLAN WIDGET ── */}
+      {activePlan ? (
+        <section aria-label="Your Active Training Plan">
+          <div className="card p-4 sm:p-5 bg-gradient-to-br from-surface-900 via-surface-900 to-brand-950 text-white border border-surface-800 rounded-2xl shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-400 bg-brand-500/20 px-2 py-0.5 rounded-full border border-brand-500/30">
+                    Your Active Plan
+                  </span>
+                  <span className="text-xs text-surface-400">
+                    Week {activePlanWeekNumber} of {activePlan.duration_weeks || 12}
+                  </span>
+                </div>
+
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  {activePlan.name}
+                </h3>
+
+                <p className="text-xs text-surface-300 mt-0.5">
+                  Today&rsquo;s Workout: <span className="font-semibold text-white">{activePlanTodayWorkout ? activePlanTodayWorkout.name : 'Rest / Recovery Day'}</span>
+                  {plannedExerciseCount > 0 && (
+                    <span className="ml-2 text-brand-300 font-bold">
+                      • {completedPlannedExercisesCount} / {plannedExerciseCount} completed
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate('/plans')}
+                id="home-active-plan-continue-btn"
+                className="btn-primary py-2 px-4 text-xs font-bold self-start sm:self-auto flex items-center gap-1.5 shadow-sm"
+              >
+                <span>{completedPlannedExercisesCount > 0 ? 'Continue Training' : 'View Today’s Workout'}</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section aria-label="Build a training plan">
+          <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <CalendarDays size={16} className="text-brand-600 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-surface-800">
+                  No Active Training Plan
+                </p>
+                <p className="text-[11px] text-surface-500">
+                  Choose a goal and we&rsquo;ll structure your day-by-day workout routine.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/plans')}
+              className="text-xs font-bold text-brand-600 hover:text-brand-700 self-start sm:self-auto flex items-center gap-1"
+            >
+              <span>Build Plan</span>
+              <ChevronRight size={13} />
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ── 3. TODAY'S TRAINING SUMMARY ── */}
       <section aria-label="Today's activity record">

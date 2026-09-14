@@ -10,8 +10,24 @@ import {
 } from './coachDataService'
 import { calculate1RM } from './exerciseIntelligence'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
+import { supabase } from '@/lib/supabase'
 
 export interface StructuredCoachContext {
+  active_plan?: {
+    has_active_plan: boolean
+    plan_name?: string
+    goal?: string
+    duration_weeks?: number
+    current_week?: number
+    today_day_number?: number
+    today_workout_name?: string
+    today_day_type?: 'workout' | 'recovery' | 'rest'
+    today_planned_exercises?: string[]
+    today_completed_exercises?: string[]
+    completed_count?: number
+    total_count?: number
+    next_uncompleted_exercise?: string | null
+  } | null
   user_profile: {
     first_name?: string
     last_name?: string
@@ -96,7 +112,8 @@ export async function buildCoachContext(profile: any, userId: string): Promise<S
       prsRaw,
       muscleVol,
       frequencyData,
-      progressComp
+      progressComp,
+      activePlanRes
     ] = await Promise.all([
       profile ? Promise.resolve(profile) : get_user_profile(userId),
       get_today_workout(userId),
@@ -105,8 +122,35 @@ export async function buildCoachContext(profile: any, userId: string): Promise<S
       get_personal_record(userId),
       get_muscle_group_volume(userId, 14),
       get_training_frequency(userId),
-      get_progress_comparison(userId)
+      get_progress_comparison(userId),
+      supabase
+        .from('workout_plans')
+        .select(`
+          id,
+          name,
+          goal,
+          duration_weeks,
+          started_at,
+          workouts (
+            id,
+            name,
+            day_of_week,
+            day_type,
+            workout_exercises (
+              id,
+              order_in_workout,
+              exercise:exercises (id, name, slug, target_muscle)
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
     ])
+
+    const activePlanData = activePlanRes?.data
 
     // Pre-aggregate exercise-specific performance & 1RMs
     const exerciseHistoryMap = new Map<string, {
@@ -218,7 +262,51 @@ export async function buildCoachContext(profile: any, userId: string): Promise<S
       }
     }
 
+    // Active Training Plan telemetry
+    let activePlanContext: StructuredCoachContext['active_plan'] = null
+    if (activePlanData) {
+      const currentDayOfWeek = (new Date().getDay() + 6) % 7 + 1
+      let currentWeek = 1
+      if (activePlanData.started_at) {
+        const diffDays = Math.floor((Date.now() - new Date(activePlanData.started_at).getTime()) / (1000 * 60 * 60 * 24))
+        currentWeek = Math.min(activePlanData.duration_weeks || 12, Math.max(1, Math.floor(diffDays / 7) + 1))
+      }
+
+      const workouts = (activePlanData.workouts || []) as any[]
+      const todayWkPlan = workouts.find((w: any) => w.day_of_week === currentDayOfWeek)
+
+      const plannedExercises: string[] = (todayWkPlan?.workout_exercises || [])
+        .sort((a: any, b: any) => (a.order_in_workout ?? 0) - (b.order_in_workout ?? 0))
+        .map((we: any) => we.exercise?.name || 'Exercise')
+        .filter(Boolean)
+
+      const completedExercises = plannedExercises.filter(name =>
+        todayWk.exercises_names.some((en: string) => en.toLowerCase() === name.toLowerCase())
+      )
+
+      const nextEx = plannedExercises.find(name =>
+        !completedExercises.some(c => c.toLowerCase() === name.toLowerCase())
+      ) || null
+
+      activePlanContext = {
+        has_active_plan: true,
+        plan_name: activePlanData.name,
+        goal: activePlanData.goal,
+        duration_weeks: activePlanData.duration_weeks || 12,
+        current_week: currentWeek,
+        today_day_number: currentDayOfWeek,
+        today_workout_name: todayWkPlan ? todayWkPlan.name : 'Rest Day',
+        today_day_type: todayWkPlan?.day_type || (plannedExercises.length > 0 ? 'workout' : 'rest'),
+        today_planned_exercises: plannedExercises,
+        today_completed_exercises: completedExercises,
+        completed_count: completedExercises.length,
+        total_count: plannedExercises.length,
+        next_uncompleted_exercise: nextEx
+      }
+    }
+
     return {
+      active_plan: activePlanContext,
       user_profile: {
         first_name: userProf?.first_name || profile?.first_name,
         last_name: userProf?.last_name || profile?.last_name,

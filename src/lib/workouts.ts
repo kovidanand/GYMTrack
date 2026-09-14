@@ -373,7 +373,6 @@ export async function getPreviousExercisePerformance(exerciseId: string, userId:
       .from('workout_session_sets')
       .select('weight, reps')
       .eq('exercise_id', exerciseId)
-      .eq('user_id', userId)
       .not('weight', 'is', null)
       .not('reps', 'is', null)
       .order('created_at', { ascending: false })
@@ -387,5 +386,216 @@ export async function getPreviousExercisePerformance(exerciseId: string, userId:
     console.warn('[GYMTrack] Error fetching previous performance:', err)
   }
   return null
+}
+
+// ─── Multi-Week Structured Plans Engine ───────────────────────────────────────
+
+import type { StructuredPlanDefinition } from '@/types'
+import { emitGymtrackEvent } from '@/lib/events'
+
+export async function saveStructuredPlan(
+  userId: string,
+  definition: StructuredPlanDefinition
+): Promise<{ data: WorkoutPlan | null; error: string | null }> {
+  try {
+    // 1. Insert Workout Plan
+    const { data: plan, error: planErr } = await supabase
+      .from('workout_plans')
+      .insert({
+        user_id: userId,
+        name: definition.plan_name,
+        description: `${definition.goal} • ${definition.duration_weeks} Weeks • ${definition.training_days_per_week} days/week`,
+        goal: definition.goal,
+        difficulty: definition.difficulty,
+        days_per_week: definition.training_days_per_week,
+        duration_weeks: definition.duration_weeks,
+        session_duration: definition.session_duration,
+        training_location: definition.training_location,
+        available_equipment: definition.available_equipment,
+        plan_data: definition,
+        is_active: false
+      })
+      .select()
+      .single()
+
+    if (planErr || !plan) {
+      console.error('[GYMTrack] saveStructuredPlan error:', planErr?.message)
+      return { data: null, error: 'Failed to create training plan.' }
+    }
+
+    // 2. Fetch exercise lookup table to match database IDs
+    const { data: exercisesData } = await supabase.from('exercises').select('id, slug, name')
+    const exerciseMap = new Map<string, string>()
+    if (exercisesData) {
+      for (const ex of exercisesData) {
+        exerciseMap.set(ex.slug, ex.id)
+        exerciseMap.set(ex.name.toLowerCase(), ex.id)
+        exerciseMap.set(ex.id, ex.id)
+      }
+    }
+
+    // 3. Insert Workouts for each day in weekly schedule
+    for (const day of definition.weekly_schedule) {
+      const { data: wo, error: woErr } = await supabase
+        .from('workouts')
+        .insert({
+          plan_id: plan.id,
+          user_id: userId,
+          name: day.focus || day.day_name,
+          description: `${day.day_name}: ${day.focus}`,
+          day_number: day.day_number,
+          day_type: day.day_type,
+          estimated_duration: day.estimated_duration
+        })
+        .select()
+        .single()
+
+      if (!woErr && wo && day.exercises && day.exercises.length > 0) {
+        for (let i = 0; i < day.exercises.length; i++) {
+          const exItem = day.exercises[i]
+          let exId = exItem.exercise_id
+
+          if (!exId && exItem.exercise_slug) {
+            exId = exerciseMap.get(exItem.exercise_slug)
+          }
+          if (!exId) {
+            exId = exerciseMap.get(exItem.exercise_name.toLowerCase())
+          }
+          // Fallback if not found in db lookup
+          if (!exId && exercisesData && exercisesData.length > 0) {
+            exId = exercisesData[0].id
+          }
+
+          if (exId) {
+            await supabase.from('workout_exercises').insert({
+              workout_id: wo.id,
+              exercise_id: exId,
+              exercise_order: i + 1,
+              sets: exItem.sets || 3,
+              reps: String(exItem.reps || '8-12'),
+              rest_seconds: exItem.rest_seconds || 90
+            })
+          }
+        }
+      }
+    }
+
+    emitGymtrackEvent('gymtrack:workout_updated')
+    return { data: plan, error: null }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[GYMTrack] Exception saving plan:', msg)
+    return { data: null, error: msg }
+  }
+}
+
+export async function activatePlan(userId: string, planId: string): Promise<boolean> {
+  try {
+    // 1. Deactivate all existing plans for user
+    await supabase
+      .from('workout_plans')
+      .update({ is_active: false })
+      .eq('user_id', userId)
+
+    // 2. Activate target plan and set started_at if not yet set
+    const { error } = await supabase
+      .from('workout_plans')
+      .update({ 
+        is_active: true,
+        started_at: new Date().toISOString()
+      })
+      .eq('id', planId)
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('[GYMTrack] activatePlan error:', error.message)
+      return false
+    }
+
+    emitGymtrackEvent('gymtrack:workout_updated')
+    return true
+  } catch (err) {
+    console.error('[GYMTrack] activatePlan exception:', err)
+    return false
+  }
+}
+
+export async function pauseActivePlan(userId: string, planId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('workout_plans')
+      .update({ is_active: false })
+      .eq('id', planId)
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('[GYMTrack] pauseActivePlan error:', error.message)
+      return false
+    }
+
+    emitGymtrackEvent('gymtrack:workout_updated')
+    return true
+  } catch (err) {
+    console.error('[GYMTrack] pauseActivePlan exception:', err)
+    return false
+  }
+}
+
+export async function getPlanDayCompletions(
+  planId: string,
+  userId: string
+): Promise<{ week_number: number; day_number: number; status: string; completed_at: string }[]> {
+  try {
+    const { data, error } = await supabase
+      .from('plan_day_completions')
+      .select('week_number, day_number, status, completed_at')
+      .eq('plan_id', planId)
+      .eq('user_id', userId)
+
+    if (error) {
+      // Table may not exist yet if migration pending, return empty
+      return []
+    }
+    return data || []
+  } catch (err) {
+    console.warn('[GYMTrack] Error fetching plan completions:', err)
+    return []
+  }
+}
+
+export async function markPlanDayCompleted(
+  planId: string,
+  userId: string,
+  weekNumber: number,
+  dayNumber: number,
+  workoutId?: string,
+  completedExercises = 0,
+  totalExercises = 0
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('plan_day_completions')
+      .upsert({
+        plan_id: planId,
+        user_id: userId,
+        week_number: weekNumber,
+        day_number: dayNumber,
+        workout_id: workoutId || null,
+        status: 'completed',
+        completed_exercises: completedExercises,
+        total_exercises: totalExercises,
+        completed_at: new Date().toISOString()
+      }, { onConflict: 'plan_id,user_id,week_number,day_number' })
+
+    if (error) {
+      console.warn('[GYMTrack] markPlanDayCompleted warning:', error.message)
+    }
+    emitGymtrackEvent('gymtrack:workout_updated')
+    emitGymtrackEvent('gymtrack:session_completed')
+    return true
+  } catch (err) {
+    console.warn('[GYMTrack] Exception marking plan day completed:', err)
+    return false
+  }
 }
 

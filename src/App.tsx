@@ -51,7 +51,7 @@ export default function App() {
               <Route path="/workouts/new" element={<WorkoutBuilder />} />
               <Route path="/workouts/:id" element={<WorkoutDetail />} />
               <Route path="/workouts/:id/edit" element={<WorkoutBuilder />} />
-              <Route path="/plans" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/plans" element={<Plans />} />
               <Route path="/plans/new" element={<PlanBuilder />} />
               <Route path="/exercises" element={<Exercises />} />
               <Route path="/exercises/:slug" element={<ExerciseDetail />} />

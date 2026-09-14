@@ -116,9 +116,15 @@ export interface WorkoutPlan {
   goal: string | null
   difficulty: string | null
   days_per_week: number | null
-  duration_weeks: number | null
+  duration_weeks?: number | null
+  session_duration?: number | null
+  training_location?: string | null
+  available_equipment?: string[] | null
+  started_at?: string | null
+  completed_at?: string | null
+  plan_data?: any
   is_active: boolean
-  ai_generated: boolean
+  ai_generated?: boolean
   created_at: string
   updated_at: string
 }
@@ -130,6 +136,9 @@ export interface Workout {
   name: string
   description?: string | null
   day_number?: number | null
+  day_type?: 'workout' | 'recovery' | 'rest'
+  phase_number?: number | null
+  week_number?: number | null
   notes?: string | null
   estimated_duration?: number | null
   target_muscle_groups?: string[] | null
@@ -138,6 +147,61 @@ export interface Workout {
 
   // Joined relation (populated on fetch)
   workout_exercises?: WorkoutExercise[]
+}
+
+export interface PlanDayCompletion {
+  id: string
+  plan_id: string
+  user_id: string
+  week_number: number
+  day_number: number
+  workout_id?: string | null
+  status: 'completed' | 'partial' | 'skipped'
+  completed_exercises: number
+  total_exercises: number
+  notes?: string | null
+  completed_at: string
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanPhase {
+  phase_number: number
+  name: string
+  description: string
+  start_week: number
+  end_week: number
+  focus: string
+}
+
+export interface StructuredPlanDefinition {
+  plan_name: string
+  goal: string
+  duration_weeks: number
+  training_days_per_week: number
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  session_duration: number
+  training_location: string
+  available_equipment: string[]
+  phases: PlanPhase[]
+  weekly_schedule: Array<{
+    day_number: number
+    day_name: string
+    day_type: 'workout' | 'recovery' | 'rest'
+    focus: string
+    estimated_duration: number
+    exercises: Array<{
+      exercise_id?: string
+      exercise_slug?: string
+      exercise_name: string
+      target_muscle: string
+      sets: number
+      reps: string
+      rest_seconds: number
+      target_weight?: number
+    }>
+  }>
+  progression_notes?: string
 }
 
 export interface WorkoutExercise {

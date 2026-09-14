@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, BookOpen, TrendingUp, User, LogOut, Timer } from 'lucide-react'
+import { LayoutDashboard, BookOpen, TrendingUp, User, LogOut, Timer, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { GYMTrackLogo, Avatar } from '@/components/shared'
@@ -12,6 +12,7 @@ const primaryNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
   { to: '/exercises', label: 'Library', icon: BookOpen },
+  { to: '/plans', label: 'Plans', icon: CalendarDays },
 ]
 
 // ─── Desktop Top Navigation ──────────────────────────────────────────────────
@@ -125,6 +126,7 @@ const mobileNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
   { to: '/exercises', label: 'Library', icon: BookOpen },
+  { to: '/plans', label: 'Plans', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
 ]
 

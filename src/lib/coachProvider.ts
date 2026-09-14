@@ -398,47 +398,55 @@ function generateDeterministicAnswer(
   const intent = classifyQueryIntent(query)
 
   // ─── A. Exercise Alternatives ──────────────────────────────────────────────
-  if (intent === 'exercise_alternative' || query.includes('replace') || query.includes('instead of')) {
-    if (query.includes('squat')) {
-      const ex1 = DEFAULT_EXERCISES.find(e => e.slug === 'leg-press')!
-      const ex2 = DEFAULT_EXERCISES.find(e => e.slug === 'lunges')!
-      const ex3 = DEFAULT_EXERCISES.find(e => e.slug === 'front-squat')!
-      return {
-        content: `Squat Alternatives\n\nIf you need to substitute the Barbell Back Squat due to equipment availability or lower-back fatigue, these movements deliver equivalent quadriceps and glute stimulus:\n\nKey Options:\n• Leg Press: Allows maximal quad and glute overload with zero spinal axial compression.\n• Bulgarian Split Squat: Unilateral lunge variation that eliminates pelvic loading while challenging balance.\n• Front Squat or Goblet Squat: Forces an upright torso, decreasing lumbar shear force.\n\nRecommendation:\nChoose Leg Press for pure mechanical volume, or Bulgarian Split Squats to develop single-leg balance and hip stability.`,
-        supportingData: 'Biomechanical substitution protocol.',
-        structuredRecommendation: {
-          type: 'workout_recommendation',
-          focus: 'Squat Substitutions',
-          reasoning: 'Alternative quad and glute exercises with lower spinal compression.',
-          exercises: [
-            { name: 'Leg Press', slug: 'leg-press', sets: 3, reps: '10-12 reps', media: resolveExerciseMedia('leg-press') },
-            { name: 'Barbell Lunge', slug: 'lunges', sets: 3, reps: '10 reps each', media: resolveExerciseMedia('lunges') },
-            { name: 'Front Squat', slug: 'front-squat', sets: 3, reps: '8-10 reps', media: resolveExerciseMedia('front-squat') }
-          ],
-          coachInsight: 'Control the eccentric tempo on every repetition for knee joint health.'
-        },
-        suggestedQuestions: [
-          'How do I do leg press?',
-          'How do I do lunges?',
-          'What should I train today?'
-        ]
-      }
+  if (intent === 'exercise_alternative' || query.includes('replace') || query.includes('instead of') || query.includes('substitute')) {
+    // Identify target exercise to replace
+    let targetName: string | null = null
+    const matchedSlug = findMatchedExerciseSlug(query)
+    if (matchedSlug) {
+      const match = DEFAULT_EXERCISES.find(e => e.slug === matchedSlug)
+      if (match) targetName = match.name
+    } else if (query.includes('this exercise') || query.includes('replace this')) {
+      targetName = context?.active_plan?.next_uncompleted_exercise || null
     }
 
-    if (query.includes('bench')) {
-      return {
-        content: `Bench Press Alternatives\n\nOptions to stimulate the pectoralis major without a flat barbell bench:\n\nKey Options:\n• Dumbbell Bench Press: Allows greater range of motion and natural converging wrist rotation.\n• Push-Ups: Premier closed-kinetic-chain movement engaging core and scapular stabilizers.\n• Floor Press: Restricts bottom range of motion, reducing anterior shoulder strain while building lockout power.\n• Dips: Emphasizes the lower sternal head of the pectorals with a forward torso lean.\n\nRecommendation:\nPerform 3 sets of 8-12 reps on the Dumbbell Press to balance unilateral pectoral strength.`,
-        supportingData: 'Pectoral substitution protocol.',
-        structuredRecommendation: {
-          type: 'workout_recommendation',
-          focus: 'Chest Press Substitutions',
-          reasoning: 'Alternative pressing movements targeting the pectorals.',
-          exercises: [
-            { name: 'Dumbbell Bench Press', slug: 'dumbbell-bench-press', sets: 3, reps: '8-12 reps', media: resolveExerciseMedia('dumbbell-bench-press') },
-            { name: 'Push-Ups', slug: 'push-up', sets: 3, reps: '15-20 reps', media: resolveExerciseMedia('push-up') },
-            { name: 'Chest Dip', slug: 'dips', sets: 3, reps: '8-10 reps', media: resolveExerciseMedia('dips') }
-          ],
-          coachInsight: 'Keep elbows tucked at roughly 60 degrees to safeguard shoulder health.'
+    if (!targetName && query.includes('squat')) targetName = 'Squat'
+    if (!targetName && query.includes('bench')) targetName = 'Bench Press'
+
+    const targetEx = targetName 
+      ? DEFAULT_EXERCISES.find(e => e.name.toLowerCase().includes(targetName!.toLowerCase()))
+      : null
+
+    if (targetEx) {
+      const alternatives = DEFAULT_EXERCISES
+        .filter(e => e.muscle_group === targetEx.muscle_group && e.slug !== targetEx.slug)
+        .slice(0, 3)
+
+      if (alternatives.length > 0) {
+        return {
+          content: `${targetEx.name} Substitutions\n\n` +
+            `If you need to substitute **${targetEx.name}** due to equipment availability, comfort, or joint load, these movements stimulate the same primary muscle group (${targetEx.muscle_group.toUpperCase()}):\n\n` +
+            `Recommended Alternatives:\n` +
+            alternatives.map(a => `• **${a.name}**: ${a.description}`).join('\n\n') +
+            `\n\nRecommendation:\nSelect the variation matching your available gym equipment while matching the target rep range.`,
+          supportingData: `Biomechanically equivalent alternatives for ${targetEx.name}.`,
+          structuredRecommendation: {
+            type: 'workout_recommendation',
+            focus: `${targetEx.name} Substitutions`,
+            reasoning: `Equivalent movements targeting ${targetEx.primary_muscle || targetEx.muscle_group}.`,
+            exercises: alternatives.map(a => ({
+              name: a.name,
+              slug: a.slug,
+              sets: 3,
+              reps: '8-12 reps',
+              media: resolveExerciseMedia(a.slug)
+            })),
+            coachInsight: 'Ensure controlled tempo on the eccentric phase to maximize muscle fiber tension.'
+          },
+          suggestedQuestions: [
+            `How do I do ${alternatives[0]?.name}?`,
+            'What should I train today?',
+            'What exercise is next?'
+          ]
         }
       }
     }
@@ -704,15 +712,175 @@ function generateDeterministicAnswer(
     }
   }
 
-  // ─── G. Workout Recommendation: "What should I train today?" ──────────────
+  // ─── G1. Next Exercise in Active Plan ─────────────────────────────────────
+  if (query.includes('next exercise') || query.includes('what is next') || query.includes('exercise is next') || query.includes("what's next")) {
+    if (context?.active_plan?.has_active_plan) {
+      const ap = context.active_plan
+      if (ap.today_day_type === 'rest') {
+        return {
+          content: `Rest Day in Active Plan\n\nToday is a scheduled Recovery Day in your **${ap.plan_name}** plan (Week ${ap.current_week}).\n\nNo exercises are scheduled for today. Rest, hydrate, and prepare for your upcoming training session.`,
+          supportingData: `Active Plan: ${ap.plan_name} (Week ${ap.current_week}, Rest Day)`,
+          suggestedQuestions: ['Why is today a rest day?', 'How is my plan progressing?', 'What should I train tomorrow?']
+        }
+      }
+      if (ap.next_uncompleted_exercise) {
+        const exDef = DEFAULT_EXERCISES.find(e => e.name.toLowerCase() === ap.next_uncompleted_exercise?.toLowerCase())
+        const slug = exDef?.slug || 'bench-press'
+        return {
+          content: `Next Exercise: ${ap.next_uncompleted_exercise}\n\n` +
+            `Your active plan is **${ap.plan_name}** (Week ${ap.current_week}, ${ap.today_workout_name}).\n\n` +
+            `Next scheduled movement:\n• **${ap.next_uncompleted_exercise}**\n\n` +
+            `Current Session Progress:\n${ap.completed_count || 0} of ${ap.total_count || 0} exercises completed today.`,
+          supportingData: `Next: ${ap.next_uncompleted_exercise} in ${ap.today_workout_name}`,
+          structuredRecommendation: {
+            type: 'workout_recommendation',
+            focus: ap.today_workout_name || "Today's Session",
+            reasoning: `Next exercise in your ${ap.plan_name} training schedule.`,
+            exercises: [{
+              name: ap.next_uncompleted_exercise,
+              slug,
+              sets: 3,
+              reps: '8-12 reps',
+              media: resolveExerciseMedia(slug)
+            }],
+            coachInsight: 'Focus on deliberate eccentric control and smooth tempo.'
+          },
+          suggestedQuestions: [`How do I do ${ap.next_uncompleted_exercise}?`, 'What should I train today?', 'Can I replace this exercise?']
+        }
+      } else if (ap.total_count && ap.total_count > 0 && ap.completed_count === ap.total_count) {
+        return {
+          content: `All Exercises Completed!\n\nOutstanding work! You have completed all **${ap.total_count}** exercises scheduled for today in **${ap.plan_name}** (${ap.today_workout_name}).\n\nTake time to hydrate, consume adequate protein, and rest for recovery.`,
+          supportingData: `${ap.completed_count}/${ap.total_count} exercises completed today.`,
+          suggestedQuestions: ['How is my plan progressing?', 'What did I train today?']
+        }
+      }
+    }
+  }
+
+  // ─── G2. Rest Day Explanation ─────────────────────────────────────────────
+  if (query.includes('rest day') || query.includes('why is today a rest') || query.includes('why rest')) {
+    if (context?.active_plan?.has_active_plan) {
+      const ap = context.active_plan
+      return {
+        content: `Active Plan Recovery Philosophy\n\n` +
+          `Your active plan **${ap.plan_name}** (Week ${ap.current_week}) schedules dedicated rest days for neurological and muscular recovery.\n\n` +
+          `Why Rest Days Matter:\n` +
+          `• Muscle Protein Synthesis: Skeletal muscle adapts and hypertrophies during rest periods between sessions.\n` +
+          `• Central Nervous System (CNS) Recovery: Heavy loading strains motor unit recruitment. Rest days prevent cumulative fatigue.\n` +
+          `• Connective Tissue Remodeling: Tendons and ligaments adapt slower than muscle tissue and require restorative downtime.\n\n` +
+          `Recommendation:\n` +
+          `Engage in light 20–30 min walking, gentle mobility drills, and aim for 7–9 hours of sleep.`,
+        supportingData: `Active Plan: ${ap.plan_name} recovery schedule.`,
+        suggestedQuestions: ['What should I train tomorrow?', 'How is my plan progressing?', 'What did I train this week?']
+      }
+    }
+  }
+
+  // ─── G3. Plan Progression Status ──────────────────────────────────────────
+  if (query.includes('plan progress') || query.includes('how is my plan') || (query.includes('my plan') && query.includes('progress'))) {
+    if (context?.active_plan?.has_active_plan) {
+      const ap = context.active_plan
+      const remainingWeeks = Math.max(0, (ap.duration_weeks || 12) - (ap.current_week || 1))
+      return {
+        content: `Training Plan Progress\n\n` +
+          `Plan: **${ap.plan_name}**\n` +
+          `Goal: **${ap.goal ? ap.goal.replace(/_/g, ' ').toUpperCase() : 'GENERAL FITNESS'}**\n\n` +
+          `Key Milestones:\n` +
+          `• Current Timeline: Week ${ap.current_week} of ${ap.duration_weeks} weeks\n` +
+          `• Remaining Schedule: ${remainingWeeks} weeks remaining\n` +
+          `• Today: ${ap.today_workout_name} (${ap.today_day_type === 'rest' ? 'Rest Day' : `${ap.completed_count || 0}/${ap.total_count || 0} exercises completed`})\n\n` +
+          `Recommendation:\n` +
+          `Consistency is the primary driver of physical adaptation. Continue hitting scheduled working sets.`,
+        supportingData: `Plan: ${ap.plan_name}, Week ${ap.current_week}/${ap.duration_weeks}.`,
+        suggestedQuestions: ['What should I train today?', 'What exercise is next?', 'Is my volume increasing?']
+      }
+    }
+  }
+
+  // ─── G4. Workout Recommendation: "What should I train today?" ─────────────
   if (
     intent === 'workout_recommendation' ||
     query.includes('what should i train') ||
+    query.includes('today workout') ||
+    query.includes("today's workout") ||
+    query.includes('what to train') ||
     query.includes('did chest yesterday') ||
     query.includes('trained chest yesterday') ||
-    query.includes('recommend') ||
-    query.includes('what to train')
+    query.includes('recommend')
   ) {
+    // Check if user has an active training plan
+    if (context?.active_plan?.has_active_plan) {
+      const ap = context.active_plan
+      if (ap.today_day_type === 'rest' || !ap.today_planned_exercises || ap.today_planned_exercises.length === 0) {
+        return {
+          content: `Today's Schedule: Active Recovery\n\n` +
+            `You are currently on Week ${ap.current_week} of **${ap.plan_name}**.\n\n` +
+            `Today is designated as a **Rest & Recovery Day** in your structured training schedule.\n\n` +
+            `Why Rest Today?\n` +
+            `• Muscular hypertrophy and connective tissue remodeling occur during restorative downtime.\n` +
+            `• Taking today off ensures optimal motor unit recruitment for your next scheduled training session.\n\n` +
+            `Recommendation:\n` +
+            `Engage in light 20–30 min walking, gentle foam rolling, and ensure adequate protein intake.`,
+          supportingData: `Active Plan: ${ap.plan_name} (Week ${ap.current_week}, Rest Day).`,
+          suggestedQuestions: [
+            'Why is today a rest day?',
+            'How is my plan progressing?',
+            'What did I train this week?'
+          ]
+        }
+      }
+
+      // Today is a workout day in the active plan
+      const exObjects = ap.today_planned_exercises.map(name => {
+        const found = DEFAULT_EXERCISES.find(e => e.name.toLowerCase() === name.toLowerCase())
+        const slug = found?.slug || 'bench-press'
+        return {
+          name,
+          slug,
+          sets: 3,
+          reps: '8-12 reps',
+          media: resolveExerciseMedia(slug)
+        }
+      })
+
+      const completed = ap.completed_count || 0
+      const total = ap.total_count || exObjects.length
+      const remaining = Math.max(0, total - completed)
+
+      let statusMsg = `Status: ${completed} of ${total} exercises logged today.`
+      if (remaining > 0 && ap.next_uncompleted_exercise) {
+        statusMsg += ` Next exercise up: **${ap.next_uncompleted_exercise}**.`
+      } else if (remaining === 0) {
+        statusMsg += ` All exercises for today are completed!`
+      }
+
+      return {
+        content: `Today's Workout: ${ap.today_workout_name}\n\n` +
+          `Active Plan: **${ap.plan_name}** (Week ${ap.current_week} of ${ap.duration_weeks})\n\n` +
+          `${statusMsg}\n\n` +
+          `Scheduled Exercises:\n` +
+          ap.today_planned_exercises.map((name, i) => {
+            const isDone = ap.today_completed_exercises?.some(c => c.toLowerCase() === name.toLowerCase())
+            return `${i + 1}. ${name} ${isDone ? '✓ (Completed)' : '• 3 sets × 8-12 reps'}`
+          }).join('\n') +
+          `\n\nRecommendation:\n` +
+          `Execute each working set with controlled tempo. Log your weights directly in the Plans tab or Home dashboard.`,
+        supportingData: `Active Plan: ${ap.plan_name} (${completed}/${total} completed).`,
+        structuredRecommendation: {
+          type: 'workout_recommendation',
+          focus: ap.today_workout_name || "Today's Session",
+          reasoning: `Scheduled in Week ${ap.current_week} of ${ap.plan_name}.`,
+          exercises: exObjects,
+          coachInsight: 'Log your sets accurately to ensure automatic progressive overload tracking.'
+        },
+        suggestedQuestions: [
+          'What exercise is next?',
+          'How is my plan progressing?',
+          'Can I replace this exercise?'
+        ]
+      }
+    }
+
     const isChestYesterday = query.includes('chest') || (context?.recovery_context.last_session_muscle_groups.includes('chest'))
     let focus = 'Upper Body Foundation'
     let reasoning = 'A balanced full-upper foundation focusing on horizontal and vertical movement patterns.'
