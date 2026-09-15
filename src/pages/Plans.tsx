@@ -111,17 +111,47 @@ export default function Plans() {
     const todayEnd = new Date()
     todayEnd.setHours(23, 59, 59, 999)
 
-    const { data: todaySets } = await supabase
-      .from('workout_session_sets')
-      .select('exercise_id')
-      .eq('user_id', user.id)
-      .gte('created_at', todayStart.toISOString())
-      .lte('created_at', todayEnd.toISOString())
+    const completedIds = new Set<string>()
 
-    if (todaySets) {
-      const ids = new Set(todaySets.map(s => s.exercise_id))
-      setTodayCompletedExerciseIds(ids)
+    // Check local storage completed exercises for today
+    try {
+      const raw = localStorage.getItem(`gymtrack:today_completed_exercises_${user.id}`) || localStorage.getItem('gymtrack:today_completed_exercises')
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[]
+        parsed.forEach(id => completedIds.add(id))
+      }
+    } catch {}
+
+    // Check Supabase today's workout sessions & sets
+    try {
+      const { data: todaySessions } = await supabase
+        .from('workout_sessions')
+        .select(`
+          id,
+          workout_session_sets (
+            exercise_id,
+            exercise_name
+          )
+        `)
+        .eq('user_id', user.id)
+        .gte('started_at', todayStart.toISOString())
+        .lte('started_at', todayEnd.toISOString())
+
+      if (todaySessions) {
+        for (const s of todaySessions) {
+          if (s.workout_session_sets) {
+            for (const set of s.workout_session_sets) {
+              if (set.exercise_id) completedIds.add(set.exercise_id)
+              if (set.exercise_name) completedIds.add(set.exercise_name.toLowerCase())
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Plans] Error fetching today completed sets from db:', err)
     }
+
+    setTodayCompletedExerciseIds(completedIds)
   }, [user, activePlan])
 
   useEffect(() => {
@@ -189,9 +219,15 @@ export default function Plans() {
   const todayExerciseStats = useMemo(() => {
     if (!todayWorkout || !todayWorkout.workout_exercises) return { total: 0, completed: 0 }
     const total = todayWorkout.workout_exercises.length
-    const completed = todayWorkout.workout_exercises.filter(we => 
-      todayCompletedExerciseIds.has(we.exercise_id)
-    ).length
+    const completed = todayWorkout.workout_exercises.filter(we => {
+      const ex = we.exercise || DEFAULT_EXERCISES.find(e => e.id === we.exercise_id)
+      return (
+        todayCompletedExerciseIds.has(we.exercise_id) ||
+        (ex?.id && todayCompletedExerciseIds.has(ex.id)) ||
+        (ex?.slug && todayCompletedExerciseIds.has(ex.slug)) ||
+        (ex?.name && todayCompletedExerciseIds.has(ex.name.toLowerCase()))
+      )
+    }).length
     return { total, completed }
   }, [todayWorkout, todayCompletedExerciseIds])
 
@@ -235,8 +271,15 @@ export default function Plans() {
       setIsCreateOpen(false)
       setGeneratedPreview(null)
       await refresh()
+      await fetchPlanTelemetry()
     } catch (err: unknown) {
-      setActionError('Failed to save your plan. Please check your connection.')
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[GYMTrack Plans] handleSaveAndStart error:', msg)
+      if (msg.includes('auth') || msg.includes('JWT') || msg.includes('sign in')) {
+        setActionError('Please sign in again to continue.')
+      } else {
+        setActionError("Couldn't save your plan. Please try again.")
+      }
     } finally {
       setIsGenerating(false)
     }
@@ -251,6 +294,7 @@ export default function Plans() {
       await activatePlan(user.id, planId)
     }
     await refresh()
+    await fetchPlanTelemetry()
   }
 
   if (loading && plans.length === 0) {
@@ -403,7 +447,12 @@ export default function Plans() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {todayWorkout.workout_exercises.map((we, idx) => {
                     const ex = we.exercise || DEFAULT_EXERCISES.find(e => e.id === we.exercise_id) || DEFAULT_EXERCISES[0]
-                    const isCompleted = todayCompletedExerciseIds.has(ex.id)
+                    const isCompleted = Boolean(
+                      todayCompletedExerciseIds.has(we.exercise_id) ||
+                      (ex?.id && todayCompletedExerciseIds.has(ex.id)) ||
+                      (ex?.slug && todayCompletedExerciseIds.has(ex.slug)) ||
+                      (ex?.name && todayCompletedExerciseIds.has(ex.name.toLowerCase()))
+                    )
 
                     return (
                       <div

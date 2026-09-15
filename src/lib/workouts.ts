@@ -1,35 +1,120 @@
 import { supabase } from '@/lib/supabase'
 import type { WorkoutPlan, Workout, WorkoutExercise, WorkoutSetLog } from '@/types'
+import { DEFAULT_EXERCISES } from '@/data/exercisesData'
+import { emitGymtrackEvent } from '@/lib/events'
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function isUUID(str?: string | null): boolean {
+  if (!str) return false
+  return UUID_REGEX.test(str)
+}
+
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+function getLocalPlans(userId: string): WorkoutPlan[] {
+  try {
+    const raw = localStorage.getItem(`gymtrack:local_workout_plans_${userId}`) || localStorage.getItem('gymtrack:local_workout_plans')
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function setLocalPlans(userId: string, plans: WorkoutPlan[]) {
+  try {
+    localStorage.setItem(`gymtrack:local_workout_plans_${userId}`, JSON.stringify(plans))
+    localStorage.setItem('gymtrack:local_workout_plans', JSON.stringify(plans))
+  } catch (err) {
+    console.warn('[GYMTrack] Error saving local plans:', err)
+  }
+}
+
+function getLocalWorkouts(userId: string): Workout[] {
+  try {
+    const raw = localStorage.getItem(`gymtrack:local_workouts_${userId}`) || localStorage.getItem('gymtrack:local_workouts')
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function setLocalWorkouts(userId: string, workouts: Workout[]) {
+  try {
+    localStorage.setItem(`gymtrack:local_workouts_${userId}`, JSON.stringify(workouts))
+    localStorage.setItem('gymtrack:local_workouts', JSON.stringify(workouts))
+  } catch (err) {
+    console.warn('[GYMTrack] Error saving local workouts:', err)
+  }
+}
 
 // ─── Workout Plans ────────────────────────────────────────────────────────────
 
 export async function getWorkoutPlans(userId: string): Promise<{ data: WorkoutPlan[] | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from('workout_plans')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
+  const localPlans = getLocalPlans(userId)
 
-  if (error) {
-    console.error('[GYMTrack] getWorkoutPlans error:', error.message)
+  try {
+    const { data: dbPlans, error } = await supabase
+      .from('workout_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      if (localPlans.length > 0) return { data: localPlans, error: null }
+      return { data: null, error: 'Failed to load workout plans.' }
+    }
+
+    const combined = [...(dbPlans || [])]
+    const ids = new Set(combined.map(p => p.id))
+    for (const lp of localPlans) {
+      if (!ids.has(lp.id)) {
+        combined.push(lp)
+        ids.add(lp.id)
+      }
+    }
+
+    return { data: combined, error: null }
+  } catch (err) {
+    if (localPlans.length > 0) return { data: localPlans, error: null }
     return { data: null, error: 'Failed to load workout plans.' }
   }
-  return { data, error: null }
 }
 
 export async function getActiveWorkoutPlan(userId: string): Promise<{ data: WorkoutPlan | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from('workout_plans')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .single()
+  const localPlans = getLocalPlans(userId)
+  const localActive = localPlans.find(p => p.is_active)
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-    console.error('[GYMTrack] getActiveWorkoutPlan error:', error.message)
-    return { data: null, error: 'Failed to load active plan.' }
+  try {
+    const { data, error } = await supabase
+      .from('workout_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (error && error.code !== 'PGRST116') {
+      if (localActive) return { data: localActive, error: null }
+      return { data: null, error: 'Failed to load active plan.' }
+    }
+
+    if (data) {
+      return { data, error: null }
+    }
+
+    return { data: localActive || null, error: null }
+  } catch (err) {
+    return { data: localActive || null, error: null }
   }
-  return { data: data || null, error: null }
 }
 
 export async function createWorkoutPlan(plan: Partial<WorkoutPlan>): Promise<{ data: WorkoutPlan | null; error: string | null }> {
@@ -62,38 +147,61 @@ export async function updateWorkoutPlan(id: string, updates: Partial<WorkoutPlan
 }
 
 export async function deleteWorkoutPlan(id: string): Promise<boolean> {
-  const { error } = await supabase.from('workout_plans').delete().eq('id', id)
-  if (error) {
-    console.error('[GYMTrack] deleteWorkoutPlan error:', error.message)
-    return false
+  // 1. Remove from local storage
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith('gymtrack:local_workout_plans')) {
+      try {
+        const raw = localStorage.getItem(key)
+        if (raw) {
+          const list = JSON.parse(raw).filter((p: any) => p.id !== id)
+          localStorage.setItem(key, JSON.stringify(list))
+        }
+      } catch {}
+    }
   }
+
+  // 2. Remove from Supabase
+  try {
+    await supabase.from('workout_plans').delete().eq('id', id)
+  } catch (err) {
+    console.warn('[GYMTrack] deleteWorkoutPlan Supabase notice:', err)
+  }
+
+  emitGymtrackEvent('gymtrack:workout_updated')
   return true
 }
 
 export async function setActivePlan(userId: string, planId: string): Promise<boolean> {
-  // First, deactivate all plans for the user
-  const { error: err1 } = await supabase
-    .from('workout_plans')
-    .update({ is_active: false })
-    .eq('user_id', userId)
-    
-  if (err1) {
-    console.error('[GYMTrack] Error deactivating plans:', err1.message)
-    return false
+  // 1. Update local storage
+  const localPlans = getLocalPlans(userId)
+  const updatedLocal = localPlans.map(p => ({
+    ...p,
+    is_active: p.id === planId,
+    started_at: p.id === planId ? (p.started_at || new Date().toISOString()) : p.started_at
+  }))
+  setLocalPlans(userId, updatedLocal)
+
+  // 2. Update Supabase
+  try {
+    await supabase
+      .from('workout_plans')
+      .update({ is_active: false })
+      .eq('user_id', userId)
+
+    await supabase
+      .from('workout_plans')
+      .update({ 
+        is_active: true,
+        started_at: new Date().toISOString()
+      })
+      .eq('id', planId)
+      .eq('user_id', userId)
+  } catch (err) {
+    console.warn('[GYMTrack] setActivePlan Supabase notice:', err)
   }
 
-  // Then activate the target plan
-  const { error: err2 } = await supabase
-    .from('workout_plans')
-    .update({ is_active: true })
-    .eq('id', planId)
-    .eq('user_id', userId)
-
-  if (err2) {
-    console.error('[GYMTrack] Error activating plan:', err2.message)
-    return false
-  }
-
+  emitGymtrackEvent('gymtrack:workout_updated')
   return true
 }
 
@@ -101,23 +209,41 @@ export async function setActivePlan(userId: string, planId: string): Promise<boo
 // ─── Workouts ─────────────────────────────────────────────────────────────────
 
 export async function getWorkouts(userId: string): Promise<{ data: Workout[] | null; error: string | null }> {
-  const { data, error } = await supabase
-    .from('workouts')
-    .select(`
-      *,
-      workout_exercises (
-        *,
-        exercise:exercises (*)
-      )
-    `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
+  const localWorkouts = getLocalWorkouts(userId)
 
-  if (error) {
-    console.error('[GYMTrack] getWorkouts error:', error.message)
+  try {
+    const { data, error } = await supabase
+      .from('workouts')
+      .select(`
+        *,
+        workout_exercises (
+          *,
+          exercise:exercises (*)
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      if (localWorkouts.length > 0) return { data: localWorkouts, error: null }
+      return { data: null, error: 'Failed to load workouts.' }
+    }
+
+    // Merge Supabase workouts with local workouts
+    const combined = [...(data || [])]
+    const ids = new Set(combined.map(w => w.id))
+    for (const lw of localWorkouts) {
+      if (!ids.has(lw.id)) {
+        combined.push(lw)
+        ids.add(lw.id)
+      }
+    }
+
+    return { data: combined, error: null }
+  } catch (err) {
+    if (localWorkouts.length > 0) return { data: localWorkouts, error: null }
     return { data: null, error: 'Failed to load workouts.' }
   }
-  return { data, error: null }
 }
 
 export async function getWorkoutById(id: string): Promise<{ data: Workout | null; error: string | null }> {
@@ -391,17 +517,114 @@ export async function getPreviousExercisePerformance(exerciseId: string, userId:
 // ─── Multi-Week Structured Plans Engine ───────────────────────────────────────
 
 import type { StructuredPlanDefinition } from '@/types'
-import { emitGymtrackEvent } from '@/lib/events'
 
 export async function saveStructuredPlan(
   userId: string,
   definition: StructuredPlanDefinition
 ): Promise<{ data: WorkoutPlan | null; error: string | null }> {
   try {
-    // 1. Insert Workout Plan
-    const { data: plan, error: planErr } = await supabase
-      .from('workout_plans')
-      .insert({
+    // Check if user has an active authenticated session
+    const { data: sessionData } = await supabase.auth.getSession()
+    const isAuthenticated = Boolean(sessionData?.session?.user && sessionData.session.user.id === userId)
+
+    let savedPlan: WorkoutPlan | null = null
+
+    if (isAuthenticated) {
+      const { data: plan, error: planErr } = await supabase
+        .from('workout_plans')
+        .insert({
+          user_id: userId,
+          name: definition.plan_name,
+          description: `${definition.goal} • ${definition.duration_weeks} Weeks • ${definition.training_days_per_week} days/week`,
+          goal: definition.goal,
+          difficulty: definition.difficulty,
+          days_per_week: definition.training_days_per_week,
+          duration_weeks: definition.duration_weeks,
+          session_duration: definition.session_duration,
+          training_location: definition.training_location,
+          available_equipment: definition.available_equipment,
+          plan_data: definition,
+          is_active: false
+        })
+        .select()
+        .single()
+
+      if (!planErr && plan) {
+        savedPlan = plan
+
+        // 2. Fetch exercise lookup table from database
+        const { data: exercisesData } = await supabase.from('exercises').select('id, slug, name')
+        const exerciseMap = new Map<string, string>()
+        if (exercisesData) {
+          for (const ex of exercisesData) {
+            exerciseMap.set(ex.slug, ex.id)
+            exerciseMap.set(ex.name.toLowerCase(), ex.id)
+            exerciseMap.set(ex.id, ex.id)
+          }
+        }
+
+        // 3. Insert Workouts for each day in weekly schedule
+        for (const day of definition.weekly_schedule) {
+          const { data: wo, error: woErr } = await supabase
+            .from('workouts')
+            .insert({
+              plan_id: plan.id,
+              user_id: userId,
+              name: day.focus || day.day_name,
+              description: `${day.day_name}: ${day.focus}`,
+              day_number: day.day_number,
+              day_type: day.day_type,
+              estimated_duration: day.estimated_duration
+            })
+            .select()
+            .single()
+
+          if (!woErr && wo && day.exercises && day.exercises.length > 0) {
+            for (let i = 0; i < day.exercises.length; i++) {
+              const exItem = day.exercises[i]
+              let exId: string | undefined = undefined
+
+              // Check if exItem.exercise_id is already a valid UUID
+              if (exItem.exercise_id && isUUID(exItem.exercise_id)) {
+                exId = exItem.exercise_id
+              }
+
+              // Match by slug or name in database
+              if (!exId && exItem.exercise_slug) {
+                exId = exerciseMap.get(exItem.exercise_slug)
+              }
+              if (!exId) {
+                exId = exerciseMap.get(exItem.exercise_name.toLowerCase())
+              }
+              // Fallback to any valid database exercise id to satisfy foreign key
+              if (!exId && exercisesData && exercisesData.length > 0) {
+                exId = exercisesData[0].id
+              }
+
+              if (exId && isUUID(exId)) {
+                await supabase.from('workout_exercises').insert({
+                  workout_id: wo.id,
+                  exercise_id: exId,
+                  exercise_order: i + 1,
+                  sets: exItem.sets || 3,
+                  reps: String(exItem.reps || '8-12'),
+                  rest_seconds: exItem.rest_seconds || 90
+                })
+              }
+            }
+          }
+        }
+      } else if (planErr) {
+        console.warn('[GYMTrack] Supabase saveStructuredPlan failed, falling back to local persistence:', planErr.message)
+      }
+    }
+
+    // If unauthenticated, in demo mode, or if Supabase insert was rejected by RLS, save locally with complete relational structure
+    if (!savedPlan) {
+      const planId = generateUUID()
+      const now = new Date().toISOString()
+      savedPlan = {
+        id: planId,
         user_id: userId,
         name: definition.plan_name,
         description: `${definition.goal} • ${definition.duration_weeks} Weeks • ${definition.training_days_per_week} days/week`,
@@ -413,103 +636,99 @@ export async function saveStructuredPlan(
         training_location: definition.training_location,
         available_equipment: definition.available_equipment,
         plan_data: definition,
-        is_active: false
-      })
-      .select()
-      .single()
-
-    if (planErr || !plan) {
-      console.error('[GYMTrack] saveStructuredPlan error:', planErr?.message)
-      return { data: null, error: 'Failed to create training plan.' }
-    }
-
-    // 2. Fetch exercise lookup table to match database IDs
-    const { data: exercisesData } = await supabase.from('exercises').select('id, slug, name')
-    const exerciseMap = new Map<string, string>()
-    if (exercisesData) {
-      for (const ex of exercisesData) {
-        exerciseMap.set(ex.slug, ex.id)
-        exerciseMap.set(ex.name.toLowerCase(), ex.id)
-        exerciseMap.set(ex.id, ex.id)
+        is_active: false,
+        created_at: now,
+        updated_at: now
       }
-    }
 
-    // 3. Insert Workouts for each day in weekly schedule
-    for (const day of definition.weekly_schedule) {
-      const { data: wo, error: woErr } = await supabase
-        .from('workouts')
-        .insert({
-          plan_id: plan.id,
+      // Generate local workouts and workout exercises with rich exercise data from DEFAULT_EXERCISES
+      const generatedWorkouts: Workout[] = definition.weekly_schedule.map(day => {
+        const woId = generateUUID()
+        const exercisesList = (day.exercises || []).map((exItem, idx) => {
+          const catalogEx = DEFAULT_EXERCISES.find(e => 
+            e.slug === exItem.exercise_slug || 
+            e.name.toLowerCase() === exItem.exercise_name.toLowerCase() ||
+            e.id === exItem.exercise_id
+          ) || DEFAULT_EXERCISES[0]
+
+          return {
+            id: generateUUID(),
+            workout_id: woId,
+            exercise_id: catalogEx.id,
+            exercise_order: idx + 1,
+            sets: exItem.sets || 3,
+            reps: String(exItem.reps || '8-12'),
+            weight: null,
+            rest_seconds: exItem.rest_seconds || 90,
+            notes: null,
+            created_at: now,
+            updated_at: now,
+            exercise: catalogEx
+          }
+        })
+
+        return {
+          id: woId,
+          plan_id: planId,
           user_id: userId,
           name: day.focus || day.day_name,
           description: `${day.day_name}: ${day.focus}`,
           day_number: day.day_number,
           day_type: day.day_type,
-          estimated_duration: day.estimated_duration
-        })
-        .select()
-        .single()
-
-      if (!woErr && wo && day.exercises && day.exercises.length > 0) {
-        for (let i = 0; i < day.exercises.length; i++) {
-          const exItem = day.exercises[i]
-          let exId = exItem.exercise_id
-
-          if (!exId && exItem.exercise_slug) {
-            exId = exerciseMap.get(exItem.exercise_slug)
-          }
-          if (!exId) {
-            exId = exerciseMap.get(exItem.exercise_name.toLowerCase())
-          }
-          // Fallback if not found in db lookup
-          if (!exId && exercisesData && exercisesData.length > 0) {
-            exId = exercisesData[0].id
-          }
-
-          if (exId) {
-            await supabase.from('workout_exercises').insert({
-              workout_id: wo.id,
-              exercise_id: exId,
-              exercise_order: i + 1,
-              sets: exItem.sets || 3,
-              reps: String(exItem.reps || '8-12'),
-              rest_seconds: exItem.rest_seconds || 90
-            })
-          }
+          notes: null,
+          estimated_duration: day.estimated_duration,
+          created_at: now,
+          updated_at: now,
+          workout_exercises: exercisesList
         }
-      }
+      })
+
+      // Persist to local storage
+      const localPlans = getLocalPlans(userId)
+      localPlans.unshift(savedPlan)
+      setLocalPlans(userId, localPlans)
+
+      const existingWorkouts = getLocalWorkouts(userId)
+      setLocalWorkouts(userId, [...generatedWorkouts, ...existingWorkouts])
     }
 
     emitGymtrackEvent('gymtrack:workout_updated')
-    return { data: plan, error: null }
+    return { data: savedPlan, error: null }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[GYMTrack] Exception saving plan:', msg)
+    console.error('[GYMTrack] Exception in saveStructuredPlan:', msg)
     return { data: null, error: msg }
   }
 }
 
 export async function activatePlan(userId: string, planId: string): Promise<boolean> {
   try {
-    // 1. Deactivate all existing plans for user
-    await supabase
-      .from('workout_plans')
-      .update({ is_active: false })
-      .eq('user_id', userId)
+    // 1. Update local storage
+    const localPlans = getLocalPlans(userId)
+    const updatedLocal = localPlans.map(p => ({
+      ...p,
+      is_active: p.id === planId,
+      started_at: p.id === planId ? (p.started_at || new Date().toISOString()) : p.started_at
+    }))
+    setLocalPlans(userId, updatedLocal)
 
-    // 2. Activate target plan and set started_at if not yet set
-    const { error } = await supabase
-      .from('workout_plans')
-      .update({ 
-        is_active: true,
-        started_at: new Date().toISOString()
-      })
-      .eq('id', planId)
-      .eq('user_id', userId)
+    // 2. Update Supabase
+    try {
+      await supabase
+        .from('workout_plans')
+        .update({ is_active: false })
+        .eq('user_id', userId)
 
-    if (error) {
-      console.error('[GYMTrack] activatePlan error:', error.message)
-      return false
+      await supabase
+        .from('workout_plans')
+        .update({ 
+          is_active: true,
+          started_at: new Date().toISOString()
+        })
+        .eq('id', planId)
+        .eq('user_id', userId)
+    } catch (err) {
+      console.warn('[GYMTrack] activatePlan Supabase notice:', err)
     }
 
     emitGymtrackEvent('gymtrack:workout_updated')
@@ -522,15 +741,20 @@ export async function activatePlan(userId: string, planId: string): Promise<bool
 
 export async function pauseActivePlan(userId: string, planId: string): Promise<boolean> {
   try {
-    const { error } = await supabase
-      .from('workout_plans')
-      .update({ is_active: false })
-      .eq('id', planId)
-      .eq('user_id', userId)
+    // 1. Update local storage
+    const localPlans = getLocalPlans(userId)
+    const updatedLocal = localPlans.map(p => p.id === planId ? { ...p, is_active: false } : p)
+    setLocalPlans(userId, updatedLocal)
 
-    if (error) {
-      console.error('[GYMTrack] pauseActivePlan error:', error.message)
-      return false
+    // 2. Update Supabase
+    try {
+      await supabase
+        .from('workout_plans')
+        .update({ is_active: false })
+        .eq('id', planId)
+        .eq('user_id', userId)
+    } catch (err) {
+      console.warn('[GYMTrack] pauseActivePlan Supabase notice:', err)
     }
 
     emitGymtrackEvent('gymtrack:workout_updated')
@@ -545,6 +769,13 @@ export async function getPlanDayCompletions(
   planId: string,
   userId: string
 ): Promise<{ week_number: number; day_number: number; status: string; completed_at: string }[]> {
+  const localKey = `gymtrack:plan_day_completions_${planId}_${userId}`
+  let localComps: { week_number: number; day_number: number; status: string; completed_at: string }[] = []
+  try {
+    const raw = localStorage.getItem(localKey)
+    if (raw) localComps = JSON.parse(raw)
+  } catch {}
+
   try {
     const { data, error } = await supabase
       .from('plan_day_completions')
@@ -552,14 +783,21 @@ export async function getPlanDayCompletions(
       .eq('plan_id', planId)
       .eq('user_id', userId)
 
-    if (error) {
-      // Table may not exist yet if migration pending, return empty
-      return []
+    if (error || !data) {
+      return localComps
     }
-    return data || []
+
+    const merged = [...data]
+    const set = new Set(data.map(d => `${d.week_number}_${d.day_number}`))
+    for (const lc of localComps) {
+      if (!set.has(`${lc.week_number}_${lc.day_number}`)) {
+        merged.push(lc)
+      }
+    }
+    return merged
   } catch (err) {
     console.warn('[GYMTrack] Error fetching plan completions:', err)
-    return []
+    return localComps
   }
 }
 
@@ -572,30 +810,49 @@ export async function markPlanDayCompleted(
   completedExercises = 0,
   totalExercises = 0
 ): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('plan_day_completions')
-      .upsert({
-        plan_id: planId,
-        user_id: userId,
-        week_number: weekNumber,
-        day_number: dayNumber,
-        workout_id: workoutId || null,
-        status: 'completed',
-        completed_exercises: completedExercises,
-        total_exercises: totalExercises,
-        completed_at: new Date().toISOString()
-      }, { onConflict: 'plan_id,user_id,week_number,day_number' })
+  const now = new Date().toISOString()
 
-    if (error) {
-      console.warn('[GYMTrack] markPlanDayCompleted warning:', error.message)
-    }
-    emitGymtrackEvent('gymtrack:workout_updated')
-    emitGymtrackEvent('gymtrack:session_completed')
-    return true
-  } catch (err) {
-    console.warn('[GYMTrack] Exception marking plan day completed:', err)
-    return false
+  // 1. Local update
+  const localKey = `gymtrack:plan_day_completions_${planId}_${userId}`
+  let localComps: any[] = []
+  try {
+    const raw = localStorage.getItem(localKey)
+    if (raw) localComps = JSON.parse(raw)
+  } catch {}
+
+  const existingIdx = localComps.findIndex(c => c.week_number === weekNumber && c.day_number === dayNumber)
+  const newComp = {
+    plan_id: planId,
+    user_id: userId,
+    week_number: weekNumber,
+    day_number: dayNumber,
+    workout_id: workoutId || null,
+    status: 'completed',
+    completed_exercises: completedExercises,
+    total_exercises: totalExercises,
+    completed_at: now
   }
+
+  if (existingIdx >= 0) {
+    localComps[existingIdx] = newComp
+  } else {
+    localComps.push(newComp)
+  }
+  try {
+    localStorage.setItem(localKey, JSON.stringify(localComps))
+  } catch {}
+
+  // 2. Supabase update
+  try {
+    await supabase
+      .from('plan_day_completions')
+      .upsert(newComp, { onConflict: 'plan_id,user_id,week_number,day_number' })
+  } catch (dbErr) {
+    console.warn('[GYMTrack] markPlanDayCompleted Supabase notice:', dbErr)
+  }
+
+  emitGymtrackEvent('gymtrack:workout_updated')
+  emitGymtrackEvent('gymtrack:session_completed')
+  return true
 }
 

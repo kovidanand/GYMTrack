@@ -11,6 +11,7 @@ import {
 import { calculate1RM } from './exerciseIntelligence'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 import { supabase } from '@/lib/supabase'
+import { getActiveWorkoutPlan } from './workouts'
 
 export interface StructuredCoachContext {
   active_plan?: {
@@ -150,7 +151,10 @@ export async function buildCoachContext(profile: any, userId: string): Promise<S
         .maybeSingle()
     ])
 
-    const activePlanData = activePlanRes?.data
+    let activePlanData = activePlanRes?.data
+    if (!activePlanData) {
+      activePlanData = (await getActiveWorkoutPlan(userId)) as any
+    }
 
     // Pre-aggregate exercise-specific performance & 1RMs
     const exerciseHistoryMap = new Map<string, {
@@ -273,7 +277,7 @@ export async function buildCoachContext(profile: any, userId: string): Promise<S
       }
 
       const workouts = (activePlanData.workouts || []) as any[]
-      const todayWkPlan = workouts.find((w: any) => w.day_of_week === currentDayOfWeek)
+      const todayWkPlan = workouts.find((w: any) => w.day_number === currentDayOfWeek || w.day_of_week === currentDayOfWeek)
 
       const plannedExercises: string[] = (todayWkPlan?.workout_exercises || [])
         .sort((a: any, b: any) => (a.order_in_workout ?? 0) - (b.order_in_workout ?? 0))

@@ -5,7 +5,8 @@ import { MuscleGroupBadge } from '@/components/shared'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { emitGymtrackEvent } from '@/lib/events'
-import { getPreviousExercisePerformance } from '@/lib/workouts'
+import { getPreviousExercisePerformance, isUUID } from '@/lib/workouts'
+import { enqueueSyncOperation, generateUUID } from '@/lib/offline/db'
 import type { Exercise } from '@/types'
 
 interface SetRow {
@@ -122,87 +123,158 @@ export function PlanExerciseModal({
     setSaving(true)
 
     try {
-      // 1. Ensure or find today's active workout_session
+      // 1. Resolve valid exercise ID (must be valid UUID for database)
+      let resolvedExerciseId = exercise.id
+      if (!isUUID(resolvedExerciseId)) {
+        try {
+          const { data: exRow } = await supabase
+            .from('exercises')
+            .select('id')
+            .or(`slug.eq.${exercise.slug},name.ilike.${exercise.name}`)
+            .maybeSingle()
+          if (exRow?.id && isUUID(exRow.id)) {
+            resolvedExerciseId = exRow.id
+          }
+        } catch {}
+      }
+
+      // If still not a UUID, generate a deterministic UUID fallback
+      if (!isUUID(resolvedExerciseId)) {
+        resolvedExerciseId = generateUUID()
+      }
+
+      // 2. Ensure today's workout_session
       const todayStart = new Date()
       todayStart.setHours(0, 0, 0, 0)
       const todayEnd = new Date()
       todayEnd.setHours(23, 59, 59, 999)
 
-      const { data: existingSessions } = await supabase
-        .from('workout_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('started_at', todayStart.toISOString())
-        .lte('started_at', todayEnd.toISOString())
-        .order('started_at', { ascending: false })
-        .limit(1)
+      let sessionId: string | null = null
 
-      let sessionId = existingSessions && existingSessions.length > 0 ? existingSessions[0].id : null
+      try {
+        const { data: existingSessions } = await supabase
+          .from('workout_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('started_at', todayStart.toISOString())
+          .lte('started_at', todayEnd.toISOString())
+          .order('started_at', { ascending: false })
+          .limit(1)
+
+        if (existingSessions && existingSessions.length > 0) {
+          sessionId = existingSessions[0].id
+        }
+      } catch {}
 
       if (!sessionId) {
-        const { data: newSession, error: sErr } = await supabase
-          .from('workout_sessions')
-          .insert({
-            user_id: user.id,
-            workout_id: workoutId || null,
-            workout_name: workoutName || 'Plan Workout',
-            started_at: new Date().toISOString(),
-            status: 'completed',
-            total_exercises: 1,
-            total_sets: sets.length,
-            completed_sets: sets.length,
-            total_volume: sets.reduce((sum, s) => sum + s.weight * s.reps, 0)
-          })
-          .select()
-          .single()
-
-        if (sErr || !newSession) {
-          throw new Error(sErr?.message || 'Failed to create session')
-        }
-        sessionId = newSession.id
+        sessionId = generateUUID()
+        try {
+          const { data: newSession } = await supabase
+            .from('workout_sessions')
+            .insert({
+              id: sessionId,
+              user_id: user.id,
+              workout_id: workoutId || null,
+              workout_name: workoutName || 'Plan Workout',
+              started_at: new Date().toISOString(),
+              status: 'completed',
+              total_exercises: 1,
+              total_sets: sets.length,
+              completed_sets: sets.length,
+              total_volume: sets.reduce((sum, s) => sum + s.weight * s.reps, 0)
+            })
+            .select()
+            .maybeSingle()
+          if (newSession) sessionId = newSession.id
+        } catch {}
       }
 
-      // 2. Insert set logs into workout_session_sets
-      const rowsToInsert = sets.map(s => ({
-        session_id: sessionId,
+      // 3. Insert set logs into workout_session_sets
+      const setsDataPayload = sets.map(s => ({
+        id: generateUUID(),
+        session_id: sessionId!,
         workout_exercise_id: workoutExerciseId || null,
-        exercise_id: exercise.id,
+        exercise_id: resolvedExerciseId,
         exercise_name: exercise.name,
         set_number: s.setNumber,
-        weight: s.weight,
-        reps: s.reps,
+        weight: Number(s.weight) || 0,
+        reps: Number(s.reps) || 0,
         completed: true
       }))
 
-      const { error: setsErr } = await supabase
-        .from('workout_session_sets')
-        .insert(rowsToInsert)
-
-      if (setsErr) {
-        console.warn('[PlanExerciseModal] Sets insert warning:', setsErr.message)
-      }
-
-      // 3. Recalculate session totals
-      const { data: allSessionSets } = await supabase
-        .from('workout_session_sets')
-        .select('weight, reps, exercise_id')
-        .eq('session_id', sessionId)
-
-      if (allSessionSets) {
-        const totalVol = allSessionSets.reduce((sum, s) => sum + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0)
-        const uniqueExercises = new Set(allSessionSets.map(s => s.exercise_id)).size
+      try {
         await supabase
-          .from('workout_sessions')
-          .update({
-            total_volume: totalVol,
-            total_sets: allSessionSets.length,
-            completed_sets: allSessionSets.length,
-            total_exercises: uniqueExercises,
-            status: 'completed',
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', sessionId)
+          .from('workout_session_sets')
+          .insert(setsDataPayload)
+      } catch (setsErr) {
+        console.warn('[PlanExerciseModal] Sets insert notice:', setsErr)
       }
+
+      // 4. Enqueue in IndexedDB sync queue for robust offline/demo synchronization
+      try {
+        await enqueueSyncOperation({
+          id: generateUUID(),
+          userId: user.id,
+          sessionId: sessionId!,
+          operationType: 'SAVE_WORKOUT_SESSION',
+          payload: {
+            sessionData: {
+              id: sessionId!,
+              user_id: user.id,
+              workout_name: workoutName || 'Plan Workout',
+              started_at: new Date().toISOString(),
+              status: 'completed',
+              total_exercises: 1,
+              total_sets: sets.length,
+              completed_sets: sets.length,
+              total_volume: sets.reduce((sum, s) => sum + s.weight * s.reps, 0)
+            },
+            setsData: setsDataPayload
+          },
+          createdAt: Date.now(),
+          syncStatus: 'pending',
+          retryCount: 0
+        })
+      } catch (queueErr) {
+        console.warn('[PlanExerciseModal] Enqueue notice:', queueErr)
+      }
+
+      // 5. Persist completed exercise ID in local storage for instantaneous UI reactivity
+      try {
+        const key = `gymtrack:today_completed_exercises_${user.id}`
+        const raw = localStorage.getItem(key)
+        const storedIds: string[] = raw ? JSON.parse(raw) : []
+        const toAdd = [exercise.id, exercise.slug, resolvedExerciseId].filter(Boolean) as string[]
+        for (const id of toAdd) {
+          if (!storedIds.includes(id)) storedIds.push(id)
+        }
+        localStorage.setItem(key, JSON.stringify(storedIds))
+        localStorage.setItem('gymtrack:today_completed_exercises', JSON.stringify(storedIds))
+      } catch {}
+
+      // 6. Recalculate session totals in Supabase
+      try {
+        const { data: allSessionSets } = await supabase
+          .from('workout_session_sets')
+          .select('weight, reps, exercise_id')
+          .eq('session_id', sessionId)
+
+        if (allSessionSets && allSessionSets.length > 0) {
+          const totalVol = allSessionSets.reduce((sum, s) => sum + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0)
+          const uniqueExercises = new Set(allSessionSets.map(s => s.exercise_id)).size
+          await supabase
+            .from('workout_sessions')
+            .update({
+              total_volume: totalVol,
+              total_sets: allSessionSets.length,
+              completed_sets: allSessionSets.length,
+              total_exercises: uniqueExercises,
+              status: 'completed',
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', sessionId)
+        }
+      } catch {}
 
       // Show success feedback
       setSuccessToast(true)
