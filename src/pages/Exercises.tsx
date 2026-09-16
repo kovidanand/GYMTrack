@@ -4,6 +4,7 @@ import { SlidersHorizontal, X, Heart, HeartOff, Search } from 'lucide-react'
 import { PageHeader, SearchInput, EmptyState } from '@/components/shared'
 import { ExerciseCard, FilterChips } from '@/components/exercise/ExerciseComponents'
 import { ExerciseSkeleton } from '@/components/exercise/ExerciseSkeleton'
+import { TrainingLoggerModal } from '@/components/workout/TrainingLoggerModal'
 import { useExercises, type SortOption } from '@/hooks/useExercises'
 import { useToast } from '@/components/shared/Toast'
 import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
@@ -65,6 +66,7 @@ export default function Exercises() {
 
   const toast = useToast()
   const [showFilters, setShowFilters] = useState(false)
+  const [loggingExerciseId, setLoggingExerciseId] = useState<string | null>(null)
 
   return (
     <div className="animate-fade-in space-y-6 pb-12">
@@ -141,10 +143,10 @@ export default function Exercises() {
               role="tab"
               aria-selected={isActive}
               className={cn(
-                "px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap border shadow-2xs",
+                "px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all",
                 isActive
-                  ? "bg-surface-900 text-white border-surface-900 shadow-xs"
-                  : "bg-white text-surface-600 border-surface-200 hover:border-surface-300 hover:text-surface-900"
+                  ? "bg-surface-900 text-white shadow-xs"
+                  : "bg-surface-100 text-surface-600 hover:bg-surface-200"
               )}
             >
               {cat.label}
@@ -153,26 +155,29 @@ export default function Exercises() {
         })}
       </div>
 
-      {/* ── Filter Panel ── */}
+      {/* ── Filter Sheet / Dropdown ── */}
       {showFilters && (
-        <div className="card p-5 space-y-5 animate-slide-up">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-surface-900">Filter Exercises</h2>
-            <div className="flex items-center gap-2">
+        <div className="card p-5 bg-surface-50/60 border border-surface-200 rounded-2xl space-y-5 animate-scale-down" id="exercise-filters-panel">
+          <div className="flex items-center justify-between border-b border-surface-200/60 pb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-surface-500">
+              Filter Options {activeFilterCount > 0 && `(${activeFilterCount} active)`}
+            </span>
+            <div className="flex items-center gap-3">
               {activeFilterCount > 0 && (
                 <button
+                  className="text-xs text-brand-600 hover:text-brand-700 font-semibold"
                   onClick={resetFilters}
-                  className="text-xs text-brand-600 font-medium hover:text-brand-700 flex items-center gap-1"
                   id="exercise-filter-reset"
                 >
-                  <X size={12} /> Reset all
+                  Reset all
                 </button>
               )}
               <button
+                className="text-surface-400 hover:text-surface-600 p-1"
                 onClick={() => setShowFilters(false)}
-                className="btn-ghost py-1 px-2 text-xs"
+                aria-label="Close filters"
               >
-                Done
+                <X size={18} />
               </button>
             </div>
           </div>
@@ -257,9 +262,13 @@ export default function Exercises() {
                     undefined,
                     {
                       label: 'Log now',
-                      onClick: () => navigate('/dashboard')
+                      onClick: () => setLoggingExerciseId(ex.id)
                     }
                   )
+                }}
+                onLogExercise={(ex, e) => {
+                  e.stopPropagation()
+                  setLoggingExerciseId(ex.id)
                 }}
                 onClick={(ex) => navigate(`/exercises/${ex.slug}`)}
               />
@@ -282,6 +291,14 @@ export default function Exercises() {
           }
         />
       )}
+
+      {/* Direct Canonical Training Logger Modal for instant logging from library */}
+      <TrainingLoggerModal
+        isOpen={!!loggingExerciseId}
+        onClose={() => setLoggingExerciseId(null)}
+        initialExerciseId={loggingExerciseId || undefined}
+        initialMode="manual"
+      />
     </div>
   )
 }

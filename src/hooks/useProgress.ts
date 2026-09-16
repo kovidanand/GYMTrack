@@ -126,21 +126,49 @@ export { computeMuscleDistribution }
 
 export function useProgress() {
   const { user } = useAuth()
+  const userId = user?.id
   
-  const [history, setHistory] = useState<WorkoutSession[]>([])
+  const [history, setHistory] = useState<WorkoutSession[]>(() => {
+    if (user?.id) {
+      try {
+        const raw = localStorage.getItem('gymtrack_cached_history_' + user.id)
+        return raw ? JSON.parse(raw) : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  })
   const [stats, setStats] = useState<ProgressStats | null>(null)
   const [volumeChart, setVolumeChart] = useState<ChartDataPoint[]>([])
   const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([])
   const [timeRange, setTimeRange] = useState<TimeRange>('30d')
   
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => history.length === 0)
   const [error, setError] = useState<string | null>(null)
 
-  const userId = user?.id
+  // Sync cache when userId becomes available
+  useEffect(() => {
+    if (userId) {
+      try {
+        const raw = localStorage.getItem('gymtrack_cached_history_' + userId)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (parsed.length > 0) {
+            setHistory(parsed)
+            setLoading(false)
+          }
+        }
+      } catch {}
+    }
+  }, [userId])
 
   const fetchData = useCallback(async () => {
     if (!userId) return
-    setLoading(true)
+    // Only set loading to true if we have no existing history to prevent flicker
+    if (history.length === 0) {
+      setLoading(true)
+    }
     setError(null)
 
     const days = timeRange === 'all' ? 3650 : RANGE_DAYS[timeRange]
@@ -162,16 +190,33 @@ export function useProgress() {
     }
     
     setLoading(false)
-  }, [userId, timeRange])
+  }, [userId, timeRange, history.length])
 
   useEffect(() => {
     fetchData()
 
+    const readCache = () => {
+      if (userId) {
+        try {
+          const raw = localStorage.getItem('gymtrack_cached_history_' + userId)
+          if (raw) {
+            setHistory(JSON.parse(raw))
+          }
+        } catch {}
+      }
+    }
+
     // Listen for reactive session completions and sync flushes
-    const unsub1 = subscribeGymtrackEvent('gymtrack:session_completed', () => fetchData())
+    const unsub1 = subscribeGymtrackEvent('gymtrack:session_completed', () => {
+      readCache()
+      fetchData()
+    })
     const unsub2 = subscribeGymtrackEvent('gymtrack:sync_completed', () => fetchData())
     const unsub3 = subscribeGymtrackEvent('gymtrack:workout_updated', () => fetchData())
-    const unsub4 = subscribeGymtrackEvent('gymtrack:sets_logged', () => fetchData())
+    const unsub4 = subscribeGymtrackEvent('gymtrack:sets_logged', () => {
+      readCache()
+      fetchData()
+    })
 
     return () => {
       unsub1()
@@ -179,7 +224,7 @@ export function useProgress() {
       unsub3()
       unsub4()
     }
-  }, [fetchData])
+  }, [fetchData, userId])
 
   // ── Derived period-filtered data ──────────────────────────────────────────
 

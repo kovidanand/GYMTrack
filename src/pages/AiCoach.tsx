@@ -11,7 +11,8 @@ import {
   Dumbbell, 
   HelpCircle,
   TrendingUp,
-  ChevronRight
+  ChevronRight,
+  CheckCircle2
 } from 'lucide-react'
 import { PageHeader, EmptyState } from '@/components/shared'
 import { useAiCoach } from '@/hooks/useAiCoach'
@@ -29,6 +30,8 @@ export default function AiCoach() {
     loading, 
     isAsking, 
     ask, 
+    confirmPendingLog,
+    cancelPendingLog,
     clearChat, 
     refresh 
   } = useAiCoach()
@@ -324,6 +327,33 @@ export default function AiCoach() {
                         <span>{msg.content}</span>
                       )}
                     </div>
+
+                    {/* Workout Logging Confirmation Card */}
+                    {msg.pendingLog && !msg.pendingLog.logged && (
+                      <div className="p-3 bg-brand-50/70 border border-brand-200 rounded-xl space-y-2 text-left">
+                        <div className="text-xs font-bold text-brand-950 flex items-center justify-between">
+                          <span>{msg.pendingLog.exerciseName}</span>
+                          <span className="text-brand-700 font-mono text-[11px]">{msg.pendingLog.sets} sets × {msg.pendingLog.reps} reps @ {msg.pendingLog.weight} kg</span>
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => cancelPendingLog(msg.id)}
+                            className="flex-1 py-1.5 px-3 bg-white border border-surface-200 hover:bg-surface-100 text-surface-700 rounded-lg text-xs font-bold transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => confirmPendingLog(msg.id)}
+                            className="flex-1 py-1.5 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1"
+                          >
+                            <CheckCircle2 size={13} />
+                            <span>Confirm & Log</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {msg.supportingData && (
                       <div className="flex items-center gap-1.5 text-[11px] font-mono text-surface-400 px-1">

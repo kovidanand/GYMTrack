@@ -14,7 +14,8 @@ import {
 } from '@/lib/offline/db'
 import { syncEngine } from '@/lib/offline/syncEngine'
 import { emitGymtrackEvent } from '@/lib/events'
-import type { Workout, WorkoutExercise, WorkoutSessionSet, Exercise } from '@/types'
+import { getCachedHistory, setCachedHistory } from '@/lib/workoutService'
+import type { Workout, WorkoutExercise, WorkoutSessionSet, Exercise, WorkoutSession } from '@/types'
 
 export type TimerState = 'idle' | 'running' | 'paused' | 'finished'
 
@@ -350,8 +351,19 @@ export function useWorkoutExecution(workoutId: string) {
         })
       }
 
-      // 4. Notify app of completed workout session
+      // 4. Update optimistic local cache for immediate Home & Progress updates
+      const cached = getCachedHistory(user.id)
+      setCachedHistory(user.id, [
+        {
+          ...sessionPayload,
+          workout_session_sets: finalizedSets as WorkoutSessionSet[]
+        } as WorkoutSession,
+        ...cached.filter(s => s.id !== sessionId)
+      ])
+
+      // 5. Notify app of completed workout session
       emitGymtrackEvent('gymtrack:session_completed', { sessionId, workoutId })
+      emitGymtrackEvent('gymtrack:sets_logged', { sessionId, workoutId })
 
       return { success: true, isOffline: !isOnline }
     } catch (err) {

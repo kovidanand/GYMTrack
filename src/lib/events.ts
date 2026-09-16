@@ -12,11 +12,11 @@ export type GymtrackEventType =
   | 'gymtrack:sets_logged'
 
 interface EventDetailMap {
-  'gymtrack:workout_updated': { workoutId?: string; action?: 'create' | 'update' | 'delete' | 'add_exercise'; exerciseId?: string }
-  'gymtrack:session_completed': { sessionId: string; workoutId?: string }
+  'gymtrack:workout_updated': { workoutId?: string; sessionId?: string; action?: 'create' | 'update' | 'delete' | 'add_exercise'; exerciseId?: string; source?: string }
+  'gymtrack:session_completed': { sessionId: string; workoutId?: string; source?: string }
   'gymtrack:sync_completed': { syncedCount: number }
   'gymtrack:exercise_favorited': { exerciseId: string; isFavorite: boolean }
-  'gymtrack:sets_logged': { sessionId?: string; exerciseName?: string; setsCount?: number; volume?: number }
+  'gymtrack:sets_logged': { sessionId?: string; workoutId?: string; exerciseName?: string; setsCount?: number; volume?: number; source?: string }
 }
 
 export function emitGymtrackEvent<T extends GymtrackEventType>(

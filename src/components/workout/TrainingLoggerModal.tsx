@@ -22,9 +22,8 @@ import {
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/shared/Toast'
-import { enqueueSyncOperation, generateUUID, getQueuedExercisesForTodayWorkout, clearQueuedExercisesForTodayWorkout } from '@/lib/offline/db'
-import { syncEngine } from '@/lib/offline/syncEngine'
-import { emitGymtrackEvent } from '@/lib/events'
+import { generateUUID, getQueuedExercisesForTodayWorkout, clearQueuedExercisesForTodayWorkout } from '@/lib/offline/db'
+import { logCanonicalWorkout } from '@/lib/workoutService'
 import { cn } from '@/lib/utils'
 import type { Exercise, MuscleGroup, WorkoutSession, WorkoutSessionSet } from '@/types'
 
@@ -423,6 +422,7 @@ export function TrainingLoggerModal({
     setLoggedItems([newItem])
     setMissingFieldPrompt(null)
     setVoiceFeedback(`Successfully captured: ${matchedExercise.name} — ${extractedSets} sets × ${finalReps} reps @ ${finalWeight}kg. Ready to review!`)
+    setStep('confirmation')
   }
 
   const handleResolveMissingField = (value: number) => {
@@ -452,6 +452,7 @@ export function TrainingLoggerModal({
     setLoggedItems([newItem])
     setMissingFieldPrompt(null)
     setVoiceFeedback(`Captured ${matchedExercise.name} — ${setsCount} sets × ${reps} reps @ ${weight}kg. Ready to review!`)
+    setStep('confirmation')
   }
 
   const toggleListening = () => {
@@ -520,74 +521,31 @@ export function TrainingLoggerModal({
     setIsSaving(true)
 
     try {
-      const sessionId = generateUUID()
-      const now = new Date()
-      const startedAt = new Date(now.getTime() - (sessionTotals.totalSets * 90 * 1000)).toISOString()
-      const completedAt = now.toISOString()
-      const durationSeconds = Math.max(300, sessionTotals.totalSets * 90)
+      const exercisesPayload = loggedItems.map(item => ({
+        exerciseId: item.exercise.id,
+        exerciseName: item.exercise.name,
+        sets: item.sets.map(s => ({
+          setNumber: s.set_number,
+          weight: Number(s.weight) || 0,
+          reps: Number(s.reps) || 0,
+          completed: s.completed !== false
+        }))
+      }))
 
-      // Primary workout session payload
-      const sessionPayload: Partial<WorkoutSession> = {
-        id: sessionId,
-        user_id: user.id,
-        workout_name: loggedItems.length === 1 
+      const result = await logCanonicalWorkout({
+        userId: user.id,
+        workoutName: loggedItems.length === 1 
           ? `${loggedItems[0].exercise.name} Training`
           : `${loggedItems[0].exercise.muscle_group.toUpperCase()} Focus Session`,
-        started_at: startedAt,
-        completed_at: completedAt,
-        duration_seconds: durationSeconds,
-        total_exercises: loggedItems.length,
-        total_sets: sessionTotals.totalSets,
-        completed_sets: sessionTotals.totalSets,
-        total_volume: sessionTotals.totalVolume,
-        status: 'completed'
-      }
-
-      // Sets payload
-      const setsData: Partial<WorkoutSessionSet>[] = []
-      loggedItems.forEach(item => {
-        item.sets.forEach(s => {
-          setsData.push({
-            id: generateUUID(),
-            session_id: sessionId,
-            exercise_id: item.exercise.id,
-            exercise_name: item.exercise.name,
-            set_number: s.set_number,
-            weight: Number(s.weight) || 0,
-            reps: Number(s.reps) || 0,
-            completed: true
-          })
-        })
+        exercises: exercisesPayload,
+        source: activeTab === 'voice' ? 'voice' : 'home'
       })
 
-      // 1. Enqueue in IndexedDB sync queue
-      await enqueueSyncOperation({
-        id: generateUUID(),
-        userId: user.id,
-        sessionId,
-        operationType: 'SAVE_WORKOUT_SESSION',
-        payload: {
-          sessionData: sessionPayload,
-          setsData
-        },
-        createdAt: Date.now(),
-        syncStatus: 'pending',
-        retryCount: 0
-      })
-
-      // 2. Trigger sync quietly in background if online
-      if (typeof navigator !== 'undefined' && navigator.onLine) {
-        syncEngine.syncPending().catch(err => {
-          console.warn('[GYMTrack] Background sync execution:', err)
-        })
+      if (!result.success) {
+        toast.error('Save Failed', result.error || 'Could not record workout session. Please try again.')
+        setIsSaving(false)
+        return
       }
-
-      // Clear any queued exercises from library
-      clearQueuedExercisesForTodayWorkout()
-
-      // 3. Emit reactive events to immediately update Dashboard, Progress, and History
-      emitGymtrackEvent('gymtrack:session_completed', { sessionId })
-      emitGymtrackEvent('gymtrack:sets_logged', { sessionId })
 
       toast.success(
         'Workout Logged Successfully!',

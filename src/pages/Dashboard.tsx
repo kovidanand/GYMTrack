@@ -509,21 +509,11 @@ export default function Dashboard() {
               </button>
             </div>
           ) : (
-            <div className="p-4 rounded-xl bg-surface-50 border border-surface-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold text-surface-800">No workout recorded yet today</p>
-                <p className="text-xs text-surface-500 mt-0.5">
-                  Log your training to start today's record.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenManualLog}
-                className="btn-secondary py-1.5 px-3.5 text-xs font-bold inline-flex items-center gap-1 self-start sm:self-auto"
-              >
-                <Plus size={13} />
-                Log Training
-              </button>
+            <div className="p-4 rounded-xl bg-surface-50 border border-surface-200/80">
+              <p className="text-xs font-bold text-surface-800">No workout recorded yet today</p>
+              <p className="text-xs text-surface-500 mt-0.5">
+                Log your training to start today's record.
+              </p>
             </div>
           )}
         </div>

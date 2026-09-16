@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { subscribeGymtrackEvent } from '@/lib/events'
 import { getStructuredWorkoutAnalysis, type StructuredWorkoutAnalysis } from '@/lib/coachAnalysis'
-import { askCoachQuestion, type CoachAnswer } from '@/lib/coachProvider'
+import { askCoachQuestion, type CoachAnswer, type PendingLogPayload } from '@/lib/coachProvider'
 import { buildCoachContext } from '@/lib/contextBuilder'
+import { logCanonicalWorkout } from '@/lib/workoutService'
 import type { StructuredExerciseGuidance, StructuredWorkoutRecommendation } from '@/types'
 
 export interface CoachChatMessage {
@@ -15,6 +16,7 @@ export interface CoachChatMessage {
   imageUrl?: string
   structuredGuidance?: StructuredExerciseGuidance
   structuredRecommendation?: StructuredWorkoutRecommendation
+  pendingLog?: PendingLogPayload
   createdAt: number
 }
 
@@ -60,8 +62,124 @@ export function useAiCoach() {
     }
   }, [loadAnalysis])
 
+  const confirmPendingLog = async (targetMsgId?: string) => {
+    if (!user) return
+    setIsAsking(true)
+
+    // Locate target message with pending log
+    const target = targetMsgId 
+      ? messages.find(m => m.id === targetMsgId && m.pendingLog && !m.pendingLog.logged)
+      : [...messages].reverse().find(m => m.pendingLog && !m.pendingLog.logged)
+
+    if (!target || !target.pendingLog) {
+      setIsAsking(false)
+      return
+    }
+
+    const log = target.pendingLog
+
+    try {
+      const setsPayload = Array.from({ length: log.sets }, (_, i) => ({
+        setNumber: i + 1,
+        weight: log.weight,
+        reps: log.reps,
+        completed: true
+      }))
+
+      await logCanonicalWorkout({
+        userId: user.id,
+        workoutName: `${log.exerciseName} Training`,
+        exercises: [{
+          exerciseId: log.exerciseId,
+          exerciseName: log.exerciseName,
+          sets: setsPayload
+        }],
+        source: 'ai_coach'
+      })
+
+      // Mark target message as logged
+      setMessages(prev => prev.map(m => {
+        if (m.id === target.id && m.pendingLog) {
+          return {
+            ...m,
+            pendingLog: { ...m.pendingLog, logged: true }
+          }
+        }
+        return m
+      }))
+
+      // Append confirmation success message
+      const successMsg: CoachChatMessage = {
+        id: 'coach-' + Date.now(),
+        role: 'assistant',
+        content: `Logged **${log.exerciseName}** (${log.sets} sets × ${log.reps} reps @ ${log.weight} kg) to your workout history!\n\nYour Home Dashboard and Progress analytics have been updated.`,
+        supportingData: 'Logged via canonical workoutService',
+        suggestedQuestions: ['What should I train next?', "What's my estimated 1RM?"],
+        createdAt: Date.now()
+      }
+      setMessages(prev => [...prev, successMsg])
+      await loadAnalysis()
+    } catch (err) {
+      console.error('[GYMTrack useAiCoach] Failed to confirm log:', err)
+    } finally {
+      setIsAsking(false)
+    }
+  }
+
+  const cancelPendingLog = (targetMsgId?: string) => {
+    setMessages(prev => prev.map(m => {
+      if ((!targetMsgId || m.id === targetMsgId) && m.pendingLog && !m.pendingLog.logged) {
+        return {
+          ...m,
+          pendingLog: { ...m.pendingLog, logged: true }
+        }
+      }
+      return m
+    }))
+
+    const cancelMsg: CoachChatMessage = {
+      id: 'coach-' + Date.now(),
+      role: 'assistant',
+      content: 'Workout logging cancelled. Let me know whenever you want to record a session.',
+      createdAt: Date.now()
+    }
+    setMessages(prev => [...prev, cancelMsg])
+  }
+
   const ask = async (query: string): Promise<CoachAnswer | null> => {
     if (!query.trim()) return null
+    const cleanLower = query.trim().toLowerCase()
+
+    // Check if user confirmed the pending workout log via text ("confirm", "yes", "confirm & log")
+    if (cleanLower === 'confirm' || cleanLower === 'confirm and log' || cleanLower === 'yes' || cleanLower === 'log it') {
+      const activePending = [...messages].reverse().find(m => m.pendingLog && !m.pendingLog.logged)
+      if (activePending) {
+        const userMsg: CoachChatMessage = {
+          id: 'user-' + Date.now(),
+          role: 'user',
+          content: query.trim(),
+          createdAt: Date.now()
+        }
+        setMessages(prev => [...prev, userMsg])
+        await confirmPendingLog(activePending.id)
+        return null
+      }
+    }
+
+    if (cleanLower === 'cancel' || cleanLower === 'no') {
+      const activePending = [...messages].reverse().find(m => m.pendingLog && !m.pendingLog.logged)
+      if (activePending) {
+        const userMsg: CoachChatMessage = {
+          id: 'user-' + Date.now(),
+          role: 'user',
+          content: query.trim(),
+          createdAt: Date.now()
+        }
+        setMessages(prev => [...prev, userMsg])
+        cancelPendingLog(activePending.id)
+        return null
+      }
+    }
 
     const userMsgId = 'user-' + Date.now()
     const assistantMsgId = 'coach-' + (Date.now() + 1)
@@ -109,6 +227,7 @@ export function useAiCoach() {
         imageUrl: answer.imageUrl,
         structuredGuidance: answer.structuredGuidance,
         structuredRecommendation: answer.structuredRecommendation,
+        pendingLog: answer.pendingLog,
         createdAt: Date.now()
       }
 
@@ -140,6 +259,8 @@ export function useAiCoach() {
     isAsking,
     error,
     ask,
+    confirmPendingLog,
+    cancelPendingLog,
     clearChat,
     refresh: loadAnalysis
   }

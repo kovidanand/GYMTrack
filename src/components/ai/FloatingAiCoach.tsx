@@ -12,7 +12,7 @@ import { AiResponseRenderer, sanitizeAiContent } from '@/components/ai/AiRespons
 
 export function FloatingAiCoach() {
   const { user, profile } = useAuth()
-  const { analysis, messages, isAsking, ask } = useAiCoach()
+  const { analysis, messages, isAsking, ask, confirmPendingLog, cancelPendingLog } = useAiCoach()
 
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
@@ -115,7 +115,7 @@ export function FloatingAiCoach() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-surface-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-surface-400 hover:text-white hover:bg-white/15 transition-colors"
                 aria-label="Minimize AI Coach"
               >
                 <X size={16} />
@@ -188,6 +188,32 @@ export function FloatingAiCoach() {
                   ) : (
                     <div className="whitespace-pre-line break-words">
                       {msg.content}
+                    </div>
+                  )}
+
+                  {msg.pendingLog && !msg.pendingLog.logged && (
+                    <div className="mt-3 p-3 bg-brand-50/70 border border-brand-200 rounded-xl space-y-2 text-left">
+                      <div className="text-xs font-bold text-brand-950 flex items-center justify-between">
+                        <span>{msg.pendingLog.exerciseName}</span>
+                        <span className="text-brand-700 font-mono text-[11px]">{msg.pendingLog.sets} sets × {msg.pendingLog.reps} reps @ {msg.pendingLog.weight} kg</span>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => cancelPendingLog(msg.id)}
+                          className="flex-1 py-1.5 px-3 bg-white border border-surface-200 hover:bg-surface-100 text-surface-700 rounded-lg text-xs font-bold transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => confirmPendingLog(msg.id)}
+                          className="flex-1 py-1.5 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1"
+                        >
+                          <CheckCircle2 size={13} />
+                          <span>Confirm & Log</span>
+                        </button>
+                      </div>
                     </div>
                   )}
 

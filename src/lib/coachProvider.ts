@@ -11,6 +11,15 @@ import {
 import type { StructuredCoachContext } from './contextBuilder'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 
+export interface PendingLogPayload {
+  exerciseId: string
+  exerciseName: string
+  weight: number
+  reps: number
+  sets: number
+  logged?: boolean
+}
+
 export interface CoachAnswer {
   content: string
   supportingData?: string
@@ -18,6 +27,7 @@ export interface CoachAnswer {
   imageUrl?: string
   structuredGuidance?: StructuredExerciseGuidance
   structuredRecommendation?: StructuredWorkoutRecommendation
+  pendingLog?: PendingLogPayload
 }
 
 export type QueryIntent =
@@ -309,6 +319,81 @@ export function classifyQueryIntent(query: string): QueryIntent {
   return 'other'
 }
 
+export function parseWorkoutLoggingQuery(query: string): PendingLogPayload | null {
+  const q = query.trim().toLowerCase()
+
+  const hasLogTrigger = 
+    q.includes('i did') ||
+    q.includes('i finished') ||
+    q.includes('i completed') ||
+    q.includes('i trained') ||
+    q.includes('logged') ||
+    q.startsWith('log ') ||
+    q.includes('sets of') ||
+    q.includes('reps for') ||
+    q.includes('reps,') ||
+    q.includes('reps of') ||
+    q.includes('kg for') ||
+    q.includes('kilos for')
+
+  const matchedSlug = findMatchedExerciseSlug(q)
+  if (!matchedSlug && !hasLogTrigger) return null
+
+  let matchedExercise = DEFAULT_EXERCISES.find(e => e.slug === matchedSlug)
+  if (!matchedExercise && matchedSlug) {
+    matchedExercise = DEFAULT_EXERCISES.find(e => e.id === matchedSlug)
+  }
+
+  if (!matchedExercise) {
+    for (const ex of DEFAULT_EXERCISES) {
+      if (q.includes(ex.name.toLowerCase())) {
+        matchedExercise = ex
+        break
+      }
+    }
+  }
+
+  if (!matchedExercise) return null
+
+  const isBodyweight = matchedExercise.equipment.includes('bodyweight') || matchedExercise.equipment.includes('none')
+
+  let extractedWeight: number | null = null
+  const weightMatch = q.match(/(\d+(?:\.\d+)?)\s*(?:kg|kilos?|kilograms?|lbs?|pounds?)/i) ||
+                      q.match(/(?:at|with|@)\s*(\d+(?:\.\d+)?)/i)
+  if (weightMatch) {
+    extractedWeight = parseFloat(weightMatch[1])
+  } else if (isBodyweight) {
+    extractedWeight = 0
+  }
+
+  let extractedReps: number | null = null
+  const repsMatch = q.match(/(?:sets?\s+of\s+)?(\d+)\s*(?:reps?|times?)/i) ||
+                    q.match(/(?:for)\s*(\d+)\s*(?:reps?)?/i) ||
+                    q.match(/(?:x|times)\s*(\d+)/i) ||
+                    q.match(/(?:of\s+)(\d+)\s*(?:reps?)?/i)
+  if (repsMatch) {
+    extractedReps = parseInt(repsMatch[1], 10)
+  }
+
+  let extractedSets = 3
+  const setsMatch = q.match(/(\d+)\s*sets?/i) || q.match(/(\d+)\s*x\s*\d+/i)
+  if (setsMatch) {
+    extractedSets = Math.min(20, Math.max(1, parseInt(setsMatch[1], 10)))
+  }
+
+  if (extractedWeight !== null || extractedReps !== null || hasLogTrigger) {
+    return {
+      exerciseId: matchedExercise.id,
+      exerciseName: matchedExercise.name,
+      weight: extractedWeight ?? 50,
+      reps: extractedReps ?? 8,
+      sets: extractedSets ?? 3
+    }
+  }
+
+  return null
+}
+
 /**
  * Enhanced AI Coach Question Resolver
  * Real data grounding + embedded video demonstrations + structured clean formatting.
@@ -320,6 +405,18 @@ export async function askCoachQuestion(
   userId?: string | null
 ): Promise<CoachAnswer> {
   const cleanQuery = query.trim().toLowerCase()
+
+  // 0. Check for Workout Logging Intent
+  const pendingLog = parseWorkoutLoggingQuery(cleanQuery)
+  if (pendingLog) {
+    return {
+      content: `Here's what I understood:\n\n**${pendingLog.exerciseName}**\n• ${pendingLog.weight} kg\n• ${pendingLog.reps} reps\n• ${pendingLog.sets} sets\n\nConfirm and log?`,
+      supportingData: 'Workout logging parser',
+      pendingLog,
+      suggestedQuestions: ['Confirm', 'Cancel']
+    }
+  }
+
   const intent = classifyQueryIntent(cleanQuery)
 
   // 1. Safety Guardrail

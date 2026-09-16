@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Heart, ArrowLeft, Loader2, PlayCircle, Trophy, Activity, Flame, History, Search, Lightbulb, AlertTriangle, Check, X as XIcon } from 'lucide-react'
+import { Heart, ArrowLeft, Loader2, PlayCircle, Trophy, Activity, Flame, History, Search, Lightbulb, AlertTriangle, Check, X as XIcon, Dumbbell, Plus } from 'lucide-react'
 import { getExerciseBySlug, getRelatedExercises, toggleFavorite, getUserFavorites } from '@/lib/exercises'
 import { useAuth } from '@/context/AuthContext'
 import { ExerciseIllustration, ExerciseCard } from '@/components/exercise/ExerciseComponents'
@@ -13,6 +13,7 @@ import { resolveExerciseMedia } from '@/lib/exerciseMedia'
 import { ExerciseVideoPlayer } from '@/components/exercise/ExerciseVideoPlayer'
 import { useToast } from '@/components/shared/Toast'
 import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
+import { TrainingLoggerModal } from '@/components/workout/TrainingLoggerModal'
 import type { Exercise } from '@/types'
 
 export default function ExerciseDetail() {
@@ -27,6 +28,7 @@ export default function ExerciseDetail() {
   const [error, setError] = useState<string | null>(null)
   const [isFavorite, setIsFavorite] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [isLoggerOpen, setIsLoggerOpen] = useState(false)
 
   const { intelligence, loading: intelLoading } = useExerciseIntelligence(exercise?.id)
 
@@ -162,7 +164,16 @@ export default function ExerciseDetail() {
               </div>
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex gap-2.5 flex-wrap">
+              <button 
+                onClick={() => setIsLoggerOpen(true)}
+                className="btn-primary flex-1 sm:flex-none flex items-center gap-1.5"
+                id="exercise-detail-log-exercise"
+              >
+                <Dumbbell size={15} />
+                <span>Log Exercise</span>
+              </button>
+
               <button 
                 onClick={() => {
                   queueExerciseForTodayWorkout(exercise)
@@ -171,14 +182,15 @@ export default function ExerciseDetail() {
                     undefined,
                     {
                       label: 'Log now',
-                      onClick: () => navigate('/dashboard')
+                      onClick: () => setIsLoggerOpen(true)
                     }
                   )
                 }} 
-                className="btn-primary flex-1 sm:flex-none"
+                className="btn-secondary flex-1 sm:flex-none flex items-center gap-1.5"
                 id="exercise-detail-add-to-workout"
               >
-                Add to Today's Workout
+                <Plus size={15} />
+                <span>Add to Workout</span>
               </button>
             </div>
           </div>
@@ -434,6 +446,15 @@ export default function ExerciseDetail() {
         open={showHistoryModal}
         onOpenChange={setShowHistoryModal}
       />
+      {/* Direct Canonical Training Logger Modal */}
+      {exercise && (
+        <TrainingLoggerModal
+          isOpen={isLoggerOpen}
+          onClose={() => setIsLoggerOpen(false)}
+          initialExerciseId={exercise.id}
+          initialMode="manual"
+        />
+      )}
     </div>
   )
 }

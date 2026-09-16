@@ -18,9 +18,13 @@ import {
   Flame,
   ArrowRight,
   Compass,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Trash2,
+  Loader2
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/components/shared/Toast'
+import { deleteUserPlan } from '@/lib/workoutService'
 import { useWorkouts } from '@/hooks/useWorkouts'
 import { ExerciseMedia } from '@/components/exercise/ExerciseComponents'
 import { MuscleGroupBadge } from '@/components/shared'
@@ -48,7 +52,10 @@ export default function Plans() {
   const { plans, activePlan, workouts, loading, refresh } = useWorkouts()
 
   // Creation Wizard Modal State
+  const toast = useToast()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [planToDelete, setPlanToDelete] = useState<WorkoutPlan | null>(null)
+  const [isDeletingPlan, setIsDeletingPlan] = useState(false)
   const [selectedGoal, setSelectedGoal] = useState('muscle_growth')
   const [selectedLevel, setSelectedLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate')
   const [selectedDays, setSelectedDays] = useState(4)
@@ -295,6 +302,30 @@ export default function Plans() {
     }
     await refresh()
     await fetchPlanTelemetry()
+  }
+
+  // Handler: Confirm delete inactive/previous plan
+  const handleConfirmDeletePlan = async () => {
+    if (!planToDelete || !user) return
+    setIsDeletingPlan(true)
+
+    try {
+      const res = await deleteUserPlan(planToDelete.id, user.id)
+      if (res.success) {
+        toast.success(
+          'Plan Deleted',
+          `"${planToDelete.name}" has been permanently removed. Your workout history remains safe.`
+        )
+        setPlanToDelete(null)
+        await refresh()
+      } else {
+        toast.error('Failed to Delete', res.error || 'Could not delete plan.')
+      }
+    } catch (err) {
+      toast.error('Error', 'An unexpected error occurred while deleting the plan.')
+    } finally {
+      setIsDeletingPlan(false)
+    }
   }
 
   if (loading && plans.length === 0) {
@@ -690,13 +721,26 @@ export default function Plans() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleToggleActive(plan.id, false)}
-                  className="btn-secondary text-xs py-1.5 px-3 font-semibold"
-                >
-                  Activate
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(plan.id, false)}
+                    className="btn-secondary text-xs py-1.5 px-3 font-semibold"
+                    id={`activate-plan-${plan.id}`}
+                  >
+                    Activate
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPlanToDelete(plan)}
+                    className="text-xs py-1.5 px-3 font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors flex items-center gap-1"
+                    id={`delete-plan-${plan.id}`}
+                  >
+                    <Trash2 size={13} />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -946,6 +990,66 @@ export default function Plans() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE PLAN CONFIRMATION DIALOG ── */}
+      {planToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-plan-dialog-title"
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border border-surface-200 space-y-4 animate-scale-in"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div className="space-y-1">
+                <h3 id="delete-plan-dialog-title" className="text-base font-bold text-surface-900">
+                  Delete Training Plan?
+                </h3>
+                <p className="text-xs text-surface-500 leading-relaxed">
+                  Are you sure you want to delete <strong>{planToDelete.name}</strong>? This action cannot be undone.
+                </p>
+                <p className="text-[11px] text-surface-400">
+                  Your historical workout records and performance progress will remain preserved in Progress.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-surface-100">
+              <button
+                type="button"
+                onClick={() => setPlanToDelete(null)}
+                disabled={isDeletingPlan}
+                className="btn-secondary py-2 px-4 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmDeletePlan}
+                disabled={isDeletingPlan}
+                className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                id="confirm-delete-plan-btn"
+              >
+                {isDeletingPlan ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete Plan</span>
+                )}
+              </button>
             </div>
           </div>
         </div>
