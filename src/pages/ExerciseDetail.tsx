@@ -5,7 +5,7 @@ import { getExerciseBySlug, getRelatedExercises, toggleFavorite, getUserFavorite
 import { useAuth } from '@/context/AuthContext'
 import { ExerciseIllustration, ExerciseCard } from '@/components/exercise/ExerciseComponents'
 import { MuscleGroupBadge } from '@/components/shared'
-import { getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, cn, formatRelativeDate } from '@/lib/utils'
+import { getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, cn, formatRelativeDate, formatTagLabel } from '@/lib/utils'
 import { useExerciseIntelligence } from '@/hooks/useExerciseIntelligence'
 import { ExerciseProgressionGraph } from '@/components/exercise/ExerciseProgressionGraph'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
@@ -150,15 +150,15 @@ export default function ExerciseDetail() {
               <div className="flex flex-wrap gap-2 items-center">
                 <MuscleGroupBadge group={exercise.muscle_group} />
                 {exercise.equipment && exercise.equipment.map(eq => (
-                  <span key={eq} className="badge bg-surface-100 text-surface-600">
-                    {getEquipmentLabel(eq)}
+                  <span key={eq} className="badge bg-surface-100 text-surface-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                    {formatTagLabel(eq)}
                   </span>
                 ))}
-                <span className={cn('badge border', difficultyClass)}>
-                  {exercise.difficulty}
+                <span className={cn('badge border text-xs font-semibold px-2.5 py-1 rounded-full', difficultyClass)}>
+                  {formatTagLabel(exercise.difficulty)}
                 </span>
-                <span className="badge bg-brand-50 text-brand-700 border border-brand-200 capitalize">
-                  {exercise.exercise_type}
+                <span className="badge bg-brand-50 text-brand-700 border border-brand-200 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  {formatTagLabel(exercise.exercise_type)}
                 </span>
               </div>
             </div>

@@ -298,29 +298,119 @@ export async function getProgressStats(userId: string): Promise<{ data: Progress
   return { data: stats, error: null }
 }
 
+export interface VolumeChartResult {
+  chartData: ChartDataPoint[]
+  totalPeriodVolume: number
+  hasWorkoutData: boolean
+}
+
+/**
+ * Computes daily volume over time strictly from actual workout session sets.
+ * Volume = sum(weight * reps) for every completed set.
+ * Multiple sets and multiple exercises on the same date are summed into the daily total.
+ * For the active period (7d, 30d, all), all calendar dates are generated so inactive days
+ * correctly appear with 0 kg to show training consistency.
+ */
+export function computeVolumeChartData(
+  sessions: WorkoutSession[],
+  timeRange: '7d' | '30d' | 'all' = '30d'
+): VolumeChartResult {
+  // 1. Build a map of YYYY-MM-DD -> total daily volume (kg)
+  const dailyVolumeMap = new Map<string, number>()
+  let totalAccountVolume = 0
+  let totalAccountCompletedSets = 0
+
+  for (const session of sessions) {
+    if (!session.started_at) continue
+    const d = new Date(session.started_at)
+    if (isNaN(d.getTime())) continue
+
+    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    let sessionVol = 0
+
+    if (session.workout_session_sets && session.workout_session_sets.length > 0) {
+      for (const set of session.workout_session_sets) {
+        if (set.completed !== false) {
+          totalAccountCompletedSets++
+          const w = Number(set.weight) || 0
+          const r = Number(set.reps) || 0
+          if (w > 0 && r > 0) {
+            sessionVol += (w * r)
+          }
+        }
+      }
+    } else if (session.total_volume) {
+      sessionVol = Number(session.total_volume) || 0
+    }
+
+    if (sessionVol > 0) {
+      totalAccountVolume += sessionVol
+      dailyVolumeMap.set(dateKey, (dailyVolumeMap.get(dateKey) || 0) + sessionVol)
+    }
+  }
+
+  // If user has no sessions or no completed sets/volume across their entire account, return empty indicator
+  const hasWorkoutData = sessions.length > 0 && (totalAccountCompletedSets > 0 || totalAccountVolume > 0)
+  if (!hasWorkoutData) {
+    return {
+      chartData: [],
+      totalPeriodVolume: 0,
+      hasWorkoutData: false,
+    }
+  }
+
+  // 2. Generate calendar days for the requested time range
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  let numDays = 30
+
+  if (timeRange === '7d') {
+    numDays = 7
+  } else if (timeRange === '30d') {
+    numDays = 30
+  } else if (timeRange === 'all') {
+    // Find earliest session date
+    let earliestTime = today.getTime()
+    for (const session of sessions) {
+      if (!session.started_at) continue
+      const t = new Date(session.started_at).getTime()
+      if (!isNaN(t) && t < earliestTime) {
+        earliestTime = t
+      }
+    }
+    const diffDays = Math.ceil((today.getTime() - earliestTime) / (1000 * 60 * 60 * 24)) + 1
+    // At least 7 days to give the chart proper visual context
+    numDays = Math.max(7, Math.min(365, diffDays))
+  }
+
+  const chartData: ChartDataPoint[] = []
+  let totalPeriodVolume = 0
+
+  for (let i = numDays - 1; i >= 0; i--) {
+    const dayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i)
+    const dateKey = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`
+    const displayDate = dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const dayVol = dailyVolumeMap.get(dateKey) || 0
+
+    totalPeriodVolume += dayVol
+    chartData.push({
+      date: displayDate,
+      value: dayVol,
+    })
+  }
+
+  return {
+    chartData,
+    totalPeriodVolume,
+    hasWorkoutData: true,
+  }
+}
+
 export async function getVolumeChartData(userId: string, days: number = 30): Promise<ChartDataPoint[]> {
-  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
-  
-  const { data } = await supabase
-    .from('workout_sessions')
-    .select('started_at, total_volume')
-    .eq('user_id', userId)
-    .gte('started_at', cutoff)
-    .order('started_at', { ascending: true })
-
-  if (!data) return []
-
-  // Group by day
-  const grouped: Record<string, number> = {}
-  data.forEach(session => {
-    const dateStr = new Date(session.started_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    grouped[dateStr] = (grouped[dateStr] || 0) + (session.total_volume || 0)
-  })
-
-  return Object.entries(grouped).map(([date, volume]) => ({
-    date,
-    value: volume
-  }))
+  const { data: sessions } = await getWorkoutHistory(userId)
+  const timeRange = days <= 7 ? '7d' : days <= 30 ? '30d' : 'all'
+  const result = computeVolumeChartData(sessions || [], timeRange)
+  return result.chartData
 }
 
 export async function getExerciseProgress(userId: string, exerciseId: string): Promise<ChartDataPoint[]> {

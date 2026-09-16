@@ -146,7 +146,7 @@ export function ExerciseLogModal({
               <div className="flex items-center gap-1.5 mt-0.5">
                 <MuscleGroupBadge group={exercise.muscle_group} />
                 {exercise.equipment && exercise.equipment.length > 0 && (
-                  <span className="badge bg-surface-100 text-surface-600 text-[10px]">
+                  <span className="badge bg-surface-100 text-surface-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                     {getEquipmentLabel(exercise.equipment[0])}
                   </span>
                 )}

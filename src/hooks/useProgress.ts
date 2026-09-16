@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { getWorkoutHistory, getProgressStats, getVolumeChartData, getPersonalRecords, getExerciseProgress } from '@/lib/progress'
+import { getWorkoutHistory, getProgressStats, getVolumeChartData, getPersonalRecords, getExerciseProgress, computeVolumeChartData } from '@/lib/progress'
 import { useAuth } from '@/context/AuthContext'
 import { subscribeGymtrackEvent } from '@/lib/events'
 import type { WorkoutSession, ProgressStats, ChartDataPoint, PersonalRecord } from '@/types'
@@ -140,7 +140,6 @@ export function useProgress() {
     return []
   })
   const [stats, setStats] = useState<ProgressStats | null>(null)
-  const [volumeChart, setVolumeChart] = useState<ChartDataPoint[]>([])
   const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([])
   const [timeRange, setTimeRange] = useState<TimeRange>('30d')
   
@@ -171,12 +170,9 @@ export function useProgress() {
     }
     setError(null)
 
-    const days = timeRange === 'all' ? 3650 : RANGE_DAYS[timeRange]
-
-    const [historyRes, statsRes, volumeRes, prsRes] = await Promise.all([
+    const [historyRes, statsRes, prsRes] = await Promise.all([
       getWorkoutHistory(userId),
       getProgressStats(userId),
-      getVolumeChartData(userId, days),
       getPersonalRecords(userId)
     ])
 
@@ -185,12 +181,11 @@ export function useProgress() {
     } else {
       setHistory(historyRes.data || [])
       setStats(statsRes.data || null)
-      setVolumeChart(volumeRes)
       setPersonalRecords(prsRes.data || [])
     }
     
     setLoading(false)
-  }, [userId, timeRange, history.length])
+  }, [userId, history.length])
 
   useEffect(() => {
     fetchData()
@@ -271,6 +266,11 @@ export function useProgress() {
     [filteredHistory]
   )
 
+  // Real user volume chart data with 0 kg on rest days and accurate period totals
+  const { chartData: volumeChart, totalPeriodVolume, hasWorkoutData } = useMemo(() => {
+    return computeVolumeChartData(history, timeRange)
+  }, [history, timeRange])
+
   return {
     history,
     filteredHistory,
@@ -279,6 +279,8 @@ export function useProgress() {
     muscleDistribution,
     stats,
     volumeChart,
+    totalPeriodVolume,
+    hasWorkoutData,
     personalRecords,
     timeRange,
     setTimeRange,

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { cn, getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel } from '@/lib/utils'
+import { cn, getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, formatTagLabel } from '@/lib/utils'
 import type { Exercise } from '@/types'
 import { MuscleGroupBadge } from '@/components/shared'
 import { Dumbbell, Heart } from 'lucide-react'
@@ -181,21 +181,23 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
           </h3>
 
           {/* Muscle + Equipment chips */}
-          <div className="flex flex-wrap gap-1 mt-1">
+          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             <MuscleGroupBadge group={exercise.muscle_group} />
             {exercise.equipment && exercise.equipment.length > 0 && (
-              <span className="badge bg-surface-100 text-surface-600 text-[10px]">
-                {getEquipmentLabel(exercise.equipment[0])}
+              <span className="badge bg-surface-100 text-surface-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                {formatTagLabel(exercise.equipment[0])}
               </span>
             )}
           </div>
 
-          {/* Difficulty + Type */}
-          <div className="flex items-center justify-between text-xs mt-1.5">
-            <span className={cn('badge border text-[10px]', difficultyClass)}>
-              {exercise.difficulty}
+          {/* Difficulty + Goal / Type */}
+          <div className="flex items-center justify-between gap-1.5 text-xs mt-2">
+            <span className={cn('badge border text-[10px] font-semibold px-2 py-0.5 rounded-full', difficultyClass)}>
+              {formatTagLabel(exercise.difficulty)}
             </span>
-            <span className="text-[10px] text-surface-400 capitalize">{exercise.exercise_type}</span>
+            <span className="badge bg-surface-50 text-surface-600 border border-surface-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+              {formatTagLabel(exercise.exercise_type)}
+            </span>
           </div>
         </div>
 

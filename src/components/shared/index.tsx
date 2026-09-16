@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn, formatTagLabel } from '@/lib/utils'
 import { Link } from 'react-router-dom'
 
 // ─── Logo ──────────────────────────────────────────────────────────────────────
@@ -272,11 +272,12 @@ const muscleColors: Record<string, string> = {
   traps: 'bg-purple-100 text-purple-600',
 }
 
-export function MuscleGroupBadge({ group }: { group: string }) {
-  const color = muscleColors[group] ?? 'bg-surface-100 text-surface-600'
+export function MuscleGroupBadge({ group, className }: { group: string; className?: string }) {
+  const normKey = group ? group.toLowerCase().replace(/[-\s]+/g, '_') : ''
+  const color = muscleColors[normKey] ?? 'bg-surface-100 text-surface-600'
   return (
-    <span className={cn('badge border-0', color)}>
-      {group.replace('_', ' ')}
+    <span className={cn('badge border-0 text-[10px] font-semibold px-2 py-0.5 rounded-full', color, className)}>
+      {formatTagLabel(group)}
     </span>
   )
 }

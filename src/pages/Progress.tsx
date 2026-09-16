@@ -18,7 +18,7 @@ import { MuscleDistributionChart } from '@/components/progress/MuscleDistributio
 import { AiCoachInsightsPanel } from '@/components/progress/AiCoachInsightsPanel'
 import { useProgress, type TimeRange } from '@/hooks/useProgress'
 import { useWorkouts } from '@/hooks/useWorkouts'
-import { formatDuration, formatRelativeDate, cn } from '@/lib/utils'
+import { formatDuration, formatRelativeDate, cn, formatVolumeDisplay } from '@/lib/utils'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 import {
@@ -137,6 +137,8 @@ export default function Progress() {
     muscleDistribution,
     stats,
     volumeChart,
+    totalPeriodVolume,
+    hasWorkoutData,
     personalRecords,
     timeRange,
     setTimeRange,
@@ -283,12 +285,22 @@ export default function Progress() {
       {/* ── 4. VOLUME TREND CHART ── */}
       <section aria-label="Volume trend" className="space-y-3">
         <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs">
-          <div className="mb-4">
-            <h3 className="text-sm font-bold text-surface-900">Volume Trend</h3>
-            <p className="text-xs text-surface-500 mt-0.5">Aggregate tonnage lifted per day — {periodLabels[timeRange].toLowerCase()}.</p>
+          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-surface-900">Volume Trend</h3>
+              <p className="text-xs text-surface-500 mt-0.5">Aggregate tonnage lifted per day — {periodLabels[timeRange].toLowerCase()}.</p>
+            </div>
+            {hasWorkoutData && (
+              <div className="text-left sm:text-right">
+                <span className="text-xs text-surface-400 font-medium">Total volume: </span>
+                <span className="text-base font-extrabold text-brand-700">
+                  {formatVolumeDisplay(totalPeriodVolume)}
+                </span>
+              </div>
+            )}
           </div>
           <div className="min-h-[220px]">
-            {volumeChart && volumeChart.length > 0 ? (
+            {hasWorkoutData && volumeChart && volumeChart.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={volumeChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
@@ -304,16 +316,32 @@ export default function Progress() {
                     tickLine={false}
                     tick={{ fill: '#64748B', fontSize: 11 }}
                     dy={10}
+                    interval={timeRange === '7d' ? 0 : timeRange === '30d' ? 4 : 'preserveStartEnd'}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
                     tick={{ fill: '#64748B', fontSize: 11 }}
-                    tickFormatter={(val) => `${(val / 1000).toFixed(0)}k`}
+                    tickFormatter={(val: number) => {
+                      if (val === 0) return '0'
+                      if (val >= 1000) {
+                        const k = val / 1000
+                        return `${k >= 10 ? Math.round(k) : k.toFixed(1)}k`
+                      }
+                      return `${val}`
+                    }}
                   />
                   <Tooltip
                     cursor={{ stroke: '#7C3AED', strokeWidth: 1, strokeDasharray: '4 4' }}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    contentStyle={{
+                      backgroundColor: '#0F172A',
+                      borderRadius: '10px',
+                      border: 'none',
+                      padding: '8px 12px',
+                      boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.2)'
+                    }}
+                    itemStyle={{ color: '#F8FAFC', fontSize: '12px', fontWeight: 700 }}
+                    labelStyle={{ color: '#94A3B8', fontSize: '11px', fontWeight: 500, marginBottom: '2px' }}
                     formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Volume']}
                   />
                   <Area
@@ -326,8 +354,14 @@ export default function Progress() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[220px] flex items-center justify-center text-surface-400 text-xs font-medium">
-                Not enough workout data to display volume trend.
+              <div className="h-[220px] flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mb-2.5 text-surface-400">
+                  <TrendingUp size={22} />
+                </div>
+                <p className="text-sm font-bold text-surface-800">No volume data yet</p>
+                <p className="text-xs text-surface-500 mt-1 max-w-xs leading-relaxed">
+                  Log your first workout to start tracking your training volume.
+                </p>
               </div>
             )}
           </div>

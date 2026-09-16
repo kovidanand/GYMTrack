@@ -38,40 +38,95 @@ export function capitalise(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ')
 }
 
+const TAG_LABEL_MAP: Record<string, string> = {
+  // Experience / Difficulty
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+
+  // Muscle groups
+  chest: 'Chest',
+  back: 'Back',
+  shoulders: 'Shoulders',
+  legs: 'Legs',
+  quads: 'Quadriceps',
+  hamstrings: 'Hamstrings',
+  glutes: 'Glutes',
+  calves: 'Calves',
+  biceps: 'Biceps',
+  triceps: 'Triceps',
+  forearms: 'Forearms',
+  traps: 'Traps',
+  core: 'Core',
+  abs: 'Core',
+  full_body: 'Full Body',
+  'full body': 'Full Body',
+
+  // Equipment
+  barbell: 'Barbell',
+  dumbbell: 'Dumbbell',
+  cable: 'Cable',
+  machine: 'Machine',
+  bodyweight: 'Bodyweight',
+  resistance_band: 'Resistance Band',
+  'resistance band': 'Resistance Band',
+  kettlebell: 'Kettlebell',
+  pull_up_bar: 'Pull-up Bar',
+  'pull up bar': 'Pull-up Bar',
+  bench: 'Bench',
+  none: 'No Equipment',
+
+  // Goals / Types
+  strength: 'Strength',
+  hypertrophy: 'Hypertrophy',
+  functional: 'Functional',
+  endurance: 'Endurance',
+  mobility: 'Mobility',
+  stretching: 'Stretching',
+  cardio: 'Cardio',
+}
+
+/**
+ * Standardize user-facing exercise metadata and tags to consistent Title Case.
+ */
+export function formatTagLabel(value: string | undefined | null): string {
+  if (!value) return ''
+  const trimmed = value.trim()
+  const normalized = trimmed.toLowerCase()
+  const underscoreKey = normalized.replace(/[-\s]+/g, '_')
+  const spaceKey = normalized.replace(/[_-]+/g, ' ')
+
+  if (TAG_LABEL_MAP[underscoreKey]) return TAG_LABEL_MAP[underscoreKey]
+  if (TAG_LABEL_MAP[spaceKey]) return TAG_LABEL_MAP[spaceKey]
+  if (TAG_LABEL_MAP[normalized]) return TAG_LABEL_MAP[normalized]
+
+  // Fallback: Title Case for multi-word or single-word terms
+  return trimmed
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+export const formatExerciseLabel = formatTagLabel
+
 export function getMuscleGroupLabel(group: string): string {
-  const labels: Record<string, string> = {
-    chest: 'Chest',
-    back: 'Back',
-    shoulders: 'Shoulders',
-    biceps: 'Biceps',
-    triceps: 'Triceps',
-    legs: 'Legs',
-    quads: 'Quadriceps',
-    hamstrings: 'Hamstrings',
-    glutes: 'Glutes',
-    calves: 'Calves',
-    core: 'Core',
-    full_body: 'Full Body',
-    forearms: 'Forearms',
-    traps: 'Traps',
-  }
-  return labels[group] ?? capitalise(group)
+  return formatTagLabel(group)
 }
 
 export function getEquipmentLabel(equipment: string): string {
-  const labels: Record<string, string> = {
-    barbell: 'Barbell',
-    dumbbell: 'Dumbbell',
-    cable: 'Cable',
-    machine: 'Machine',
-    bodyweight: 'Bodyweight',
-    resistance_band: 'Resistance Band',
-    kettlebell: 'Kettlebell',
-    pull_up_bar: 'Pull-up Bar',
-    bench: 'Bench',
-    none: 'No Equipment',
+  return formatTagLabel(equipment)
+}
+
+export function formatVolumeDisplay(volumeKg: number): string {
+  if (!volumeKg || volumeKg <= 0) return '0 kg'
+  if (volumeKg < 10000) {
+    return `${volumeKg.toLocaleString()} kg`
   }
-  return labels[equipment] ?? capitalise(equipment)
+  const inK = volumeKg / 1000
+  const formatted = inK >= 100 ? Math.round(inK) : inK.toFixed(1).replace(/\.0$/, '')
+  return `${formatted}k kg`
 }
 
 export function getDifficultyColor(difficulty: string): string {
