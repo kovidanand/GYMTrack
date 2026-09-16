@@ -118,25 +118,25 @@ export async function getWorkoutHistory(userId: string): Promise<{ data: Workout
     fetchError = err instanceof Error ? err.message : 'Network error'
   }
 
-  // 3. Fall back to cached sessions if remote failed and offline
-  if (fetchError && remoteSessions.length === 0) {
-    try {
-      const cachedRaw = localStorage.getItem(CACHED_HISTORY_PREFIX + userId)
-      if (cachedRaw) {
-        remoteSessions = JSON.parse(cachedRaw)
-      }
-    } catch {}
-  }
-
-  // 4. Merge remote sessions and pending sessions, deduplicating by ID
+  // 3. Merge: cached sessions, remote sessions, and pending local sessions
   const sessionMap = new Map<string, WorkoutSession>()
-  
-  // Remote sessions first
+
+  try {
+    const cachedRaw = localStorage.getItem(CACHED_HISTORY_PREFIX + userId)
+    if (cachedRaw) {
+      const cachedSessions: WorkoutSession[] = JSON.parse(cachedRaw)
+      cachedSessions.forEach(s => {
+        if (s.id) sessionMap.set(s.id, s)
+      })
+    }
+  } catch {}
+
+  // 4. Remote sessions overlay (and take precedence for finalized server data)
   remoteSessions.forEach(s => {
     if (s.id) sessionMap.set(s.id, s)
   })
 
-  // Pending local sessions take precedence (or are added)
+  // Pending local sessions take precedence
   pendingSessions.forEach(s => {
     if (s.id) sessionMap.set(s.id, s)
   })

@@ -232,11 +232,20 @@ export async function logCanonicalWorkout(payload: WorkoutLogPayload): Promise<W
   setCachedHistory(userId, updatedHistory)
 
   // Mark exercises completed today in registry for instant plan green checkmarks
-  const exerciseTokensToMark = exercises.flatMap(e => [
-    e.exerciseId,
-    e.exerciseName.toLowerCase(),
-    resolveExerciseUUID(e.exerciseId, e.exerciseName)
-  ])
+  const exerciseTokensToMark = exercises.flatMap(e => {
+    const tokens = [
+      e.exerciseId,
+      e.exerciseName.toLowerCase(),
+      resolveExerciseUUID(e.exerciseId, e.exerciseName)
+    ]
+    const matched = DEFAULT_EXERCISES.find(
+      d => d.id === e.exerciseId || d.slug === e.exerciseId || d.name.toLowerCase() === e.exerciseName.toLowerCase()
+    )
+    if (matched) {
+      tokens.push(matched.id, matched.slug, matched.name.toLowerCase())
+    }
+    return tokens
+  })
   markExerciseCompletedToday(userId, exerciseTokensToMark)
 
   // Clear queued quick exercises from library since sets are now logged

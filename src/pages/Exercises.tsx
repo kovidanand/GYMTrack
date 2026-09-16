@@ -4,11 +4,9 @@ import { SlidersHorizontal, X, Heart, HeartOff, Search } from 'lucide-react'
 import { PageHeader, SearchInput, EmptyState } from '@/components/shared'
 import { ExerciseCard, FilterChips } from '@/components/exercise/ExerciseComponents'
 import { ExerciseSkeleton } from '@/components/exercise/ExerciseSkeleton'
-import { TrainingLoggerModal } from '@/components/workout/TrainingLoggerModal'
+import { ExerciseLogModal } from '@/components/exercise/ExerciseLogModal'
 import { useExercises, type SortOption } from '@/hooks/useExercises'
 import { useToast } from '@/components/shared/Toast'
-import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
-import { emitGymtrackEvent } from '@/lib/events'
 import type { Exercise } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -66,13 +64,13 @@ export default function Exercises() {
 
   const toast = useToast()
   const [showFilters, setShowFilters] = useState(false)
-  const [loggingExerciseId, setLoggingExerciseId] = useState<string | null>(null)
+  const [loggingExercise, setLoggingExercise] = useState<Exercise | null>(null)
 
   return (
     <div className="animate-fade-in space-y-6 pb-12">
       <PageHeader
         title="Exercise Library"
-        description="Explore movements, learn proper technique, and add exercises to today's workout in one tap."
+        description="Explore movements, learn proper technique, and log your sets in seconds."
       />
 
       {error && (
@@ -243,7 +241,7 @@ export default function Exercises() {
           <p className="text-sm text-surface-500">
             Showing <span className="font-semibold text-surface-700">{exercises.length}</span> exercise{exercises.length !== 1 ? 's' : ''}
           </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
             {exercises.map(exercise => (
               <ExerciseCard
                 key={exercise.id}
@@ -253,22 +251,9 @@ export default function Exercises() {
                   e.stopPropagation()
                   toggleFavorite(id)
                 }}
-                onAddToWorkout={(ex, e) => {
-                  e.stopPropagation()
-                  queueExerciseForTodayWorkout(ex)
-                  emitGymtrackEvent('gymtrack:workout_updated', { exerciseId: ex.id })
-                  toast.success(
-                    `${ex.name} added to today's training.`,
-                    undefined,
-                    {
-                      label: 'Log now',
-                      onClick: () => setLoggingExerciseId(ex.id)
-                    }
-                  )
-                }}
                 onLogExercise={(ex, e) => {
                   e.stopPropagation()
-                  setLoggingExerciseId(ex.id)
+                  setLoggingExercise(ex)
                 }}
                 onClick={(ex) => navigate(`/exercises/${ex.slug}`)}
               />
@@ -292,12 +277,11 @@ export default function Exercises() {
         />
       )}
 
-      {/* Direct Canonical Training Logger Modal for instant logging from library */}
-      <TrainingLoggerModal
-        isOpen={!!loggingExerciseId}
-        onClose={() => setLoggingExerciseId(null)}
-        initialExerciseId={loggingExerciseId || undefined}
-        initialMode="manual"
+      {/* Exercise-specific logging modal with review step */}
+      <ExerciseLogModal
+        isOpen={!!loggingExercise}
+        exercise={loggingExercise}
+        onClose={() => setLoggingExercise(null)}
       />
     </div>
   )

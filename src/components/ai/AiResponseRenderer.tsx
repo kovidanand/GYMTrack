@@ -266,16 +266,19 @@ function CompactAiExerciseCard({
         <p className="text-[11px] text-surface-500 font-medium">{setsReps}</p>
       </div>
 
-      {/* Quick Add Button */}
+      {/* Log Exercise Navigation Button */}
       <button
         type="button"
-        onClick={handleAdd}
+        onClick={(e) => {
+          e.stopPropagation()
+          navigate(`/exercises/${slug}`)
+        }}
         className="px-2.5 py-1 rounded-lg bg-surface-100 hover:bg-brand-50 hover:text-brand-700 text-surface-700 text-xs font-bold flex items-center gap-1 border border-surface-200 transition-colors flex-shrink-0"
-        title={`Add ${name} to today's workout`}
-        aria-label={`Add ${name} to today's workout`}
+        title={`Log ${name}`}
+        aria-label={`Log ${name}`}
       >
-        <Plus size={12} className="text-brand-600 stroke-[2.5]" />
-        <span>+ Add</span>
+        <Dumbbell size={12} className="text-brand-600" />
+        <span>Log</span>
       </button>
     </div>
   )
@@ -339,11 +342,11 @@ function AiExerciseGuidanceView({ guidance }: { guidance: StructuredExerciseGuid
 
         <button
           type="button"
-          onClick={handleAdd}
-          className="px-2.5 py-1 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-bold flex items-center gap-1 border border-brand-200 transition-all active:scale-95"
+          onClick={() => navigate(`/exercises/${guidance.exercise.slug}`)}
+          className="px-2.5 py-1 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-bold flex items-center gap-1.5 border border-brand-200 transition-all active:scale-95"
         >
-          <Plus size={12} className="stroke-[2.5]" />
-          <span>+ Add to Workout</span>
+          <Dumbbell size={12} />
+          <span>Log Exercise</span>
         </button>
       </div>
 
@@ -647,6 +650,7 @@ export function AiResponseRenderer({
 
 /**
  * Sanitizes raw AI response content before it reaches the renderer.
+ * Removes markdown hashes (###), asterisks (**bold** and *), and decorative symbols.
  */
 export function sanitizeAiContent(raw: string): string {
   if (!raw) return ''
@@ -654,6 +658,14 @@ export function sanitizeAiContent(raw: string): string {
   content = content.replace(DECORATIVE_SYMBOLS, '')
   content = content.replace(/```[\s\S]*?```/g, '')
   content = content.replace(/`/g, '')
+  // Remove markdown headers like ### or ## or #
+  content = content.replace(/^#{1,6}\s*/gm, '')
+  // Remove bold markdown **text**
+  content = content.replace(/\*{2}(.+?)\*{2}/g, '$1')
+  // Remove bullet asterisks * item
+  content = content.replace(/^\*\s+/gm, '• ')
+  // Remove stray asterisks
+  content = content.replace(/\*/g, '')
   content = content.replace(/\n{3,}/g, '\n\n')
   return content.trim()
 }

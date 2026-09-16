@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { cn, getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel } from '@/lib/utils'
 import type { Exercise } from '@/types'
 import { MuscleGroupBadge } from '@/components/shared'
-import { Dumbbell, Heart, Plus } from 'lucide-react'
+import { Dumbbell, Heart } from 'lucide-react'
 import { getExerciseVisual, resolveExerciseMedia } from '@/lib/exerciseMedia'
 
 // ─── Muscle Group Visual ────────────────────────────────────────────────────────
@@ -138,12 +138,11 @@ interface ExerciseCardProps {
   exercise: Exercise
   isFavorite?: boolean
   onToggleFavorite?: (id: string, e: React.MouseEvent) => void
-  onAddToWorkout?: (exercise: Exercise, e: React.MouseEvent) => void
   onLogExercise?: (exercise: Exercise, e: React.MouseEvent) => void
   onClick: (exercise: Exercise) => void
 }
 
-export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, onAddToWorkout, onLogExercise, onClick }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, onLogExercise, onClick }: ExerciseCardProps) {
   const difficultyClass = getDifficultyColor(exercise.difficulty)
 
   return (
@@ -200,36 +199,20 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
           </div>
         </div>
 
-        {/* ── Footer: Add & Log Buttons ── */}
-        {(onAddToWorkout || onLogExercise) && (
-          <div className="exercise-card-footer flex items-center gap-1.5">
-            {onAddToWorkout && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onAddToWorkout(exercise, e) }}
-                id={`exercise-card-add-${exercise.slug}`}
-                className="flex-1 py-1.5 px-2 rounded-xl bg-surface-50 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-surface-200 text-surface-800 text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-[0.98]"
-                title={`Add ${exercise.name} to today's workout`}
-                aria-label={`Add ${exercise.name} to today's workout`}
-              >
-                <Plus size={12} className="text-brand-600 stroke-[2.5]" aria-hidden="true" />
-                <span>Add</span>
-              </button>
-            )}
-
-            {onLogExercise && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onLogExercise(exercise, e) }}
-                id={`exercise-card-log-${exercise.slug}`}
-                className="flex-1 py-1.5 px-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-[0.98] shadow-2xs"
-                title={`Log ${exercise.name} sets now`}
-                aria-label={`Log ${exercise.name} sets now`}
-              >
-                <Dumbbell size={12} aria-hidden="true" />
-                <span>Log</span>
-              </button>
-            )}
+        {/* ── Footer: Single Primary Log Button ── */}
+        {onLogExercise && (
+          <div className="exercise-card-footer mt-2">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onLogExercise(exercise, e) }}
+              id={`exercise-card-log-${exercise.slug}`}
+              className="w-full py-2 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] shadow-xs"
+              title={`Log ${exercise.name} sets now`}
+              aria-label={`Log ${exercise.name} sets now`}
+            >
+              <Dumbbell size={13} aria-hidden="true" />
+              <span>Log</span>
+            </button>
           </div>
         )}
       </div>

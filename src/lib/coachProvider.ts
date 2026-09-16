@@ -395,6 +395,30 @@ export function parseWorkoutLoggingQuery(query: string): PendingLogPayload | nul
 }
 
 /**
+ * Clean conversational formatter for AI Coach.
+ * Removes markdown hashes (###), asterisks (**bold** and *), and robotic system text.
+ */
+export function formatCleanCoachResponse(raw: string): string {
+  if (!raw) return ''
+  let text = raw
+  // Remove markdown headers like ### or ## or #
+  text = text.replace(/^#{1,6}\s*/gm, '')
+  // Remove bold syntax **bold** -> bold
+  text = text.replace(/\*{2}(.+?)\*{2}/g, '$1')
+  // Replace leading star bullets * with clean •
+  text = text.replace(/^\*\s+/gm, '• ')
+  // Remove stray asterisks
+  text = text.replace(/\*/g, '')
+  // Clean robotic evidence lines
+  text = text.replace(/Evidence:\s*Authenticated user database has 0 historical sessions\./gi, '')
+  text = text.replace(/Evidence:\s*0 logged sets for .+/gi, '')
+  text = text.replace(/Evidence:\s*Based on .+/gi, '')
+  text = text.replace(/Evidence:\s*Grounded in .+/gi, '')
+  text = text.replace(/\n{3,}/g, '\n\n')
+  return text.trim()
+}
+
+/**
  * Enhanced AI Coach Question Resolver
  * Real data grounding + embedded video demonstrations + structured clean formatting.
  */
@@ -410,7 +434,9 @@ export async function askCoachQuestion(
   const pendingLog = parseWorkoutLoggingQuery(cleanQuery)
   if (pendingLog) {
     return {
-      content: `Here's what I understood:\n\n**${pendingLog.exerciseName}**\n• ${pendingLog.weight} kg\n• ${pendingLog.reps} reps\n• ${pendingLog.sets} sets\n\nConfirm and log?`,
+      content: formatCleanCoachResponse(
+        `Here is what I understood:\n\n${pendingLog.exerciseName}\n• ${pendingLog.weight} kg\n• ${pendingLog.reps} reps\n• ${pendingLog.sets} sets\n\nConfirm and log?`
+      ),
       supportingData: 'Workout logging parser',
       pendingLog,
       suggestedQuestions: ['Confirm', 'Cancel']
@@ -422,7 +448,9 @@ export async function askCoachQuestion(
   // 1. Safety Guardrail
   if (intent === 'safety') {
     return {
-      content: `Safety Advisory\n\nGYMTrack AI Coach is a fitness assistant, not a physician or licensed medical provider.\n\nIf you are experiencing sharp, localized, or persistent pain, joint swelling, or suspect a musculoskeletal injury, stop training immediately and consult a qualified healthcare professional.\n\nKey Safety Rules:\n• Never attempt to train through acute joint pain.\n• Pain is neurological feedback protecting connective tissue.\n• Progression requires maintaining joint health and recovery capacity.`,
+      content: formatCleanCoachResponse(
+        `Safety Advisory\n\nGYMTrack AI Coach is a fitness assistant, not a physician or licensed medical provider.\n\nIf you are experiencing sharp, localized, or persistent pain, joint swelling, or suspect a musculoskeletal injury, stop training immediately and consult a qualified healthcare professional.\n\nKey Safety Rules:\n• Never attempt to train through acute joint pain.\n• Pain is neurological feedback protecting connective tissue.\n• Progression requires maintaining joint health and recovery capacity.`
+      ),
       supportingData: 'Safety protocol applied.',
       suggestedQuestions: [
         'What should I train today?',
@@ -472,7 +500,7 @@ export async function askCoachQuestion(
         }
 
         return {
-          content: edgeContent,
+          content: formatCleanCoachResponse(edgeContent),
           supportingData: 'Response grounded in authenticated GYMTrack data.',
           structuredGuidance
         }
@@ -483,7 +511,11 @@ export async function askCoachQuestion(
   }
 
   // 3. Grounded Deterministic Intelligence Engine
-  return generateDeterministicAnswer(cleanQuery, analysis, context, userId)
+  const rawAnswer = generateDeterministicAnswer(cleanQuery, analysis, context, userId)
+  return {
+    ...rawAnswer,
+    content: formatCleanCoachResponse(rawAnswer.content)
+  }
 }
 
 function generateDeterministicAnswer(
@@ -728,14 +760,11 @@ function generateDeterministicAnswer(
         }
       } else {
         return {
-          content: `Personal Best: ${exName}\n\n` +
-            `You haven't logged any ${exName} sets in GYMTrack yet.\n\n` +
-            `Recommendation:\n` +
-            `Add ${exName} to your next workout and record your weight and reps. Your personal best and estimated 1RM will be calculated automatically.\n\n` +
-            `Evidence: 0 logged sets for ${exName}.`,
+          content: `You don't have enough ${exName} history yet to calculate a reliable progression.\n\n` +
+            `Log your first ${exName} sets in the Library or Home to start tracking your working weights and estimated 1RM.`,
           supportingData: `No data for ${exName}.`,
           suggestedQuestions: [
-            `How do I do a ${exName}?`,
+            `How do I do ${exName}?`,
             'What should I train today?',
             'What exercises target chest?'
           ]
@@ -952,16 +981,16 @@ function generateDeterministicAnswer(
       }
 
       return {
-        content: `Today's Workout: ${ap.today_workout_name}\n\n` +
-          `Active Plan: **${ap.plan_name}** (Week ${ap.current_week} of ${ap.duration_weeks})\n\n` +
-          `${statusMsg}\n\n` +
-          `Scheduled Exercises:\n` +
+        content: `Today's recommendation\n\n` +
+          `Based on your active plan ${ap.plan_name}, today's session is:\n\n` +
+          `${ap.today_workout_name || 'Upper Body'}\n\n` +
           ap.today_planned_exercises.map((name, i) => {
             const isDone = ap.today_completed_exercises?.some(c => c.toLowerCase() === name.toLowerCase())
-            return `${i + 1}. ${name} ${isDone ? '✓ (Completed)' : '• 3 sets × 8-12 reps'}`
-          }).join('\n') +
-          `\n\nRecommendation:\n` +
-          `Execute each working set with controlled tempo. Log your weights directly in the Plans tab or Home dashboard.`,
+            return `${i + 1}. ${name}\n${isDone ? 'Completed' : '3 sets × 8–10 reps'}`
+          }).join('\n\n') +
+          `\n\nWhy this session:\n` +
+          `Scheduled in Week ${ap.current_week} of ${ap.plan_name} to maintain your weekly progression.\n\n` +
+          `If you have pain or an injury, stop and consult an appropriate professional.`,
         supportingData: `Active Plan: ${ap.plan_name} (${completed}/${total} completed).`,
         structuredRecommendation: {
           type: 'workout_recommendation',
@@ -979,35 +1008,39 @@ function generateDeterministicAnswer(
     }
 
     const isChestYesterday = query.includes('chest') || (context?.recovery_context.last_session_muscle_groups.includes('chest'))
-    let focus = 'Upper Body Foundation'
-    let reasoning = 'A balanced full-upper foundation focusing on horizontal and vertical movement patterns.'
+    let focus = 'Upper Body'
+    let reasoning = 'Your recent training data shows that these muscle groups are due for training today.'
     let exercises = [
-      { name: 'Bench Press', slug: 'bench-press', sets: 3, reps: '8-12 reps' },
-      { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8-12 reps' },
-      { name: 'Shoulder Press', slug: 'shoulder-press', sets: 3, reps: '8-12 reps' }
+      { name: 'Bench Press', slug: 'bench-press', sets: 3, reps: '8–10 reps' },
+      { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8–12 reps' },
+      { name: 'Dumbbell Shoulder Press', slug: 'shoulder-press', sets: 3, reps: '8–12 reps' },
+      { name: 'Dumbbell Curl', slug: 'bicep-curl', sets: 3, reps: '10–12 reps' }
     ]
 
     if (isChestYesterday) {
-      focus = 'Pull / Back & Biceps'
-      reasoning = 'Because you trained chest/push yesterday, those pressing muscles need 48 hours to recover and repair. Shifting volume to your posterior chain (Back, Lats, and Biceps) maintains training frequency without interfering with chest recovery.'
+      focus = 'Back and Biceps (Pull)'
+      reasoning = 'Because you trained chest yesterday, your pushing muscles need 48 hours to recover and repair. Training back, lats, and biceps stimulates opposing muscles without interfering with chest recovery.'
       exercises = [
-        { name: 'Deadlift', slug: 'deadlift', sets: 3, reps: '5-8 reps' },
-        { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8-12 reps' },
-        { name: 'Cable Row', slug: 'cable-row', sets: 3, reps: '8-12 reps' }
+        { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8–12 reps' },
+        { name: 'Cable Row', slug: 'cable-row', sets: 3, reps: '8–12 reps' },
+        { name: 'Face Pull', slug: 'face-pull', sets: 3, reps: '12–15 reps' },
+        { name: 'Bicep Curl', slug: 'bicep-curl', sets: 3, reps: '10–12 reps' }
       ]
     } else if (context?.recovery_context.recommended_focus) {
       focus = context.recovery_context.recommended_focus
       if (focus.includes('Pull')) {
         exercises = [
-          { name: 'Deadlift', slug: 'deadlift', sets: 3, reps: '5-8 reps' },
-          { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8-12 reps' },
-          { name: 'Barbell Row', slug: 'barbell-row', sets: 3, reps: '8-10 reps' }
+          { name: 'Deadlift', slug: 'deadlift', sets: 3, reps: '5–8 reps' },
+          { name: 'Lat Pulldown', slug: 'lat-pulldown', sets: 3, reps: '8–12 reps' },
+          { name: 'Barbell Row', slug: 'barbell-row', sets: 3, reps: '8–10 reps' },
+          { name: 'Bicep Curl', slug: 'bicep-curl', sets: 3, reps: '10–12 reps' }
         ]
       } else if (focus.includes('Legs')) {
         exercises = [
-          { name: 'Barbell Squat', slug: 'barbell-squat', sets: 3, reps: '8-10 reps' },
-          { name: 'Romanian Deadlift', slug: 'romanian-deadlift', sets: 3, reps: '8-10 reps' },
-          { name: 'Leg Press', slug: 'leg-press', sets: 3, reps: '10-12 reps' }
+          { name: 'Barbell Squat', slug: 'barbell-squat', sets: 3, reps: '8–10 reps' },
+          { name: 'Romanian Deadlift', slug: 'romanian-deadlift', sets: 3, reps: '8–10 reps' },
+          { name: 'Leg Press', slug: 'leg-press', sets: 3, reps: '10–12 reps' },
+          { name: 'Calf Raise', slug: 'calf-raise', sets: 3, reps: '12–15 reps' }
         ]
       }
     }
@@ -1028,14 +1061,13 @@ function generateDeterministicAnswer(
       : 'Evidence: Recommended based on proven biomechanical muscle recovery splits.'
 
     return {
-      content: `Today's Training Recommendation\n\n` +
-        `Focus: ${focus}\n\n` +
+      content: `Today's recommendation\n\n` +
+        `Based on your recent training history, today's session is:\n\n` +
+        `${focus}\n\n` +
+        exercises.map((e, idx) => `${idx + 1}. ${e.name}\n${e.sets} sets × ${e.reps}`).join('\n\n') +
+        `\n\nWhy this session:\n` +
         `${reasoning}\n\n` +
-        `Key Exercises:\n` +
-        exercises.map(e => `• ${e.name}: ${e.sets} sets × ${e.reps}`).join('\n') +
-        `\n\nAction:\n` +
-        `Tap "+ Add" on any exercise card below to queue it for today's session.\n\n` +
-        `${evidenceText}`,
+        `If you have pain or an injury, stop and consult an appropriate professional.`,
       supportingData: `Focus: ${focus}.`,
       structuredRecommendation,
       suggestedQuestions: [
