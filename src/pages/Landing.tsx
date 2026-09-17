@@ -84,7 +84,7 @@ function LandingNav() {
 
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login"   className="btn-ghost text-sm px-4 py-2">Log in</Link>
-            <Link to="/dashboard" className="btn-primary text-sm px-5 py-2.5" id="landing-get-started">Get Started</Link>
+            <Link to="/signup" className="btn-primary text-sm px-5 py-2.5" id="landing-get-started">Get Started</Link>
           </div>
 
           {/* Mobile hamburger */}
@@ -109,8 +109,8 @@ function LandingNav() {
             <a href="#exercises" className="block text-sm text-surface-600 py-2" onClick={() => setMenuOpen(false)}>Exercises</a>
             <a href="#progress"  className="block text-sm text-surface-600 py-2" onClick={() => setMenuOpen(false)}>Progress</a>
             <div className="flex gap-3 pt-2">
-              <Link to="/login"     className="btn-secondary text-sm flex-1 justify-center">Log in</Link>
-              <Link to="/dashboard" className="btn-primary  text-sm flex-1 justify-center">Get Started</Link>
+              <Link to="/login"  className="btn-secondary text-sm flex-1 justify-center">Log in</Link>
+              <Link to="/signup" className="btn-primary  text-sm flex-1 justify-center">Get Started</Link>
             </div>
           </div>
         )}
@@ -218,7 +218,7 @@ export default function Landing() {
 
             <div className="flex flex-wrap gap-3">
               <Link
-                to="/dashboard"
+                to="/signup"
                 id="hero-start-training"
                 className="btn-primary text-base px-7 py-3.5"
               >
@@ -440,7 +440,7 @@ export default function Landing() {
             Start tracking today and discover what consistent, focused training can do.
           </p>
           <Link
-            to="/dashboard"
+            to="/signup"
             id="landing-final-cta"
             className="inline-flex items-center gap-2 bg-white text-brand-700 font-bold text-base px-8 py-4 rounded-xl shadow-lg hover:bg-brand-50 transition-colors"
           >

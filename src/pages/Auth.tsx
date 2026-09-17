@@ -142,7 +142,7 @@ function GoogleAuthButton({ disabled }: { disabled: boolean }) {
 // ─── Login Page ───────────────────────────────────────────────────────────────
 
 export function Login() {
-  const { signIn, signInAsDemo, isAuthenticated, profile, initialized } = useAuth()
+  const { signIn, isAuthenticated, profile, initialized } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -272,27 +272,6 @@ export function Login() {
                 ) : (
                   'Sign in'
                 )}
-              </button>
-
-              <div className="relative my-3">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-surface-200"></div>
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-white text-surface-400 font-medium uppercase tracking-wider">or preview</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                id="demo-access-btn"
-                onClick={() => {
-                  signInAsDemo()
-                  navigate('/dashboard', { replace: true })
-                }}
-                className="btn-secondary w-full justify-center text-xs py-2.5 font-medium border-brand-200 text-brand-700 hover:bg-brand-50 hover:border-brand-300 transition-colors"
-              >
-                Instant Demo Access (Explore GYMTrack)
               </button>
             </form>
 

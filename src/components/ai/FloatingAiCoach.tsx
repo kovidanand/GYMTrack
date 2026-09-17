@@ -60,27 +60,27 @@ export function FloatingAiCoach() {
 
   return (
     <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 select-none">
-      {/* ── Collapsed Floating Button ── */}
+      {/* ── Collapsed Floating Button (Compact Circular FAB) ── */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-600 text-white rounded-full shadow-lg hover:shadow-glow transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-          aria-label="Open AI Fitness Coach"
+          className="group relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-tr from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-600 text-white rounded-full shadow-lg hover:shadow-glow transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+          aria-label="Open AI Coach"
+          title="Open AI Coach"
           id="floating-ai-coach-button"
         >
-          <span className="absolute -inset-0.5 rounded-full bg-brand-400 opacity-30 group-hover:opacity-75 animate-ping -z-10 pointer-events-none" />
-          
-          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-            <Bot size={16} className="text-white" />
-          </div>
-          
-          <span className="text-sm font-bold tracking-tight pr-0.5">
-            AI Coach
-          </span>
+          {/* Ambient ping animation */}
+          <span className="absolute -inset-0.5 rounded-full bg-brand-400 opacity-25 group-hover:opacity-75 animate-ping -z-10 pointer-events-none" />
 
-          {analysis && analysis.recentSessionsCount > 0 && (
-            <span className="w-2 h-2 rounded-full bg-emerald-400" title="Data synced" />
-          )}
+          {/* Robot Face / Icon */}
+          <Bot size={22} className="text-white drop-shadow-xs transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
+
+          {/* Online / Active Status Dot */}
+          <span
+            className="absolute top-0.5 right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white shadow-2xs"
+            title="AI Coach Ready"
+            aria-hidden="true"
+          />
         </button>
       )}
 

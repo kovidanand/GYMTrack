@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { User, Target, Dumbbell, Calendar, Ruler, Weight, Trophy, Loader2, Timer } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { User, Target, Dumbbell, Calendar, Ruler, Weight, Trophy, Loader2, Timer, LogOut } from 'lucide-react'
 import { PageHeader, SectionHeader, Avatar, Badge } from '@/components/shared'
 import { getPersonalRecords } from '@/lib/progress'
 import { capitalise } from '@/lib/utils'
@@ -18,11 +19,13 @@ const fitnessGoalLabel: Record<string, string> = {
 }
 
 export default function Profile() {
-  const { user, profile, updateUserProfile } = useAuth()
+  const { user, profile, updateUserProfile, signOut } = useAuth()
+  const navigate = useNavigate()
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving]       = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [showToast, setShowToast] = useState(false)
   const [isTimerOpen, setIsTimerOpen] = useState(false)
@@ -95,6 +98,20 @@ export default function Profile() {
       setIsEditing(false)
       setShowToast(true)
       setTimeout(() => setShowToast(false), 3000)
+    }
+  }
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      await signOut()
+      navigate('/', { replace: true })
+    } catch (err) {
+      console.error('[Profile] Logout error:', err)
+      navigate('/login', { replace: true })
+    } finally {
+      setIsLoggingOut(false)
     }
   }
 
@@ -358,6 +375,38 @@ export default function Profile() {
             <p>Log your exercises and sets in workouts to automatically track your all-time best lifts.</p>
           </div>
         )}
+      </section>
+
+      {/* ── Account Session & Logout ── */}
+      <section aria-label="Account session" className="pt-4 border-t border-surface-200/80">
+        <div className="card p-4 sm:p-5 bg-white border border-surface-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-surface-900">Account Session</h3>
+            <p className="text-xs text-surface-500 mt-0.5">
+              Signed in as <span className="font-semibold text-surface-700">{user.email || 'Authenticated User'}</span>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            id="profile-logout-button"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 active:bg-red-100 transition-colors text-xs font-semibold shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:opacity-60"
+          >
+            {isLoggingOut ? (
+              <>
+                <Loader2 size={15} className="animate-spin text-red-600" aria-hidden="true" />
+                <span>Signing out…</span>
+              </>
+            ) : (
+              <>
+                <LogOut size={15} aria-hidden="true" />
+                <span>Log out</span>
+              </>
+            )}
+          </button>
+        </div>
       </section>
 
       {/* ── Timer Modal ── */}
