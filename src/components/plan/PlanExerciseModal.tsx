@@ -5,6 +5,7 @@ import { MuscleGroupBadge } from '@/components/shared'
 import { useAuth } from '@/context/AuthContext'
 import { getPreviousExercisePerformance } from '@/lib/workouts'
 import { logCanonicalWorkout } from '@/lib/workoutService'
+import { markPlanExerciseCompleted } from '@/lib/planProgressService'
 import type { Exercise } from '@/types'
 
 interface SetRow {
@@ -24,6 +25,10 @@ interface PlanExerciseModalProps {
   targetSets?: number
   targetReps?: string
   restSeconds?: number
+  planId?: string
+  instanceId?: string
+  weekNumber?: number
+  dayNumber?: number
   onCompleted: (exerciseId: string, sets: SetRow[]) => void
 }
 
@@ -37,6 +42,10 @@ export function PlanExerciseModal({
   targetSets = 3,
   targetReps = '8-12',
   restSeconds = 90,
+  planId,
+  instanceId,
+  weekNumber,
+  dayNumber,
   onCompleted
 }: PlanExerciseModalProps) {
   const { user } = useAuth()
@@ -145,6 +154,22 @@ export function PlanExerciseModal({
         return
       }
 
+      // Record exercise-specific completion in current plan instance
+      if (planId && instanceId && weekNumber != null && dayNumber != null) {
+        await markPlanExerciseCompleted({
+          planId,
+          userId: user.id,
+          instanceId,
+          weekNumber,
+          dayNumber,
+          workoutExerciseId,
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          sessionId: result.sessionId,
+          setsCount: sets.length
+        })
+      }
+
       // Show success feedback
       setSuccessToast(true)
       onCompleted(exercise.id, sets)
@@ -198,7 +223,7 @@ export function PlanExerciseModal({
         {/* Scrollable Body */}
         <div className="p-4 overflow-y-auto space-y-4 flex-1">
           {/* Exercise Video Demonstration */}
-          <div className="rounded-xl overflow-hidden bg-black aspect-video relative shadow-xs">
+          <div className="rounded-xl overflow-hidden bg-surface-100 border border-surface-200 aspect-video relative shadow-xs">
             <ExerciseMedia exercise={exercise} variant="detail" />
           </div>
 

@@ -38,10 +38,11 @@ export function ExerciseIllustration({ muscleGroup, className }: { muscleGroup: 
 
 interface ExerciseMediaProps {
   exercise: Exercise
-  variant?: 'card' | 'detail'
+  variant?: 'card' | 'detail' | 'thumbnail'
+  className?: string
 }
 
-export function ExerciseMedia({ exercise, variant = 'card' }: ExerciseMediaProps) {
+export function ExerciseMedia({ exercise, variant = 'card', className }: ExerciseMediaProps) {
   const media = resolveExerciseMedia(exercise)
   const videoUrl = media?.videoUrl || media?.maleVideoUrl || media?.femaleVideoUrl
   const posterUrl = media?.posterUrl || media?.thumbnailUrl || getExerciseVisual(exercise.slug, exercise.image_url)
@@ -53,7 +54,7 @@ export function ExerciseMedia({ exercise, variant = 'card' }: ExerciseMediaProps
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [videoError, setVideoError] = useState(false)
 
-  // IntersectionObserver — only play when in viewport (card mode) or always (detail mode)
+  // IntersectionObserver — only play when in viewport (card/thumbnail mode) or always (detail mode)
   useEffect(() => {
     if (variant === 'detail') {
       setIsVisible(true)
@@ -63,7 +64,7 @@ export function ExerciseMedia({ exercise, variant = 'card' }: ExerciseMediaProps
     if (!el || !videoUrl) return
     const observer = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.25 }
+      { threshold: 0.2 }
     )
     observer.observe(el)
     return () => observer.disconnect()
@@ -80,10 +81,16 @@ export function ExerciseMedia({ exercise, variant = 'card' }: ExerciseMediaProps
     }
   }, [isVisible, isHovered, videoError])
 
+  const containerClasses = variant === 'thumbnail'
+    ? cn('relative w-full h-full overflow-hidden bg-surface-100 rounded-lg flex-shrink-0', className)
+    : variant === 'detail'
+    ? cn('relative w-full h-full aspect-video overflow-hidden bg-surface-100 rounded-xl', className)
+    : cn('exercise-card-media bg-surface-100', className)
+
   return (
     <div
       ref={containerRef}
-      className="exercise-card-media"
+      className={containerClasses}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

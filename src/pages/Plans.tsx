@@ -41,6 +41,12 @@ import {
   pauseActivePlan, 
   getPlanDayCompletions 
 } from '@/lib/workouts'
+import { 
+  initPlanInstance, 
+  getActivePlanInstance, 
+  isPlanExerciseCompleted, 
+  type PlanInstanceData 
+} from '@/lib/planProgressService'
 import { supabase } from '@/lib/supabase'
 import { subscribeGymtrackEvent } from '@/lib/events'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
@@ -80,8 +86,8 @@ export default function Plans() {
     restSeconds: number
   } | null>(null)
 
-  // Today's completed exercise IDs (from real database logs today)
-  const [todayCompletedExerciseIds, setTodayCompletedExerciseIds] = useState<Set<string>>(new Set())
+  // Active plan instance data (plan progress scoped to current activation instance)
+  const [planInstanceData, setPlanInstanceData] = useState<PlanInstanceData | null>(null)
 
   // Prefill wizard from profile when modal opens
   useEffect(() => {
@@ -100,65 +106,21 @@ export default function Plans() {
     }
   }, [profile, isCreateOpen])
 
-  // Fetch real plan day completions and today's logged sets
+  // Fetch real plan day completions and instance progress
   const fetchPlanTelemetry = useCallback(async () => {
     if (!user || !activePlan) {
       setCompletions([])
-      setTodayCompletedExerciseIds(new Set())
+      setPlanInstanceData(null)
       return
     }
 
-    // 1. Fetch completions for active plan
+    // 1. Fetch day-level session completions for active plan
     const compData = await getPlanDayCompletions(activePlan.id, user.id)
     setCompletions(compData)
 
-    // 2. Fetch today's logged exercises for real green-check states
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-    const todayEnd = new Date()
-    todayEnd.setHours(23, 59, 59, 999)
-
-    const completedIds = new Set<string>()
-
-    // Check local storage completed exercises for today
-    try {
-      const raw = localStorage.getItem(`gymtrack:today_completed_exercises_${user.id}`) || localStorage.getItem('gymtrack:today_completed_exercises')
-      if (raw) {
-        const parsed = JSON.parse(raw) as string[]
-        parsed.forEach(id => completedIds.add(id))
-      }
-    } catch {}
-
-    // Check Supabase today's workout sessions & sets
-    try {
-      const { data: todaySessions } = await supabase
-        .from('workout_sessions')
-        .select(`
-          id,
-          workout_session_sets (
-            exercise_id,
-            exercise_name
-          )
-        `)
-        .eq('user_id', user.id)
-        .gte('started_at', todayStart.toISOString())
-        .lte('started_at', todayEnd.toISOString())
-
-      if (todaySessions) {
-        for (const s of todaySessions) {
-          if (s.workout_session_sets) {
-            for (const set of s.workout_session_sets) {
-              if (set.exercise_id) completedIds.add(set.exercise_id)
-              if (set.exercise_name) completedIds.add(set.exercise_name.toLowerCase())
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[Plans] Error fetching today completed sets from db:', err)
-    }
-
-    setTodayCompletedExerciseIds(completedIds)
+    // 2. Load active plan instance progress (scoped strictly to current activation instance)
+    const instance = await initPlanInstance(activePlan.id, user.id, false, activePlan.started_at)
+    setPlanInstanceData(instance)
   }, [user, activePlan])
 
   useEffect(() => {
@@ -170,13 +132,19 @@ export default function Plans() {
       refresh()
       fetchPlanTelemetry()
     })
+    const unsub4 = subscribeGymtrackEvent('gymtrack:plan_progress_updated', () => {
+      if (user && activePlan) {
+        setPlanInstanceData(getActivePlanInstance(activePlan.id, user.id))
+      }
+    })
 
     return () => {
       unsub1()
       unsub2()
       unsub3()
+      unsub4()
     }
-  }, [fetchPlanTelemetry, refresh])
+  }, [fetchPlanTelemetry, refresh, user, activePlan])
 
   // Active Plan Workouts & Calculations
   const activePlanWorkouts = useMemo(() => {
@@ -222,21 +190,22 @@ export default function Plans() {
     return { totalPlannedSessions, completedSessions, percentage }
   }, [activePlan, completions])
 
-  // Today's workout exercise completion stats
+  // Today's workout exercise completion stats (strictly scoped to this plan instance)
   const todayExerciseStats = useMemo(() => {
     if (!todayWorkout || !todayWorkout.workout_exercises) return { total: 0, completed: 0 }
     const total = todayWorkout.workout_exercises.length
     const completed = todayWorkout.workout_exercises.filter(we => {
-      const ex = we.exercise || DEFAULT_EXERCISES.find(e => e.id === we.exercise_id)
-      return (
-        todayCompletedExerciseIds.has(we.exercise_id) ||
-        (ex?.id && todayCompletedExerciseIds.has(ex.id)) ||
-        (ex?.slug && todayCompletedExerciseIds.has(ex.slug)) ||
-        (ex?.name && todayCompletedExerciseIds.has(ex.name.toLowerCase()))
+      return isPlanExerciseCompleted(
+        activePlan?.id,
+        user?.id,
+        currentWeek,
+        todayDayNumber,
+        we.id,
+        we.exercise_id
       )
     }).length
     return { total, completed }
-  }, [todayWorkout, todayCompletedExerciseIds])
+  }, [todayWorkout, activePlan?.id, user?.id, currentWeek, todayDayNumber, planInstanceData])
 
   // Handler: Generate plan in wizard
   const handleGeneratePreview = async () => {
@@ -292,13 +261,13 @@ export default function Plans() {
     }
   }
 
-  // Handler: Toggle active status
-  const handleToggleActive = async (planId: string, currentActive: boolean) => {
+  // Handler: Toggle active status (supports resuming existing or starting fresh instance)
+  const handleToggleActive = async (planId: string, currentActive: boolean, isNewInstance = false) => {
     if (!user) return
     if (currentActive) {
       await pauseActivePlan(user.id, planId)
     } else {
-      await activatePlan(user.id, planId)
+      await activatePlan(user.id, planId, { isNewInstance })
     }
     await refresh()
     await fetchPlanTelemetry()
@@ -478,11 +447,13 @@ export default function Plans() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {todayWorkout.workout_exercises.map((we, idx) => {
                     const ex = we.exercise || DEFAULT_EXERCISES.find(e => e.id === we.exercise_id) || DEFAULT_EXERCISES[0]
-                    const isCompleted = Boolean(
-                      todayCompletedExerciseIds.has(we.exercise_id) ||
-                      (ex?.id && todayCompletedExerciseIds.has(ex.id)) ||
-                      (ex?.slug && todayCompletedExerciseIds.has(ex.slug)) ||
-                      (ex?.name && todayCompletedExerciseIds.has(ex.name.toLowerCase()))
+                    const isCompleted = isPlanExerciseCompleted(
+                      activePlan?.id,
+                      user?.id,
+                      currentWeek,
+                      todayDayNumber,
+                      we.id,
+                      we.exercise_id
                     )
 
                     return (
@@ -503,9 +474,9 @@ export default function Plans() {
                             : 'bg-surface-50/60 border-surface-200 hover:border-brand-300 hover:bg-surface-50 shadow-2xs'
                         }`}
                       >
-                        {/* Video Thumbnail Box */}
-                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-black flex-shrink-0 relative shadow-2xs">
-                          <ExerciseMedia exercise={ex} variant="card" />
+                        {/* Video Thumbnail Box - Clean 16:9 ratio, seamless neutral surface, no black background */}
+                        <div className="w-20 sm:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 flex-shrink-0 relative border border-surface-200/80 shadow-2xs">
+                          <ExerciseMedia exercise={ex} variant="thumbnail" />
                         </div>
 
                         {/* Title & Sets */}
@@ -721,20 +692,31 @@ export default function Plans() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap">
                   <button
                     type="button"
-                    onClick={() => handleToggleActive(plan.id, false)}
-                    className="btn-secondary text-xs py-1.5 px-3 font-semibold"
-                    id={`activate-plan-${plan.id}`}
+                    onClick={() => handleToggleActive(plan.id, false, false)}
+                    className="btn-secondary text-xs py-1.5 px-2.5 font-semibold hover:border-brand-300"
+                    title="Resume this plan keeping previous progress"
+                    id={`resume-plan-${plan.id}`}
                   >
-                    Activate
+                    Resume
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(plan.id, false, true)}
+                    className="text-xs py-1.5 px-2.5 font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 transition-colors"
+                    title="Start this plan as a fresh cycle (0 exercises completed)"
+                    id={`start-fresh-plan-${plan.id}`}
+                  >
+                    Start Fresh
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPlanToDelete(plan)}
-                    className="text-xs py-1.5 px-3 font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors flex items-center gap-1"
+                    className="text-xs py-1.5 px-2.5 font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors flex items-center gap-1"
                     id={`delete-plan-${plan.id}`}
                   >
                     <Trash2 size={13} />
@@ -1067,8 +1049,12 @@ export default function Plans() {
           targetSets={activeLogExercise.targetSets}
           targetReps={activeLogExercise.targetReps}
           restSeconds={activeLogExercise.restSeconds}
-          onCompleted={(exerciseId) => {
-            setTodayCompletedExerciseIds(prev => new Set(prev).add(exerciseId))
+          planId={activePlan?.id}
+          instanceId={planInstanceData?.instanceId}
+          weekNumber={currentWeek}
+          dayNumber={todayDayNumber}
+          onCompleted={() => {
+            fetchPlanTelemetry()
           }}
         />
       )}

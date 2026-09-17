@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import type { WorkoutPlan, Workout, WorkoutExercise, WorkoutSetLog } from '@/types'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
 import { emitGymtrackEvent } from '@/lib/events'
+import { initPlanInstance } from '@/lib/planProgressService'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -701,14 +702,29 @@ export async function saveStructuredPlan(
   }
 }
 
-export async function activatePlan(userId: string, planId: string): Promise<boolean> {
+export async function activatePlan(
+  userId: string,
+  planId: string,
+  options?: { isNewInstance?: boolean }
+): Promise<boolean> {
+  const isNew = Boolean(options?.isNewInstance)
   try {
-    // 1. Update local storage
     const localPlans = getLocalPlans(userId)
+    const targetPlan = localPlans.find(p => p.id === planId)
+
+    // Initialize or resume plan instance
+    const { startedAt } = await initPlanInstance(
+      planId,
+      userId,
+      isNew,
+      isNew ? null : targetPlan?.started_at
+    )
+
+    // 1. Update local storage
     const updatedLocal = localPlans.map(p => ({
       ...p,
       is_active: p.id === planId,
-      started_at: p.id === planId ? (p.started_at || new Date().toISOString()) : p.started_at
+      started_at: p.id === planId ? startedAt : p.started_at
     }))
     setLocalPlans(userId, updatedLocal)
 
@@ -723,7 +739,7 @@ export async function activatePlan(userId: string, planId: string): Promise<bool
         .from('workout_plans')
         .update({ 
           is_active: true,
-          started_at: new Date().toISOString()
+          started_at: startedAt
         })
         .eq('id', planId)
         .eq('user_id', userId)
