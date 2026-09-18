@@ -14,7 +14,7 @@ export function AppLayout() {
   // Wait until profile is loaded to determine onboarding status
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#080A0F] text-surface-800 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-50 flex items-center justify-center">
         <Loader2 size={32} className="animate-spin text-brand-500" />
       </div>
     )
@@ -26,7 +26,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080A0F] text-surface-800 flex flex-col selection:bg-brand-500 selection:text-white">
+    <div className="min-h-screen bg-surface-50 flex flex-col selection:bg-brand-500 selection:text-white">
       {/* Desktop Top Navigation (NO left sidebar) */}
       <TopNavigation onOpenTimer={() => setIsTimerOpen(true)} />
 

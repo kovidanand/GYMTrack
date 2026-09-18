@@ -92,7 +92,7 @@ export default function Exercises() {
         <div className="flex gap-2 w-full sm:w-auto">
           {/* Sort Dropdown */}
           <select 
-            className="input-base py-2 pl-3 pr-8 w-full sm:w-40 text-sm bg-[#11151D] border-[#202733] text-surface-200"
+            className="input-base py-2 pl-3 pr-8 w-full sm:w-40 text-sm bg-white"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
             aria-label="Sort exercises"
@@ -103,7 +103,7 @@ export default function Exercises() {
           </select>
 
           <button
-            className={`btn-secondary gap-2 flex-1 sm:flex-none ${activeFilterCount > 0 ? 'border-brand-500 text-brand-400 bg-brand-950/40 hover:bg-brand-900/40' : 'bg-[#151A23] border-[#202733] text-surface-300 hover:bg-[#1A202B]'}`}
+            className={`btn-secondary gap-2 flex-1 sm:flex-none ${activeFilterCount > 0 ? 'border-brand-400 text-brand-600 bg-brand-50 hover:bg-brand-100' : ''}`}
             onClick={() => setShowFilters(!showFilters)}
             aria-expanded={showFilters}
             aria-label={`Filter exercises${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
@@ -112,7 +112,7 @@ export default function Exercises() {
             <SlidersHorizontal size={16} aria-hidden="true" />
             Filters
             {activeFilterCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center font-bold">
+              <span className="w-5 h-5 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center">
                 {activeFilterCount}
               </span>
             )}
@@ -143,8 +143,8 @@ export default function Exercises() {
               className={cn(
                 "px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all",
                 isActive
-                  ? "bg-brand-600 text-white shadow-xs"
-                  : "bg-[#151A23] text-surface-400 border border-[#202733] hover:text-white hover:border-brand-500/30"
+                  ? "bg-surface-900 text-white shadow-xs"
+                  : "bg-surface-100 text-surface-600 hover:bg-surface-200"
               )}
             >
               {cat.label}
@@ -155,15 +155,15 @@ export default function Exercises() {
 
       {/* ── Filter Sheet / Dropdown ── */}
       {showFilters && (
-        <div className="card p-5 bg-[#151A23] border border-[#202733] rounded-2xl space-y-5 animate-scale-down shadow-xl" id="exercise-filters-panel">
-          <div className="flex items-center justify-between border-b border-[#202733] pb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-surface-400">
+        <div className="card p-5 bg-surface-50/60 border border-surface-200 rounded-2xl space-y-5 animate-scale-down" id="exercise-filters-panel">
+          <div className="flex items-center justify-between border-b border-surface-200/60 pb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-surface-500">
               Filter Options {activeFilterCount > 0 && `(${activeFilterCount} active)`}
             </span>
             <div className="flex items-center gap-3">
               {activeFilterCount > 0 && (
                 <button
-                  className="text-xs text-brand-400 hover:text-brand-300 font-semibold"
+                  className="text-xs text-brand-600 hover:text-brand-700 font-semibold"
                   onClick={resetFilters}
                   id="exercise-filter-reset"
                 >
@@ -171,7 +171,7 @@ export default function Exercises() {
                 </button>
               )}
               <button
-                className="text-surface-400 hover:text-surface-200 p-1"
+                className="text-surface-400 hover:text-surface-600 p-1"
                 onClick={() => setShowFilters(false)}
                 aria-label="Close filters"
               >
@@ -181,14 +181,14 @@ export default function Exercises() {
           </div>
           
           {/* Favorites Toggle */}
-          <div className="flex items-center gap-3 py-2 border-b border-[#202733]">
+          <div className="flex items-center gap-3 py-2 border-b border-surface-100">
             <button
               onClick={() => setFavoritesOnly(!favoritesOnly)}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors border",
+                "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors border",
                 favoritesOnly 
-                  ? "bg-brand-950/50 border-brand-500/50 text-brand-300" 
-                  : "bg-[#11151D] border-[#202733] text-surface-300 hover:text-white hover:border-brand-500/30"
+                  ? "bg-brand-50 border-brand-200 text-brand-700" 
+                  : "bg-white border-surface-200 text-surface-600 hover:bg-surface-50"
               )}
             >
               <Heart size={16} className={favoritesOnly ? "fill-brand-500 text-brand-500" : ""} />

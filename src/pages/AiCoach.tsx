@@ -116,10 +116,10 @@ export default function AiCoach() {
 
       {/* ── Baseline Guidance Banner if no workouts ── */}
       {!hasWorkouts && (
-        <div className="p-4 rounded-xl bg-[#11151D] border border-[#202733] flex items-start gap-3">
-          <Bot className="w-5 h-5 text-brand-400 mt-0.5 flex-shrink-0" />
-          <div className="text-xs text-surface-300">
-            <span className="font-bold text-white">Getting Started:</span> Log your first workout session to unlock progression metrics, plateau detection, and personalized overload cues. You can ask form and technique questions anytime in the <strong className="text-white">Ask Coach</strong> tab.
+        <div className="p-4 rounded-xl bg-brand-50/80 border border-brand-200/80 flex items-start gap-3">
+          <Bot className="w-5 h-5 text-brand-600 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-brand-900">
+            <span className="font-bold">Getting Started:</span> Log your first workout session to unlock progression metrics, plateau detection, and personalized overload cues. You can ask form and technique questions anytime in the <strong>Ask Coach</strong> tab.
           </div>
         </div>
       )}
@@ -130,14 +130,14 @@ export default function AiCoach() {
       </section>
 
       {/* ── Tab Navigation ── */}
-      <div className="flex border-b border-[#202733]">
+      <div className="flex border-b border-surface-200">
         <button
           onClick={() => setActiveTab('recommendations')}
           className={cn(
             "py-3 px-5 text-sm font-bold border-b-2 -mb-px transition-colors flex items-center gap-2",
             activeTab === 'recommendations'
-              ? "border-brand-500 text-brand-400"
-              : "border-transparent text-surface-400 hover:text-white"
+              ? "border-brand-600 text-brand-600"
+              : "border-transparent text-surface-500 hover:text-surface-900"
           )}
         >
           <TrendingUp size={16} />
@@ -149,14 +149,14 @@ export default function AiCoach() {
           className={cn(
             "py-3 px-5 text-sm font-bold border-b-2 -mb-px transition-colors flex items-center gap-2",
             activeTab === 'ask'
-              ? "border-brand-500 text-brand-400"
-              : "border-transparent text-surface-400 hover:text-white"
+              ? "border-brand-600 text-brand-600"
+              : "border-transparent text-surface-500 hover:text-surface-900"
           )}
         >
           <Bot size={16} />
           Ask Coach
           {messages.length > 0 && (
-            <span className="w-5 h-5 rounded-full bg-brand-950/80 text-brand-300 border border-brand-800/40 text-xs flex items-center justify-center font-bold">
+            <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center font-bold">
               {messages.length}
             </span>
           )}
@@ -167,8 +167,8 @@ export default function AiCoach() {
           className={cn(
             "py-3 px-5 text-sm font-bold border-b-2 -mb-px transition-colors flex items-center gap-2",
             activeTab === 'telemetry'
-              ? "border-brand-500 text-brand-400"
-              : "border-transparent text-surface-400 hover:text-white"
+              ? "border-brand-600 text-brand-600"
+              : "border-transparent text-surface-500 hover:text-surface-900"
           )}
         >
           <Database size={16} />
@@ -186,12 +186,12 @@ export default function AiCoach() {
               ))}
             </div>
           ) : (
-            <div className="p-6 bg-[#151A23] border border-[#202733] rounded-2xl text-center max-w-lg mx-auto space-y-3">
-              <div className="w-12 h-12 rounded-full bg-brand-950/60 text-brand-400 border border-brand-800/40 flex items-center justify-center mx-auto">
+            <div className="card p-6 bg-white border border-surface-200 text-center max-w-lg mx-auto space-y-3">
+              <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
                 <TrendingUp size={24} />
               </div>
-              <h4 className="font-bold text-white text-base">Progressive Overload Analysis</h4>
-              <p className="text-xs text-surface-400">
+              <h4 className="font-bold text-surface-900 text-base">Progressive Overload Analysis</h4>
+              <p className="text-xs text-surface-600">
                 Log exercises and sets in your workouts to unlock personalized recommendations, progression tracking, and plateau detection.
               </p>
               <div className="flex flex-wrap gap-2 justify-center pt-2">
@@ -211,12 +211,13 @@ export default function AiCoach() {
             </div>
           )}
 
+
           {/* Quick Questions */}
-          <div className="p-5 bg-[#11151D] border border-[#202733] rounded-2xl">
-            <h3 className="font-bold text-white text-sm mb-2 flex items-center gap-2">
-              <HelpCircle size={16} className="text-brand-400" /> Questions about your training?
+          <div className="card p-5 bg-gradient-to-r from-brand-50/70 to-surface-50 border-brand-100">
+            <h3 className="font-bold text-surface-900 text-sm mb-2 flex items-center gap-2">
+              <HelpCircle size={16} className="text-brand-600" /> Questions about your training?
             </h3>
-            <p className="text-xs text-surface-400 mb-3">
+            <p className="text-xs text-surface-600 mb-3">
               Ask about exercise technique, weight adjustments, or your progress.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -224,7 +225,7 @@ export default function AiCoach() {
                 <button
                   key={q}
                   onClick={() => handleSend(q)}
-                  className="px-3 py-1.5 rounded-lg bg-[#151A23] border border-[#202733] text-xs font-semibold text-surface-300 hover:text-white hover:border-brand-500 transition-colors shadow-xs"
+                  className="px-3 py-1.5 rounded-lg bg-white border border-brand-200 text-xs font-semibold text-brand-700 hover:bg-brand-50 transition-colors shadow-sm"
                 >
                   {q}
                 </button>
@@ -236,23 +237,23 @@ export default function AiCoach() {
 
       {/* ── TAB 2: ASK COACH ── */}
       {activeTab === 'ask' && (
-        <div className="rounded-2xl overflow-hidden flex flex-col min-h-[500px] border border-[#202733] bg-[#151A23] animate-fade-in shadow-xl">
+        <div className="card overflow-hidden flex flex-col min-h-[500px] border border-surface-200 bg-white animate-fade-in">
           {/* Header */}
-          <div className="p-4 border-b border-[#202733] flex items-center justify-between bg-[#0D1017]">
-            <div className="flex items-center gap-2.5">
-              <span className="p-1.5 rounded-lg bg-brand-600 text-white">
+          <div className="p-4 border-b border-surface-100 flex items-center justify-between bg-surface-50/70">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-brand-500 text-white">
                 <Bot size={18} />
               </span>
               <div>
-                <h3 className="font-bold text-sm text-white">Ask Coach</h3>
-                <p className="text-[11px] text-surface-400">Responses are based on your actual workout data.</p>
+                <h3 className="font-bold text-sm text-surface-900">Ask Coach</h3>
+                <p className="text-[11px] text-surface-500">Responses are based on your actual workout data.</p>
               </div>
             </div>
 
             {messages.length > 0 && (
               <button
                 onClick={clearChat}
-                className="text-xs font-medium text-surface-400 hover:text-white transition-colors"
+                className="text-xs font-medium text-surface-400 hover:text-surface-700 transition-colors"
               >
                 Clear History
               </button>
@@ -260,15 +261,15 @@ export default function AiCoach() {
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-5 max-h-[520px] bg-[#080A0F]">
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-5 max-h-[520px]">
             {messages.length === 0 ? (
               <div className="text-center py-10 max-w-md mx-auto space-y-4">
-                <div className="w-12 h-12 rounded-full bg-brand-950/60 text-brand-400 border border-brand-800/40 flex items-center justify-center mx-auto">
+                <div className="w-12 h-12 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
                   <Bot size={24} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-white text-base">Ask your Coach anything</h4>
-                  <p className="text-xs text-surface-400 mt-1">
+                  <h4 className="font-bold text-surface-900 text-base">Ask your Coach anything</h4>
+                  <p className="text-xs text-surface-500 mt-1">
                     Select a question or type your own below:
                   </p>
                 </div>
@@ -278,10 +279,10 @@ export default function AiCoach() {
                     <button
                       key={q}
                       onClick={() => handleSend(q)}
-                      className="w-full text-left p-3 rounded-xl bg-[#11151D] hover:bg-[#1A202B] hover:border-brand-500 border border-[#202733] text-xs font-semibold text-surface-200 transition-all flex items-center justify-between group"
+                      className="w-full text-left p-3 rounded-xl bg-surface-50 hover:bg-brand-50 hover:text-brand-700 border border-surface-100 hover:border-brand-200 text-xs font-semibold text-surface-800 transition-all flex items-center justify-between group"
                     >
                       <span>{q}</span>
-                      <ChevronRight size={14} className="text-surface-400 group-hover:text-brand-400 group-hover:translate-x-0.5 transition-all" />
+                      <ChevronRight size={14} className="text-surface-400 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   ))}
                 </div>
@@ -300,7 +301,7 @@ export default function AiCoach() {
                       "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5",
                       msg.role === 'user'
                         ? "bg-brand-600 text-white"
-                        : "bg-surface-800 text-brand-400 border border-[#202733]"
+                        : "bg-surface-800 text-white"
                     )}
                   >
                     {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
@@ -311,8 +312,8 @@ export default function AiCoach() {
                       className={cn(
                         "p-4 rounded-2xl text-sm leading-relaxed",
                         msg.role === 'user'
-                          ? "bg-brand-600 text-white rounded-tr-sm font-medium"
-                          : "bg-[#11151D] text-surface-200 border border-[#202733] rounded-tl-sm shadow-xs"
+                          ? "bg-brand-600 text-white rounded-tr-sm"
+                          : "bg-surface-50 text-surface-900 border border-surface-200/80 rounded-tl-sm shadow-sm"
                       )}
                     >
                       {msg.role === 'assistant' ? (
@@ -329,23 +330,23 @@ export default function AiCoach() {
 
                     {/* Workout Logging Confirmation Card */}
                     {msg.pendingLog && !msg.pendingLog.logged && (
-                      <div className="p-3 bg-[#11151D] border border-brand-800/40 rounded-xl space-y-2 text-left">
-                        <div className="text-xs font-bold text-white flex items-center justify-between">
+                      <div className="p-3 bg-brand-50/70 border border-brand-200 rounded-xl space-y-2 text-left">
+                        <div className="text-xs font-bold text-brand-950 flex items-center justify-between">
                           <span>{msg.pendingLog.exerciseName}</span>
-                          <span className="text-brand-300 font-mono text-[11px]">{msg.pendingLog.sets} sets × {msg.pendingLog.reps} reps @ {msg.pendingLog.weight} kg</span>
+                          <span className="text-brand-700 font-mono text-[11px]">{msg.pendingLog.sets} sets × {msg.pendingLog.reps} reps @ {msg.pendingLog.weight} kg</span>
                         </div>
                         <div className="flex items-center gap-2 pt-1">
                           <button
                             type="button"
                             onClick={() => cancelPendingLog(msg.id)}
-                            className="flex-1 py-1.5 px-3 bg-[#151A23] border border-[#202733] hover:bg-surface-800 text-surface-300 rounded-lg text-xs font-bold transition-colors"
+                            className="flex-1 py-1.5 px-3 bg-white border border-surface-200 hover:bg-surface-100 text-surface-700 rounded-lg text-xs font-bold transition-colors"
                           >
                             Cancel
                           </button>
                           <button
                             type="button"
                             onClick={() => confirmPendingLog(msg.id)}
-                            className="flex-1 py-1.5 px-3 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1"
+                            className="flex-1 py-1.5 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1"
                           >
                             <CheckCircle2 size={13} />
                             <span>Confirm & Log</span>
@@ -356,7 +357,7 @@ export default function AiCoach() {
 
                     {msg.supportingData && (
                       <div className="flex items-center gap-1.5 text-[11px] font-mono text-surface-400 px-1">
-                        <Database size={11} className="text-brand-400 flex-shrink-0" />
+                        <Database size={11} className="text-brand-500 flex-shrink-0" />
                         <span>{msg.supportingData}</span>
                       </div>
                     )}
@@ -367,7 +368,7 @@ export default function AiCoach() {
                           <button
                             key={sq}
                             onClick={() => handleSend(sq)}
-                            className="text-[11px] font-medium bg-[#11151D] hover:bg-brand-950/60 hover:text-brand-300 text-surface-300 px-2.5 py-1 rounded-full transition-colors border border-[#202733]"
+                            className="text-[11px] font-medium bg-surface-100 hover:bg-brand-50 hover:text-brand-700 text-surface-600 px-2.5 py-1 rounded-full transition-colors border border-surface-200/60"
                           >
                             {sq}
                           </button>
@@ -380,28 +381,28 @@ export default function AiCoach() {
             )}
 
             {isAsking && (
-              <div className="flex gap-3 items-center text-surface-400 text-xs animate-pulse">
-                <div className="w-8 h-8 rounded-full bg-surface-800 text-brand-400 flex items-center justify-center border border-[#202733]">
+              <div className="flex gap-3 items-center text-surface-500 text-xs animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-surface-800 text-white flex items-center justify-center">
                   <Bot size={16} />
                 </div>
-                <div className="p-3 bg-[#11151D] rounded-2xl border border-[#202733] flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin text-brand-400" />
-                  <span>Analyzing training...</span>
+                <div className="p-3 bg-surface-50 rounded-2xl border border-surface-200 flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin text-brand-600" />
+                  <span>Thinking...</span>
                 </div>
               </div>
             )}
           </div>
 
           {/* Input Form */}
-          <div className="p-3.5 border-t border-[#202733] bg-[#0D1017]">
-            <div className="flex items-end gap-2 max-w-4xl mx-auto bg-[#11151D] p-1.5 rounded-xl border border-[#202733] focus-within:border-brand-500 transition-all">
+          <div className="p-3.5 border-t border-surface-200 bg-white">
+            <div className="flex items-end gap-2 max-w-4xl mx-auto bg-surface-50 p-1.5 rounded-xl border border-surface-200 focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition-all">
               <textarea
                 value={inputQuery}
                 onChange={e => setInputQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about your training, exercises or progress..."
                 rows={1}
-                className="w-full bg-transparent resize-none py-2 px-3 text-sm text-white placeholder-surface-500 focus:outline-none max-h-28"
+                className="w-full bg-transparent resize-none py-2 px-3 text-sm focus:outline-none max-h-28"
               />
               <button
                 onClick={() => handleSend()}
@@ -418,22 +419,22 @@ export default function AiCoach() {
       {/* ── TAB 3: EXERCISE DATA ── */}
       {activeTab === 'telemetry' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="rounded-2xl border border-[#202733] bg-[#151A23] overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-[#202733] flex items-center justify-between bg-[#0D1017]">
+          <div className="card overflow-hidden">
+            <div className="p-4 border-b border-surface-100 flex items-center justify-between bg-surface-50/70">
               <div>
-                <h3 className="font-bold text-sm text-white">Exercise Performance Data</h3>
-                <p className="text-xs text-surface-400">
+                <h3 className="font-bold text-sm text-surface-900">Exercise Performance Data</h3>
+                <p className="text-xs text-surface-500">
                   Metrics computed from {safeAnalysis.totalWorkouts} workout sessions across the last 28 days.
                 </p>
               </div>
-              <span className="badge bg-brand-950/60 text-brand-300 font-bold border border-brand-800/40">
+              <span className="badge bg-brand-50 text-brand-700 font-bold border border-brand-200">
                 {safeAnalysis.exercises.length} Exercises
               </span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-[#11151D] text-surface-400 font-semibold uppercase border-b border-[#202733]">
+                <thead className="bg-white text-surface-400 font-semibold uppercase border-b border-surface-100">
                   <tr>
                     <th className="px-4 py-3">Exercise</th>
                     <th className="px-4 py-3 text-center">Sessions</th>
@@ -443,41 +444,41 @@ export default function AiCoach() {
                     <th className="px-4 py-3 text-right">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#202733]">
+                <tbody className="divide-y divide-surface-100">
                   {safeAnalysis.exercises.map((ex: ExerciseCoachAnalysis) => (
-                    <tr key={ex.exerciseId} className="hover:bg-[#11151D]/60 transition-colors">
-                      <td className="px-4 py-3 font-bold text-white">
+                    <tr key={ex.exerciseId} className="hover:bg-surface-50/60">
+                      <td className="px-4 py-3 font-bold text-surface-900">
                         {ex.exerciseName}
                       </td>
-                      <td className="px-4 py-3 text-center text-surface-300">
+                      <td className="px-4 py-3 text-center text-surface-700">
                         {ex.totalSessions}
                       </td>
-                      <td className="px-4 py-3 text-center font-semibold text-brand-400">
+                      <td className="px-4 py-3 text-center font-semibold text-brand-600">
                         {ex.isBodyweight ? 'Bodyweight' : ex.current1RM ? `${ex.current1RM} kg` : '-'}
                       </td>
-                      <td className="px-4 py-3 text-center text-surface-300">
+                      <td className="px-4 py-3 text-center text-surface-700">
                         {ex.best1RM ? `${ex.best1RM} kg` : ex.latestWeight ? `${ex.latestWeight} kg` : '-'}
                       </td>
                       <td className="px-4 py-3 text-center font-bold">
                         {ex.oneRMChangePct != null ? (
-                          <span className={ex.oneRMChangePct >= 0 ? "text-emerald-400" : "text-amber-400"}>
+                          <span className={ex.oneRMChangePct >= 0 ? "text-emerald-600" : "text-amber-600"}>
                             {ex.oneRMChangePct >= 0 ? `+${ex.oneRMChangePct}%` : `${ex.oneRMChangePct}%`}
                           </span>
                         ) : (
-                          <span className="text-surface-500">-</span>
+                          <span className="text-surface-400">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {ex.isPlateau ? (
-                          <span className="inline-block bg-amber-950/60 text-amber-300 border border-amber-800/40 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          <span className="inline-block bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                             Plateau
                           </span>
                         ) : ex.trend === 'improving' ? (
-                          <span className="inline-block bg-emerald-950/60 text-emerald-300 border border-emerald-800/40 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          <span className="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                             Progressing
                           </span>
                         ) : (
-                          <span className="text-surface-500 text-[11px]">Stable</span>
+                          <span className="text-surface-400 text-[11px]">Stable</span>
                         )}
                       </td>
                     </tr>
@@ -490,17 +491,17 @@ export default function AiCoach() {
       )}
 
       {/* ── Data & Safety Footer ── */}
-      <footer className="p-4 bg-[#11151D] border border-[#202733] rounded-2xl text-xs text-surface-400 space-y-2">
+      <footer className="card p-4 bg-surface-50/80 border border-surface-200 text-xs text-surface-600 space-y-2">
         <div className="flex items-start gap-2">
-          <Database size={15} className="text-brand-400 mt-0.5 flex-shrink-0" />
+          <Database size={15} className="text-brand-500 mt-0.5 flex-shrink-0" />
           <p>
-            <strong className="text-surface-300">Data Notice:</strong> {safeAnalysis.recoveryNotice}
+            <strong>Data Notice:</strong> {safeAnalysis.recoveryNotice}
           </p>
         </div>
         <div className="flex items-start gap-2">
-          <ShieldAlert size={15} className="text-amber-400 mt-0.5 flex-shrink-0" />
+          <ShieldAlert size={15} className="text-amber-500 mt-0.5 flex-shrink-0" />
           <p>
-            <strong className="text-surface-300">Safety:</strong> GYMTrack AI Coach is a training performance assistant, not a physician or licensed healthcare provider. Never train through severe or sharp joint pain. Consult a medical professional for injury diagnosis and rehabilitation.
+            <strong>Safety:</strong> GYMTrack AI Coach is a training performance assistant, not a physician or licensed healthcare provider. Never train through severe or sharp joint pain. Consult a medical professional for injury diagnosis and rehabilitation.
           </p>
         </div>
       </footer>

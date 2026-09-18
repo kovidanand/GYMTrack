@@ -388,19 +388,14 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in space-y-6 pb-24 max-w-4xl mx-auto">
-      {/* ── 1. GREETING & ATHLETIC DATE HEADER ── */}
-      <section className="space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
+      {/* ── 1. GREETING & DATE HEADER ── */}
+      <section className="space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-brand-400 bg-brand-500/15 px-2.5 py-0.5 rounded-full border border-brand-500/25">
-                ATHLETE OVERVIEW
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight uppercase">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-surface-900 tracking-tight leading-tight">
               {getLocalGreeting()}, {firstName}
             </h1>
-            <p className="text-xs sm:text-sm text-surface-400 font-semibold mt-0.5">
+            <p className="text-xs sm:text-sm text-surface-500 font-semibold mt-0.5">
               {currentDate.toLocaleDateString(undefined, {
                 weekday: 'long',
                 month: 'long',
@@ -414,12 +409,12 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <span
               className={cn(
-                "badge text-xs font-bold px-3.5 py-1 rounded-full",
+                "badge text-xs font-bold px-3 py-1 rounded-full",
                 todayStatus === 'Completed'
-                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                   : todayStatus === 'In progress'
-                  ? "bg-brand-500/15 text-brand-300 border border-brand-500/30"
-                  : "bg-[#1A202B] text-surface-400 border border-[#242D3C]"
+                  ? "bg-brand-50 text-brand-700 border border-brand-200"
+                  : "bg-surface-100 text-surface-600 border border-surface-200"
               )}
             >
               {todayStatus === 'Completed' ? '✓ Trained Today' : todayStatus === 'In progress' ? 'Session In Progress' : 'No Workout Yet'}
@@ -428,34 +423,34 @@ export default function Dashboard() {
         </div>
 
         {/* AI Grounded Insight Strip */}
-        <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#11151D] border border-[#1F2633] text-surface-300 text-xs leading-relaxed shadow-sm">
-          <Sparkles size={16} className="text-brand-400 flex-shrink-0" />
+        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-surface-50 border border-surface-200/80 text-surface-700 text-xs leading-relaxed">
+          <Sparkles size={15} className="text-brand-600 flex-shrink-0" />
           <span className="font-medium">{quickInsight}</span>
         </div>
       </section>
 
-      {/* ── 2. TODAY'S TRAINING (FEATURED ATHLETIC WORKOUT CARD) ── */}
-      <section aria-label="Today's featured training" className="space-y-3">
+      {/* ── 2. TODAY'S TRAINING EXPERIENCE (CENTRAL COMPONENT) ── */}
+      <section aria-label="Today's training experience" className="space-y-3">
         {activePlan ? (
-          <div className="card p-5 sm:p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-card space-y-5">
+          <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-5">
             {/* Header with Workout info */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1F2633] pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-100 pb-4">
               <div>
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-brand-300 bg-brand-500/20 px-2.5 py-0.5 rounded-full border border-brand-500/30">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-brand-700 bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-200">
                     Week {activePlanWeekNumber} · Day {todayDayNumber}
                   </span>
-                  <span className="text-xs text-surface-400 font-semibold">
+                  <span className="text-xs text-surface-400 font-medium">
                     {activePlan.name}
                   </span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                <h2 className="text-xl font-black text-surface-900 tracking-tight">
                   {activePlanTodayWorkout ? activePlanTodayWorkout.name : 'Rest & Recovery Day'}
                 </h2>
                 {activePlanTodayWorkout && (
-                  <p className="text-xs text-surface-400 mt-1 flex items-center gap-3 flex-wrap font-medium">
+                  <p className="text-xs text-surface-500 mt-1 flex items-center gap-3 flex-wrap">
                     {activePlanTodayWorkout.target_muscle_groups && activePlanTodayWorkout.target_muscle_groups.length > 0 && (
-                      <span>Target: <strong className="text-surface-200">{activePlanTodayWorkout.target_muscle_groups.join(', ')}</strong></span>
+                      <span>Target: <strong className="text-surface-800">{activePlanTodayWorkout.target_muscle_groups.join(', ')}</strong></span>
                     )}
                     <span>~{activePlanTodayWorkout.estimated_duration || 45} min</span>
                     <span>{planExercises.length} {planExercises.length === 1 ? 'exercise' : 'exercises'}</span>
@@ -463,47 +458,29 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Progress Count Badge & Status */}
-              <div className="flex items-center gap-3 self-start sm:self-center">
-                {planExercises.length > 0 && (
+              {/* Progress Count Badge */}
+              {planExercises.length > 0 && (
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="text-right">
-                    <p className="text-xs font-bold text-white">
+                    <p className="text-xs font-bold text-surface-900">
                       {completedPlanExerciseCount} / {planExercises.length} Completed
                     </p>
-                    <div className="w-28 bg-[#11151D] rounded-full h-2 mt-1.5 overflow-hidden border border-[#202733]">
+                    <div className="w-28 bg-surface-100 rounded-full h-2 mt-1 overflow-hidden">
                       <div
                         className="bg-emerald-500 h-full rounded-full transition-all duration-300"
                         style={{ width: `${dailyGoalPct}%` }}
                       />
                     </div>
                   </div>
-                )}
-                {activePlanTodayWorkout && (
-                  todayStatus === 'Completed' ? (
-                    <div className="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
-                      <CheckCircle2 size={16} className="text-emerald-400" />
-                      <span>COMPLETED</span>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/workouts/${activePlanTodayWorkout.id}/run`)}
-                      id="start-today-workout-btn"
-                      className="btn-primary px-5 py-2.5 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-glow"
-                    >
-                      <Dumbbell size={15} />
-                      <span>START WORKOUT</span>
-                    </button>
-                  )
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
-            {/* Exercise List with Direct Logging & Demonstration Previews */}
+            {/* Exercise List with Direct Logging */}
             {activePlanTodayWorkout && planExercisesWithStatus.length > 0 ? (
               <div className="space-y-3">
-                <p className="text-xs text-surface-400 font-semibold">
-                  Scheduled Exercises:
+                <p className="text-xs text-surface-500 font-medium">
+                  Watch demonstration videos and log completed sets below:
                 </p>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -513,35 +490,35 @@ export default function Dashboard() {
                       className={cn(
                         "p-3 rounded-xl border transition-all flex items-center justify-between gap-3 group",
                         isCompleted
-                          ? "bg-emerald-950/20 border-emerald-800/40"
-                          : "bg-[#11151D] border-[#1F2633] hover:border-[#2E3848] hover:bg-[#151A23]"
+                          ? "bg-emerald-50/40 border-emerald-200"
+                          : "bg-surface-50/70 border-surface-200 hover:border-brand-300 hover:bg-white shadow-2xs"
                       )}
                     >
                       {/* Video Thumbnail */}
-                      <div className="w-20 sm:w-24 aspect-video rounded-lg overflow-hidden bg-[#0D1017] flex-shrink-0 relative border border-[#1F2633]">
+                      <div className="w-20 sm:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 flex-shrink-0 relative border border-surface-200">
                         <ExerciseMedia exercise={exercise} variant="thumbnail" />
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-xs sm:text-sm text-white truncate">
+                        <h4 className="font-bold text-xs sm:text-sm text-surface-900 truncate">
                           {exercise.name}
                         </h4>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           {exercise.muscle_group && (
                             <MuscleGroupBadge group={exercise.muscle_group} />
                           )}
-                          <span className="text-[11px] font-semibold text-surface-400">
+                          <span className="text-[11px] font-semibold text-surface-500">
                             {workoutExercise.sets || 3} × {workoutExercise.reps || '8-12'}
                           </span>
                         </div>
                       </div>
 
-                      {/* Completion State or Direct Log */}
+                      {/* Completion State or Log Button */}
                       <div className="flex-shrink-0">
                         {isCompleted ? (
-                          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">
-                            <CheckCircle2 size={14} className="text-emerald-400" />
+                          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold">
+                            <CheckCircle2 size={14} className="text-emerald-600" />
                             <span>Done</span>
                           </div>
                         ) : (
@@ -556,7 +533,7 @@ export default function Dashboard() {
                               targetReps: workoutExercise.reps || '8-12',
                               restSeconds: workoutExercise.rest_seconds || 90
                             })}
-                            className="btn-primary py-1.5 px-3 text-xs font-bold flex items-center gap-1 shadow-xs"
+                            className="btn-primary py-1.5 px-3 text-xs font-bold flex items-center gap-1"
                             title={`Log ${exercise.name}`}
                           >
                             <Plus size={13} className="stroke-[3]" />
@@ -569,33 +546,33 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : !activePlanTodayWorkout || activePlanTodayWorkout.day_type === 'rest' ? (
-              <div className="p-6 rounded-xl bg-[#11151D] border border-[#1F2633] text-center space-y-1.5">
-                <p className="text-sm font-bold text-white">Rest & Recovery Day</p>
-                <p className="text-xs text-surface-400 max-w-sm mx-auto leading-relaxed">
-                  Muscle tissue rebuilds and adapts during rest. Hydrate, prioritize sleep, or perform light mobility.
+              <div className="p-6 rounded-xl bg-surface-50 border border-surface-200/80 text-center space-y-1">
+                <p className="text-sm font-bold text-surface-800">Rest & Recovery Day</p>
+                <p className="text-xs text-surface-500 max-w-sm mx-auto">
+                  Muscle tissue rebuilds and adapts during rest. Hydrate, focus on sleep, or perform light mobility.
                 </p>
               </div>
             ) : null}
           </div>
         ) : (
-          <div className="card p-5 sm:p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-xl bg-brand-500/15 text-brand-300 flex items-center justify-center flex-shrink-0 border border-brand-500/25">
-                <CalendarDays size={24} />
+          <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0 border border-brand-100">
+                <CalendarDays size={22} />
               </div>
               <div>
-                <h3 className="font-bold text-white text-base">Choose a training plan</h3>
-                <p className="text-xs text-surface-400 mt-0.5">
-                  Select a structured training program tailored to your goals and schedule.
+                <h3 className="font-extrabold text-surface-900 text-base">No Active Plan</h3>
+                <p className="text-xs text-surface-500 mt-0.5">
+                  Choose a goal and start a personalized training program for structured daily guidance.
                 </p>
               </div>
             </div>
             <button
               onClick={() => navigate('/plans')}
               id="dashboard-explore-plans-btn"
-              className="btn-primary py-2.5 px-5 text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto"
+              className="btn-primary py-2 px-5 text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto"
             >
-              <span>EXPLORE PLANS</span>
+              <span>Explore Plans</span>
               <ChevronRight size={14} />
             </button>
           </div>
@@ -608,15 +585,15 @@ export default function Dashboard() {
           type="button"
           onClick={handleOpenManualLog}
           id="dashboard-log-training-btn"
-          className="p-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 active:scale-[0.99] text-white flex items-center justify-between transition-all shadow-md group border border-brand-400/20"
+          className="p-4 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white flex items-center justify-between transition-all shadow-xs group"
         >
           <div className="flex items-center gap-3 text-left">
             <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center text-white">
               <Plus size={20} className="stroke-[2.5]" />
             </div>
             <div>
-              <p className="text-sm font-black tracking-tight uppercase">Log Training Session</p>
-              <p className="text-xs text-brand-100 mt-0.5 font-medium">Record exercises, sets, reps & weight</p>
+              <p className="text-sm font-black">Log Training Session</p>
+              <p className="text-xs text-brand-100 mt-0.5">Record exercises, sets, reps & weight</p>
             </div>
           </div>
           <ChevronRight size={16} className="text-brand-200 group-hover:translate-x-0.5 transition-transform" />
@@ -626,27 +603,27 @@ export default function Dashboard() {
           type="button"
           onClick={handleOpenVoiceLog}
           id="dashboard-voice-log-btn"
-          className="p-4 rounded-xl bg-[#11151D] hover:bg-[#1A202B] active:scale-[0.99] text-white flex items-center justify-between transition-all shadow-xs group border border-[#1F2633]"
+          className="p-4 rounded-xl bg-surface-900 hover:bg-surface-800 active:scale-[0.99] text-white flex items-center justify-between transition-all shadow-xs group"
         >
           <div className="flex items-center gap-3 text-left">
-            <div className="w-10 h-10 rounded-lg bg-brand-500/15 flex items-center justify-center text-brand-400">
+            <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-brand-400">
               <Mic size={20} />
             </div>
             <div>
-              <p className="text-sm font-black tracking-tight uppercase">Hands-Free Voice Log</p>
-              <p className="text-xs text-surface-400 mt-0.5 font-medium">Speak sets (e.g. &ldquo;Bench press 80kg 10 reps&rdquo;)</p>
+              <p className="text-sm font-black">Hands-Free Voice Log</p>
+              <p className="text-xs text-surface-400 mt-0.5">Speak your sets (e.g. &ldquo;Bench press 80kg 10 reps&rdquo;)</p>
             </div>
           </div>
           <ChevronRight size={16} className="text-surface-400 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </section>
 
-      {/* ── 4. TODAY'S DAILY PROGRESS VISUALIZATION ── */}
+      {/* ── 4. TODAY'S DAILY PROGRESS ── */}
       <section aria-label="Today's progress summary">
-        <div className="card p-5 sm:p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-card space-y-4">
+        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h2 className="text-xs font-black uppercase tracking-wider text-surface-400">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">
                 Daily Progress · Today
               </h2>
               <p className="text-xs text-surface-500 mt-0.5">
@@ -655,71 +632,71 @@ export default function Dashboard() {
             </div>
 
             {/* Daily Goal % */}
-            <div className="flex items-center gap-2 bg-[#11151D] px-3 py-1 rounded-full border border-[#202733]">
-              <span className="text-[11px] font-bold text-surface-400">Daily Goal:</span>
-              <span className="text-xs font-black text-brand-400">{dailyGoalPct}%</span>
+            <div className="flex items-center gap-2 bg-surface-50 px-3 py-1 rounded-full border border-surface-200">
+              <span className="text-[11px] font-bold text-surface-500">Daily Goal:</span>
+              <span className="text-xs font-black text-brand-600">{dailyGoalPct}%</span>
             </div>
           </div>
 
           {/* Metric Tiles */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-4 rounded-xl bg-[#11151D] border border-[#1F2633]">
-              <div className="flex items-center justify-between text-surface-400 mb-1.5">
+            <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-100">
+              <div className="flex items-center justify-between text-surface-400 mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Exercises</span>
-                <Dumbbell size={14} className="text-brand-400" />
+                <Dumbbell size={14} className="text-brand-500" />
               </div>
-              <p className="text-2xl font-black text-white tracking-tight">
+              <p className="text-2xl font-black text-surface-900 tracking-tight">
                 {planExercises.length > 0 ? `${completedPlanExerciseCount} / ${planExercises.length}` : todayMetrics.exercises}
               </p>
-              <p className="text-[10px] text-surface-500 mt-0.5 font-medium">completed</p>
+              <p className="text-[10px] text-surface-400 mt-0.5">completed</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#11151D] border border-[#1F2633]">
-              <div className="flex items-center justify-between text-surface-400 mb-1.5">
+            <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-100">
+              <div className="flex items-center justify-between text-surface-400 mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Sets</span>
-                <Layers size={14} className="text-brand-400" />
+                <Layers size={14} className="text-brand-500" />
               </div>
-              <p className="text-2xl font-black text-white tracking-tight">
+              <p className="text-2xl font-black text-surface-900 tracking-tight">
                 {todayMetrics.sets}
               </p>
-              <p className="text-[10px] text-surface-500 mt-0.5 font-medium">logged sets</p>
+              <p className="text-[10px] text-surface-400 mt-0.5">logged sets</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#11151D] border border-[#1F2633]">
-              <div className="flex items-center justify-between text-surface-400 mb-1.5">
+            <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-100">
+              <div className="flex items-center justify-between text-surface-400 mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Volume</span>
-                <Flame size={14} className="text-amber-400" />
+                <Flame size={14} className="text-amber-500" />
               </div>
-              <p className="text-2xl font-black text-white tracking-tight">
+              <p className="text-2xl font-black text-surface-900 tracking-tight">
                 {formatVolumeDisplay(todayMetrics.volume)}
               </p>
-              <p className="text-[10px] text-surface-500 mt-0.5 font-medium">lifted</p>
+              <p className="text-[10px] text-surface-400 mt-0.5">lifted</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#11151D] border border-[#1F2633]">
-              <div className="flex items-center justify-between text-surface-400 mb-1.5">
+            <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-100">
+              <div className="flex items-center justify-between text-surface-400 mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Duration</span>
-                <Clock size={14} className="text-indigo-400" />
+                <Clock size={14} className="text-indigo-500" />
               </div>
-              <p className="text-2xl font-black text-white tracking-tight">
-                {todayMetrics.durationMins} <span className="text-xs font-semibold text-surface-400">min</span>
+              <p className="text-2xl font-black text-surface-900 tracking-tight">
+                {todayMetrics.durationMins} <span className="text-xs font-semibold text-surface-500">min</span>
               </p>
-              <p className="text-[10px] text-surface-500 mt-0.5 font-medium">active time</p>
+              <p className="text-[10px] text-surface-400 mt-0.5">active time</p>
             </div>
           </div>
 
           {/* Today's Logged Exercises Breakdown */}
           {todayExercisesBreakdown.length > 0 && (
-            <div className="pt-2 border-t border-[#1F2633] space-y-2">
-              <p className="text-xs font-bold text-surface-300">Today&rsquo;s Completed Movements:</p>
-              <div className="divide-y divide-[#1F2633]">
+            <div className="pt-2 border-t border-surface-100 space-y-2">
+              <p className="text-xs font-bold text-surface-700">Today&rsquo;s Completed Movements:</p>
+              <div className="divide-y divide-surface-100">
                 {todayExercisesBreakdown.map((ex, idx) => (
                   <div key={idx} className="py-2 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      <span className="font-bold text-white">{ex.name}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="font-bold text-surface-900">{ex.name}</span>
                     </div>
-                    <span className="text-surface-400 font-mono text-[11px]">
+                    <span className="text-surface-500 font-mono">
                       {ex.sets} {ex.sets === 1 ? 'set' : 'sets'} · {ex.weightDisplay} {ex.volume > 0 && `· ${formatVolumeDisplay(ex.volume)}`}
                     </span>
                   </div>
@@ -733,12 +710,12 @@ export default function Dashboard() {
       {/* ── 5. CURRENT PLAN OVERVIEW ON HOME ── */}
       {activePlan && (
         <section aria-label="Current training program">
-          <div className="card p-5 sm:p-6 bg-[#151A23] border border-[#202733] text-white rounded-2xl shadow-card space-y-4">
+          <div className="card p-5 sm:p-6 bg-gradient-to-br from-surface-900 via-surface-900 to-surface-800 text-white rounded-2xl shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-brand-300 bg-brand-500/20 px-2.5 py-0.5 rounded-full border border-brand-500/30">
-                    CURRENT PLAN
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-400 bg-brand-500/20 px-2 py-0.5 rounded-full border border-brand-500/30">
+                    Current Program
                   </span>
                   <span className="text-xs text-surface-400">
                     Week {activePlanWeekNumber} of {activePlan.duration_weeks || 12}
@@ -747,7 +724,7 @@ export default function Dashboard() {
                 <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
                   {activePlan.name}
                 </h3>
-                <p className="text-xs text-surface-400 mt-1">
+                <p className="text-xs text-surface-300 mt-1">
                   {completedSessionsCount} / {totalPlannedSessions} sessions completed ({overallPlanPct}%)
                 </p>
               </div>
@@ -756,15 +733,15 @@ export default function Dashboard() {
                 type="button"
                 onClick={() => navigate('/plans')}
                 id="home-view-plan-details-btn"
-                className="btn-secondary py-2 px-4 text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto"
+                className="btn-primary py-2 px-4 text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto"
               >
-                <span>VIEW PLAN</span>
+                <span>Continue Program</span>
                 <ArrowRight size={14} />
               </button>
             </div>
 
             {/* Overall Progress Bar */}
-            <div className="w-full bg-[#11151D] rounded-full h-2 overflow-hidden border border-[#1F2633]">
+            <div className="w-full bg-surface-800 rounded-full h-2 overflow-hidden">
               <div
                 className="bg-brand-500 h-full rounded-full transition-all duration-500"
                 style={{ width: `${Math.max(3, overallPlanPct)}%` }}
@@ -772,16 +749,16 @@ export default function Dashboard() {
             </div>
 
             {/* Today vs Next Workout */}
-            <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-[#1F2633] text-xs">
+            <div className="grid sm:grid-cols-2 gap-3 pt-1 border-t border-white/10 text-xs">
               <div>
-                <span className="text-surface-500 block text-[11px] font-medium">Today&rsquo;s Workout:</span>
+                <span className="text-surface-400 block text-[11px]">Today&rsquo;s Workout:</span>
                 <span className="font-bold text-white mt-0.5 block">
                   {activePlanTodayWorkout ? activePlanTodayWorkout.name : 'Rest / Recovery Day'}
                 </span>
               </div>
               {nextWorkout && (
                 <div>
-                  <span className="text-surface-500 block text-[11px] font-medium">Next Workout:</span>
+                  <span className="text-surface-400 block text-[11px]">Next Workout:</span>
                   <span className="font-bold text-surface-300 mt-0.5 block">
                     Day {nextWorkout.day_number}: {nextWorkout.name}
                   </span>
@@ -794,15 +771,15 @@ export default function Dashboard() {
 
       {/* ── 6. 7-DAY WEEKLY ACTIVITY (MON - SUN TAP TO INSPECT) ── */}
       <section aria-label="Weekly training activity">
-        <div className="card p-5 sm:p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-card space-y-4">
+        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Calendar size={16} className="text-brand-400" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+              <Calendar size={16} className="text-brand-600" />
+              <h2 className="text-sm font-bold uppercase tracking-wide text-surface-900">
                 Weekly Activity
               </h2>
             </div>
-            <span className="text-xs font-semibold text-surface-400">
+            <span className="text-xs font-semibold text-surface-500">
               {weeklySessionCount} {weeklySessionCount === 1 ? 'workout' : 'workouts'} this week
             </span>
           </div>
@@ -816,10 +793,10 @@ export default function Dashboard() {
                 className={cn(
                   "flex flex-col items-center py-2.5 px-1 rounded-xl transition-all text-center select-none cursor-pointer border",
                   day.isToday
-                    ? "bg-brand-500/15 border-brand-500/40 ring-1 ring-brand-500/30"
+                    ? "bg-brand-50 border-brand-300 ring-2 ring-brand-400/20"
                     : selectedDayIndex === idx
-                    ? "bg-[#1A202B] border-[#2E3848]"
-                    : "bg-[#11151D] border-[#1F2633] hover:border-[#2E3848]"
+                    ? "bg-surface-100 border-surface-300"
+                    : "bg-surface-50 border-surface-100 hover:border-surface-200"
                 )}
               >
                 <span className="text-[10px] font-bold uppercase text-surface-400">
@@ -827,7 +804,7 @@ export default function Dashboard() {
                 </span>
                 <span className={cn(
                   "text-sm font-black mt-0.5",
-                  day.isToday ? "text-brand-300" : "text-white"
+                  day.isToday ? "text-brand-600" : "text-surface-800"
                 )}>
                   {day.dateNumber}
                 </span>
@@ -835,11 +812,11 @@ export default function Dashboard() {
                 <div className="mt-2 h-4 flex items-center justify-center">
                   {day.hasWorkout ? (
                     <span 
-                      className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm" 
+                      className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-2xs" 
                       title={`${day.label}: ${day.volume.toLocaleString()} kg lifted`}
                     />
                   ) : (
-                    <span className="w-2 h-0.5 bg-[#2A3445] rounded-full" title={`${day.label}: Rest`} />
+                    <span className="w-2 h-0.5 bg-surface-300 rounded-full" title={`${day.label}: Rest`} />
                   )}
                 </div>
               </button>
@@ -848,41 +825,41 @@ export default function Dashboard() {
 
           {/* Interactive Inspection Card for selected day */}
           {selectedDayIndex !== null && (
-            <div className="p-4 rounded-xl bg-[#11151D] border border-[#1F2633] animate-slide-up space-y-2 relative">
+            <div className="p-4 rounded-xl bg-surface-50 border border-surface-200 animate-slide-up space-y-2 relative">
               <button
                 type="button"
                 onClick={() => setSelectedDayIndex(null)}
-                className="absolute top-3 right-3 p-1 rounded-lg text-surface-400 hover:text-white"
+                className="absolute top-3 right-3 p-1 rounded-lg text-surface-400 hover:text-surface-700"
                 aria-label="Close day summary"
               >
                 <X size={14} />
               </button>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-white">
+                <span className="text-xs font-black text-surface-900">
                   {weeklyDays[selectedDayIndex].label} · {weeklyDays[selectedDayIndex].fullDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>
                 {weeklyDays[selectedDayIndex].hasWorkout ? (
-                  <span className="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                  <span className="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
                     Workout Completed
                   </span>
                 ) : (
-                  <span className="badge bg-[#1A202B] text-surface-400 border border-[#242D3C] text-[10px]">
+                  <span className="badge bg-surface-100 text-surface-500 text-[10px]">
                     Rest Day
                   </span>
                 )}
               </div>
 
               {weeklyDays[selectedDayIndex].hasWorkout ? (
-                <div className="text-xs text-surface-400 space-y-1 pt-1">
-                  <p className="font-bold text-white">
+                <div className="text-xs text-surface-600 space-y-1 pt-1">
+                  <p className="font-bold text-surface-900">
                     {weeklyDays[selectedDayIndex].primarySession?.workout_name || 'Completed Workout'}
                   </p>
-                  <p className="text-surface-400 font-mono text-[11px]">
+                  <p className="text-surface-500 font-mono">
                     {weeklyDays[selectedDayIndex].sets} sets · {formatVolumeDisplay(weeklyDays[selectedDayIndex].volume)} volume {weeklyDays[selectedDayIndex].durationSeconds > 0 && `· ${formatDuration(Math.round(weeklyDays[selectedDayIndex].durationSeconds / 60))}`}
                   </p>
                   {weeklyDays[selectedDayIndex].exercises.length > 0 && (
-                    <p className="text-surface-400 text-[11px] pt-1">
+                    <p className="text-surface-600 text-[11px] pt-1">
                       Exercises: {weeklyDays[selectedDayIndex].exercises.join(', ')}
                     </p>
                   )}
@@ -897,25 +874,25 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ── 7. RECENT ACHIEVEMENTS & PERSONAL BESTS (GENUINE DATA ONLY) ── */}
+      {/* ── 7. RECENT ACHIEVEMENTS & PERSONAL BESTS ── */}
       <section aria-label="Recent personal best record">
-        <div className="card p-4 sm:p-5 bg-[#151A23] border border-amber-500/20 rounded-2xl shadow-card">
+        <div className="card p-4 sm:p-5 bg-gradient-to-br from-amber-50/40 via-white to-surface-50 border border-amber-200/70 rounded-2xl shadow-xs">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-xs">
-                <Trophy size={22} />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                <Trophy size={20} />
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
-                  PERSONAL RECORD
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">
+                  Personal Record
                 </span>
                 {recentPB ? (
-                  <h3 className="font-black text-white text-base sm:text-lg">
-                    {recentPB.exerciseName}: <span className="text-amber-400">{recentPB.value} {recentPB.unit}</span>
+                  <h3 className="font-black text-surface-900 text-base sm:text-lg">
+                    {recentPB.exerciseName}: <span className="text-brand-600">{recentPB.value} {recentPB.unit}</span>
                   </h3>
                 ) : (
-                  <p className="text-xs font-medium text-surface-400 mt-0.5">
-                    No PR records yet. Log your exercises to track your all-time best lifts!
+                  <p className="text-xs font-semibold text-surface-600 mt-0.5">
+                    No PR records yet. Set your baseline with your next logged workout!
                   </p>
                 )}
               </div>
@@ -923,7 +900,7 @@ export default function Dashboard() {
 
             <button
               onClick={() => navigate('/progress')}
-              className="text-xs font-bold text-brand-400 hover:text-brand-300 flex items-center gap-1"
+              className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1"
             >
               <span>View All</span>
               <ChevronRight size={14} />

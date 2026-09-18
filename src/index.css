@@ -20,10 +20,8 @@
   }
 
   body {
-    @apply bg-[#080A0F] text-surface-700 font-sans;
+    @apply bg-surface-50 text-surface-900 font-sans;
     min-height: 100vh;
-    background-color: #080A0F;
-    color: #E2E8F0;
   }
 
   /* Custom scrollbar */
@@ -33,16 +31,15 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #080A0F;
+    @apply bg-transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #1F2633;
-    border-radius: 9999px;
+    @apply bg-surface-300 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #2E3848;
+    @apply bg-surface-400;
   }
 
   /* Focus styles */
@@ -63,15 +60,15 @@
 
 @layer components {
   .card {
-    @apply bg-[#151A23] rounded-2xl border border-[#202733] shadow-card;
+    @apply bg-white rounded-xl border border-surface-200 shadow-card;
   }
 
   .card-hover {
-    @apply card transition-all duration-200 hover:border-[#2E3848] hover:bg-[#1A202B];
+    @apply card transition-shadow duration-200 hover:shadow-card-hover;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white
            shadow-sm transition-all duration-150
            hover:bg-brand-600 hover:shadow-md
            active:scale-[0.98]
@@ -80,24 +77,24 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#151A23] px-5 py-2.5 text-sm font-semibold text-surface-700
-           border border-[#242D3C] shadow-sm transition-all duration-150
-           hover:bg-[#1A202B] hover:border-[#2E3848] hover:text-white
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-surface-700
+           border border-surface-200 shadow-sm transition-all duration-150
+           hover:bg-surface-50 hover:border-surface-300 hover:shadow
            active:scale-[0.98]
            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-surface-400
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-surface-600
            transition-all duration-150
-           hover:bg-[#1A202B] hover:text-white
+           hover:bg-surface-100 hover:text-surface-900
            active:scale-[0.98]
            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white
            shadow-sm transition-all duration-150
            hover:bg-red-700 hover:shadow-md
            active:scale-[0.98]
@@ -106,52 +103,52 @@
   }
 
   .input-base {
-    @apply w-full rounded-xl border border-[#202733] bg-[#11151D] px-3.5 py-2.5 text-sm text-surface-900
+    @apply w-full rounded-lg border border-surface-200 bg-white px-3.5 py-2.5 text-sm text-surface-900
            placeholder-surface-400 shadow-sm transition-all duration-150
-           focus:border-brand-500 focus:bg-[#151A23] focus:ring-1 focus:ring-brand-500 focus:outline-none;
+           focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 
   .section-title {
-    @apply text-lg font-bold text-surface-900 tracking-tight;
+    @apply text-xl font-semibold text-surface-900 tracking-tight;
   }
 
   .page-title {
-    @apply text-2xl sm:text-3xl font-black text-surface-900 tracking-tight;
+    @apply text-2xl font-bold text-surface-900 tracking-tight;
   }
 
   .label-sm {
-    @apply text-xs font-semibold text-surface-400 uppercase tracking-wider;
+    @apply text-xs font-medium text-surface-500 uppercase tracking-wider;
   }
 
   .nav-link {
-    @apply flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-surface-400
+    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-surface-600
            transition-all duration-150
-           hover:bg-brand-500/10 hover:text-brand-300;
+           hover:bg-brand-50 hover:text-brand-700;
   }
 
   .nav-link-active {
-    @apply flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold
-           bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30;
+    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium
+           bg-brand-50 text-brand-700;
   }
 
   /* Gradient text utility */
   .gradient-text {
-    @apply bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent;
   }
 
   /* OTP Input */
   .otp-input {
-    @apply w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 border-[#202733] bg-[#11151D]
+    @apply w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 border-surface-200 bg-white
            text-surface-900 transition-all duration-150
-           focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none;
+           focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none;
   }
 
   .otp-input-filled {
-    @apply otp-input border-brand-500/60 bg-brand-500/10 text-brand-300;
+    @apply otp-input border-brand-300 bg-brand-50;
   }
 
   /* ─── Exercise Library Card System ──────────────────────────────────────── */
@@ -163,8 +160,8 @@
     aspect-ratio: 16 / 9;
     overflow: hidden;
     flex-shrink: 0;
-    border-radius: 0.875rem 0.875rem 0 0;
-    background-color: #0D1017;
+    border-radius: 0.5rem 0.5rem 0 0;
+    background-color: theme('colors.surface.100');
   }
 
   /* Card shell — flex column so footer stays at bottom */
@@ -174,8 +171,8 @@
     flex-direction: column;
     height: 100%;
     min-height: 0;
-    @apply bg-[#151A23] border border-[#202733] rounded-2xl shadow-card cursor-pointer
-           transition-all duration-200 hover:border-[#2E3848] hover:bg-[#1A202B] overflow-hidden;
+    @apply bg-white border border-surface-200 rounded-xl shadow-card cursor-pointer
+           transition-shadow duration-200 hover:shadow-card-hover overflow-hidden;
   }
 
   /* Content area grows to fill available space */
@@ -183,7 +180,7 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    padding: 0.875rem;
+    padding: 0.75rem;
     gap: 0;
   }
 
@@ -196,16 +193,16 @@
   .exercise-card-footer {
     margin-top: auto;
     padding-top: 0.625rem;
-    border-top: 1px solid #1F2633;
+    border-top: 1px solid theme('colors.surface.100');
     margin-top: 0.75rem;
   }
 
   /* Exercise name — wraps naturally, never clips */
   .exercise-card-title {
     font-weight: 700;
-    font-size: 0.875rem;
-    line-height: 1.35;
-    color: #FFFFFF;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    color: theme('colors.surface.900');
     overflow-wrap: anywhere;
     word-break: break-word;
     hyphens: auto;

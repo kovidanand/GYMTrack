@@ -124,19 +124,19 @@ export function ExerciseLogModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-surface-950/70 backdrop-blur-xs animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-labelledby="exercise-log-modal-title"
     >
       <div
-        className="bg-[#151A23] rounded-2xl w-full max-w-md shadow-2xl border border-[#202733] overflow-hidden flex flex-col max-h-[90vh] animate-scale-up"
+        className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-surface-200 overflow-hidden flex flex-col max-h-[90vh] animate-scale-up"
         onClick={e => e.stopPropagation()}
       >
         {/* ── Header ── */}
-        <div className="p-4 sm:p-5 border-b border-[#202733] flex items-center justify-between bg-[#11151D]">
+        <div className="p-4 sm:p-5 border-b border-surface-100 flex items-center justify-between bg-surface-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand-950/60 text-brand-400 border border-brand-500/30 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <Dumbbell size={18} />
             </div>
             <div>
@@ -146,7 +146,7 @@ export function ExerciseLogModal({
               <div className="flex items-center gap-1.5 mt-0.5">
                 <MuscleGroupBadge group={exercise.muscle_group} />
                 {exercise.equipment && exercise.equipment.length > 0 && (
-                  <span className="badge bg-[#151A23] text-surface-300 border border-[#202733] text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  <span className="badge bg-surface-100 text-surface-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
                     {getEquipmentLabel(exercise.equipment[0])}
                   </span>
                 )}
@@ -160,7 +160,7 @@ export function ExerciseLogModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-surface-400 hover:text-surface-200 hover:bg-[#1A202B] transition-colors"
+            className="p-1.5 rounded-lg text-surface-400 hover:text-surface-600 hover:bg-surface-100 transition-colors"
             aria-label="Close modal"
           >
             <X size={18} />
@@ -174,7 +174,7 @@ export function ExerciseLogModal({
               {/* Weight Input */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="log-weight-input" className="text-xs font-bold text-surface-300 uppercase tracking-wider">
+                  <label htmlFor="log-weight-input" className="text-xs font-bold text-surface-700 uppercase tracking-wider">
                     Weight (kg)
                   </label>
                   {isBodyweight && (
@@ -186,7 +186,7 @@ export function ExerciseLogModal({
                   <button
                     type="button"
                     onClick={() => setWeight(w => Math.max(0, w - (w >= 20 ? 5 : 2.5)))}
-                    className="w-11 h-11 rounded-xl bg-[#11151D] hover:bg-[#1A202B] text-surface-100 border border-[#202733] font-black text-base flex items-center justify-center transition-colors"
+                    className="w-11 h-11 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
                     aria-label="Decrease weight"
                   >
                     -
@@ -201,7 +201,7 @@ export function ExerciseLogModal({
                       value={weight === 0 && isBodyweight ? '' : weight}
                       onChange={e => setWeight(Math.max(0, parseFloat(e.target.value) || 0))}
                       placeholder={isBodyweight ? '0 (Bodyweight)' : '50'}
-                      className="input-base w-full text-center text-lg font-black text-surface-900 bg-[#11151D] border-[#202733] pr-9"
+                      className="input w-full text-center text-lg font-black text-surface-900 pr-9"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-surface-400">
                       kg
@@ -211,7 +211,7 @@ export function ExerciseLogModal({
                   <button
                     type="button"
                     onClick={() => setWeight(w => w + (w >= 20 ? 5 : 2.5))}
-                    className="w-11 h-11 rounded-xl bg-[#11151D] hover:bg-[#1A202B] text-surface-100 border border-[#202733] font-black text-base flex items-center justify-center transition-colors"
+                    className="w-11 h-11 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
                     aria-label="Increase weight"
                   >
                     +
@@ -223,14 +223,14 @@ export function ExerciseLogModal({
               <div className="grid grid-cols-2 gap-3">
                 {/* Sets */}
                 <div className="space-y-1.5">
-                  <label htmlFor="log-sets-input" className="text-xs font-bold text-surface-300 uppercase tracking-wider">
+                  <label htmlFor="log-sets-input" className="text-xs font-bold text-surface-700 uppercase tracking-wider">
                     Sets
                   </label>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => setSets(s => Math.max(1, s - 1))}
-                      className="w-9 h-10 rounded-xl bg-[#11151D] hover:bg-[#1A202B] text-surface-100 border border-[#202733] font-black text-base flex items-center justify-center transition-colors"
+                      className="w-9 h-10 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
                       aria-label="Decrease sets"
                     >
                       -
@@ -242,12 +242,12 @@ export function ExerciseLogModal({
                       max="20"
                       value={sets}
                       onChange={e => setSets(Math.min(20, Math.max(1, parseInt(e.target.value, 10) || 1)))}
-                      className="input-base w-full text-center text-lg font-black text-surface-900 bg-[#11151D] border-[#202733]"
+                      className="input w-full text-center text-lg font-black text-surface-900"
                     />
                     <button
                       type="button"
                       onClick={() => setSets(s => Math.min(20, s + 1))}
-                      className="w-9 h-10 rounded-xl bg-[#11151D] hover:bg-[#1A202B] text-surface-100 border border-[#202733] font-black text-base flex items-center justify-center transition-colors"
+                      className="w-9 h-10 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
                       aria-label="Increase sets"
                     >
                       +
@@ -257,14 +257,14 @@ export function ExerciseLogModal({
 
                 {/* Reps */}
                 <div className="space-y-1.5">
-                  <label htmlFor="log-reps-input" className="text-xs font-bold text-surface-300 uppercase tracking-wider">
+                  <label htmlFor="log-reps-input" className="text-xs font-bold text-surface-700 uppercase tracking-wider">
                     Reps
                   </label>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => setReps(r => Math.max(1, r - 1))}
-                      className="w-9 h-10 rounded-xl bg-[#11151D] hover:bg-[#1A202B] text-surface-100 border border-[#202733] font-black text-base flex items-center justify-center transition-colors"
+                      className="w-9 h-10 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
                       aria-label="Decrease reps"
                     >
                       -
@@ -276,12 +276,12 @@ export function ExerciseLogModal({
                       max="100"
                       value={reps}
                       onChange={e => setReps(Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1)))}
-                      className="input-base w-full text-center text-lg font-black text-surface-900 bg-[#11151D] border-[#202733]"
+                      className="input w-full text-center text-lg font-black text-surface-900"
                     />
                     <button
                       type="button"
                       onClick={() => setReps(r => Math.min(100, r + 1))}
-                      className="w-9 h-10 rounded-xl bg-[#11151D] hover:bg-[#1A202B] text-surface-100 border border-[#202733] font-black text-base flex items-center justify-center transition-colors"
+                      className="w-9 h-10 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
                       aria-label="Increase reps"
                     >
                       +
@@ -291,11 +291,11 @@ export function ExerciseLogModal({
               </div>
 
               {/* Collapsed Secondary Fields: Notes & Duration */}
-              <div className="pt-2 border-t border-[#202733]">
+              <div className="pt-2 border-t border-surface-100">
                 <button
                   type="button"
                   onClick={() => setShowOptionalFields(!showOptionalFields)}
-                  className="text-xs font-semibold text-surface-400 hover:text-surface-200 flex items-center gap-1 transition-colors"
+                  className="text-xs font-semibold text-surface-500 hover:text-surface-700 flex items-center gap-1 transition-colors"
                 >
                   {showOptionalFields ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   <span>{showOptionalFields ? 'Hide optional details' : '+ Add duration or notes'}</span>
@@ -304,7 +304,7 @@ export function ExerciseLogModal({
                 {showOptionalFields && (
                   <div className="mt-3 space-y-3 animate-fade-in">
                     <div>
-                      <label htmlFor="log-duration-input" className="text-[11px] font-bold text-surface-400 uppercase">
+                      <label htmlFor="log-duration-input" className="text-[11px] font-bold text-surface-600 uppercase">
                         Duration (Minutes)
                       </label>
                       <input
@@ -315,12 +315,12 @@ export function ExerciseLogModal({
                         value={durationMinutes || ''}
                         onChange={e => setDurationMinutes(Math.max(0, parseInt(e.target.value, 10) || 0))}
                         placeholder="e.g. 15"
-                        className="input-base w-full text-sm mt-1 bg-[#11151D] border-[#202733]"
+                        className="input w-full text-sm mt-1"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="log-notes-input" className="text-[11px] font-bold text-surface-400 uppercase">
+                      <label htmlFor="log-notes-input" className="text-[11px] font-bold text-surface-600 uppercase">
                         Session Notes
                       </label>
                       <textarea
@@ -329,7 +329,7 @@ export function ExerciseLogModal({
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
                         placeholder="RPE, tempo cues, or equipment adjustments..."
-                        className="input-base w-full text-sm mt-1 resize-none bg-[#11151D] border-[#202733]"
+                        className="input w-full text-sm mt-1 resize-none"
                       />
                     </div>
                   </div>
@@ -339,12 +339,12 @@ export function ExerciseLogModal({
           ) : (
             /* ── Step 2: Review State ── */
             <div className="space-y-4 animate-fade-in">
-              <div className="p-4 rounded-xl bg-[#11151D] border border-brand-500/40 space-y-3">
-                <div className="flex items-center justify-between border-b border-[#202733] pb-2.5">
-                  <span className="text-xs font-bold text-brand-300 uppercase tracking-wider">
+              <div className="p-4 rounded-xl bg-brand-50/60 border border-brand-200/80 space-y-3">
+                <div className="flex items-center justify-between border-b border-brand-100 pb-2.5">
+                  <span className="text-xs font-bold text-brand-800 uppercase tracking-wider">
                     Planned Record
                   </span>
-                  <span className="badge bg-brand-600 text-white text-[11px] font-bold">
+                  <span className="badge bg-brand-500 text-white text-[11px] font-bold">
                     Ready to Log
                   </span>
                 </div>
@@ -353,19 +353,19 @@ export function ExerciseLogModal({
                   <p className="text-xl sm:text-2xl font-black text-surface-900">
                     {weight > 0 ? `${weight} kg` : 'Bodyweight'} × {reps} reps × {sets} sets
                   </p>
-                  <p className="text-xs text-surface-400 mt-1">
+                  <p className="text-xs text-surface-500 mt-1">
                     {sets} completed working {sets === 1 ? 'set' : 'sets'}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#202733] text-center">
-                  <div className="p-2.5 rounded-lg bg-[#151A23] border border-[#202733]">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-brand-100 text-center">
+                  <div className="p-2 rounded-lg bg-white/80">
                     <p className="text-[10px] uppercase font-bold text-surface-400">Estimated Volume</p>
                     <p className="text-sm font-black text-surface-900 mt-0.5">
                       {estimatedVolumeKg > 0 ? `${estimatedVolumeKg.toLocaleString()} kg` : 'Bodyweight'}
                     </p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#151A23] border border-[#202733]">
+                  <div className="p-2 rounded-lg bg-white/80">
                     <p className="text-[10px] uppercase font-bold text-surface-400">Date</p>
                     <p className="text-sm font-black text-surface-900 mt-0.5">
                       Today
@@ -374,8 +374,8 @@ export function ExerciseLogModal({
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#11151D] border border-[#202733] text-xs text-surface-400 flex items-start gap-2">
-                <Sparkles size={15} className="text-brand-400 flex-shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-surface-50 border border-surface-200 text-xs text-surface-600 flex items-start gap-2">
+                <Sparkles size={15} className="text-brand-600 flex-shrink-0 mt-0.5" />
                 <p>
                   Confirming will immediately update your Home dashboard, volume analytics, and any corresponding scheduled plan workout.
                 </p>
@@ -385,7 +385,7 @@ export function ExerciseLogModal({
         </div>
 
         {/* ── Footer Actions ── */}
-        <div className="p-4 border-t border-[#202733] flex items-center justify-end gap-2.5 bg-[#11151D]">
+        <div className="p-4 border-t border-surface-100 flex items-center justify-end gap-2.5 bg-surface-50/50">
           {step === 'input' ? (
             <>
               <button

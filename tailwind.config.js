@@ -12,32 +12,30 @@ export default {
       },
       colors: {
         brand: {
-          50:  '#1e1b4b',
-          100: '#2e1065',
-          200: '#3b0764',
-          300: '#581c87',
-          400: '#7c3aed',
-          500: '#8b5cf6', // electric purple / indigo
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50:  '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#2563eb',
+          600: '#1d4ed8',
+          700: '#1e40af',
+          800: '#1e3a8a',
+          900: '#172554',
+          950: '#0f172a',
         },
         surface: {
-          50:  '#080A0F', // deepest gym background
-          100: '#0D1017', // app background / page canvas
-          150: '#11151D', // secondary container background
-          200: '#1F2633', // subtle low-contrast borders & dividers
-          250: '#242D3C', // card border & active borders
-          300: '#2E3848', // elevated border / hover lines
-          400: '#64748B', // muted labels / placeholders
-          500: '#94A3B8', // secondary text
-          600: '#CBD5E1', // readable body text
-          700: '#E2E8F0', // high-contrast text
-          800: '#F1F5F9', // bright titles
-          900: '#FFFFFF', // pure white primary text
-          950: '#FFFFFF',
+          50:  '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+          950: '#020617',
         },
       },
       borderRadius: {
@@ -46,9 +44,9 @@ export default {
         '2xl': '1.25rem',
       },
       boxShadow: {
-        card: '0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.4)',
-        'card-hover': '0 8px 30px -4px rgba(0, 0, 0, 0.6), 0 4px 10px -2px rgba(0, 0, 0, 0.5)',
-        glow: '0 0 24px rgba(139, 92, 246, 0.25)',
+        card: '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06)',
+        'card-hover': '0 4px 12px 0 rgb(0 0 0 / 0.10), 0 2px 4px -1px rgb(0 0 0 / 0.06)',
+        glow: '0 0 20px rgb(99 102 241 / 0.15)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',

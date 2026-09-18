@@ -12,43 +12,43 @@ export function CoachRecommendationCard({ recommendation }: CoachRecommendationC
       case 'PROGRESSION':
         return {
           icon: TrendingUp,
-          bg: 'bg-emerald-950/60',
-          border: 'border-emerald-800/40',
-          text: 'text-emerald-400',
-          badgeBg: 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/40'
+          bg: 'bg-emerald-50',
+          border: 'border-emerald-200',
+          text: 'text-emerald-700',
+          badgeBg: 'bg-emerald-100 text-emerald-800'
         }
       case 'PLATEAU':
         return {
           icon: AlertTriangle,
-          bg: 'bg-amber-950/60',
-          border: 'border-amber-800/40',
-          text: 'text-amber-400',
-          badgeBg: 'bg-amber-950/80 text-amber-300 border border-amber-800/40'
+          bg: 'bg-amber-50',
+          border: 'border-amber-200',
+          text: 'text-amber-700',
+          badgeBg: 'bg-amber-100 text-amber-800'
         }
       case 'VOLUME':
         return {
           icon: BarChart2,
-          bg: 'bg-sky-950/60',
-          border: 'border-sky-800/40',
-          text: 'text-sky-400',
-          badgeBg: 'bg-sky-950/80 text-sky-300 border border-sky-800/40'
+          bg: 'bg-sky-50',
+          border: 'border-sky-200',
+          text: 'text-sky-700',
+          badgeBg: 'bg-sky-100 text-sky-800'
         }
       case 'CONSISTENCY':
         return {
           icon: Calendar,
-          bg: 'bg-indigo-950/60',
-          border: 'border-indigo-800/40',
-          text: 'text-indigo-400',
-          badgeBg: 'bg-indigo-950/80 text-indigo-300 border border-indigo-800/40'
+          bg: 'bg-indigo-50',
+          border: 'border-indigo-200',
+          text: 'text-indigo-700',
+          badgeBg: 'bg-indigo-100 text-indigo-800'
         }
       case 'RECOVERY':
       default:
         return {
           icon: ShieldCheck,
-          bg: 'bg-purple-950/60',
-          border: 'border-purple-800/40',
-          text: 'text-purple-400',
-          badgeBg: 'bg-purple-950/80 text-purple-300 border border-purple-800/40'
+          bg: 'bg-purple-50',
+          border: 'border-purple-200',
+          text: 'text-purple-700',
+          badgeBg: 'bg-purple-100 text-purple-800'
         }
     }
   }
@@ -57,7 +57,7 @@ export function CoachRecommendationCard({ recommendation }: CoachRecommendationC
   const Icon = config.icon
 
   return (
-    <div className={cn("p-5 rounded-2xl bg-[#151A23] border border-[#202733] shadow-xs transition-all hover:border-surface-600", config.border)}>
+    <div className={cn("card p-5 border transition-all hover:shadow-md", config.border)}>
       {/* Header Badges */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
@@ -69,29 +69,29 @@ export function CoachRecommendationCard({ recommendation }: CoachRecommendationC
           </span>
         </div>
 
-        <span className="text-[10px] font-semibold text-surface-400 bg-[#11151D] border border-[#202733] px-2 py-0.5 rounded">
+        <span className="text-[10px] font-semibold text-surface-400 bg-surface-100 px-2 py-0.5 rounded">
           {recommendation.confidence} CONFIDENCE
         </span>
       </div>
 
       {/* Title & Recommendation */}
-      <h3 className="font-bold text-white text-base mb-1.5">
+      <h3 className="font-bold text-surface-900 text-base mb-1.5">
         {recommendation.title}
       </h3>
-      <p className="text-surface-300 text-sm leading-relaxed mb-3">
+      <p className="text-surface-700 text-sm leading-relaxed mb-3">
         {recommendation.recommendation}
       </p>
 
       {/* Reason */}
-      <div className="text-xs text-surface-300 mb-3 bg-[#11151D] p-2.5 rounded-xl border border-[#202733]">
-        <span className="font-semibold text-white">Interpretation: </span>
+      <div className="text-xs text-surface-600 mb-3 bg-surface-50 p-2.5 rounded-lg border border-surface-200/60">
+        <span className="font-semibold text-surface-800">Interpretation: </span>
         {recommendation.reason}
       </div>
 
       {/* Supporting Data (Transparency) */}
-      <div className="flex items-start gap-1.5 text-[11px] text-surface-400 pt-2 border-t border-[#202733]">
-        <Database size={13} className="text-brand-400 mt-0.5 flex-shrink-0" />
-        <span className="font-mono text-surface-400 font-medium">
+      <div className="flex items-start gap-1.5 text-[11px] text-surface-500 pt-2 border-t border-surface-100">
+        <Database size={13} className="text-brand-500 mt-0.5 flex-shrink-0" />
+        <span className="font-mono text-surface-600 font-medium">
           Evidence: {recommendation.supportingData}
         </span>
       </div>

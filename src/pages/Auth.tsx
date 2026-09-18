@@ -34,8 +34,8 @@ function Field({ id, label, type = 'text', value, onChange, error, placeholder, 
   return (
     <div>
       {label && (
-        <label htmlFor={id} className="block text-sm font-medium text-surface-300 mb-1.5">
-          {label} {required && <span className="text-brand-400">*</span>}
+        <label htmlFor={id} className="block text-sm font-medium text-surface-700 mb-1.5">
+          {label} {required && <span className="text-brand-500">*</span>}
         </label>
       )}
       <div className="relative">
@@ -46,7 +46,7 @@ function Field({ id, label, type = 'text', value, onChange, error, placeholder, 
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           autoComplete={autoComplete}
-          className={`input-base ${error ? 'border-red-500 focus:border-red-500' : ''} ${isPassword ? 'pr-10' : ''}`}
+          className={`input-base ${error ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : ''} ${isPassword ? 'pr-10' : ''}`}
           aria-describedby={error ? `${id}-error` : undefined}
           aria-invalid={!!error}
         />
@@ -54,7 +54,7 @@ function Field({ id, label, type = 'text', value, onChange, error, placeholder, 
           <button
             type="button"
             onClick={() => setShowPassword(s => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-white transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 transition-colors"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
             tabIndex={-1}
           >
@@ -63,7 +63,7 @@ function Field({ id, label, type = 'text', value, onChange, error, placeholder, 
         )}
       </div>
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+        <p id={`${id}-error`} role="alert" className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
           <AlertCircle size={12} aria-hidden="true" />
           {error}
         </p>
@@ -74,8 +74,8 @@ function Field({ id, label, type = 'text', value, onChange, error, placeholder, 
 
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <div role="alert" className="flex items-start gap-2 bg-red-950/50 border border-red-800/50 text-red-300 text-sm rounded-xl px-4 py-3">
-      <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-red-400" aria-hidden="true" />
+    <div role="alert" className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+      <AlertCircle size={16} className="flex-shrink-0 mt-0.5" aria-hidden="true" />
       <span>{message}</span>
     </div>
   )
@@ -83,8 +83,8 @@ export function ErrorBanner({ message }: { message: string }) {
 
 export function SuccessBanner({ message }: { message: string }) {
   return (
-    <div role="status" className="flex items-start gap-2 bg-emerald-950/50 border border-emerald-800/50 text-emerald-300 text-sm rounded-xl px-4 py-3">
-      <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5 text-emerald-400" aria-hidden="true" />
+    <div role="status" className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-lg px-4 py-3">
+      <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5 text-emerald-600" aria-hidden="true" />
       <span>{message}</span>
     </div>
   )
@@ -112,10 +112,10 @@ function GoogleAuthButton({ disabled }: { disabled: boolean }) {
         type="button"
         onClick={handleGoogle}
         disabled={disabled || loading}
-        className="btn-secondary w-full justify-center bg-[#11151D] hover:bg-[#1A202B] text-white border-[#202733] shadow-xs font-semibold py-2.5"
+        className="btn-secondary w-full justify-center bg-white hover:bg-surface-50 text-surface-900 border-surface-200 shadow-sm"
       >
         {loading ? (
-          <Loader2 size={16} className="animate-spin mr-2 text-surface-400" aria-hidden="true" />
+          <Loader2 size={16} className="animate-spin mr-2 text-surface-500" aria-hidden="true" />
         ) : (
           <svg className="w-5 h-5 mr-2.5" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -129,10 +129,10 @@ function GoogleAuthButton({ disabled }: { disabled: boolean }) {
 
       <div className="relative mt-6 mb-2">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-[#202733]"></div>
+          <div className="w-full border-t border-surface-200"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-3 bg-[#151A23] text-surface-400 text-xs font-medium uppercase tracking-wider">or email</span>
+          <span className="px-3 bg-white text-surface-500 text-xs font-medium uppercase tracking-wider">or email</span>
         </div>
       </div>
     </div>
@@ -199,13 +199,13 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080A0F] flex items-center justify-center px-4 py-8 text-white">
+    <div className="min-h-screen bg-surface-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <GYMTrackLogo size="lg" />
           </div>
-          <p className="text-surface-400 text-sm">Welcome back. Sign in to continue.</p>
+          <p className="text-surface-500 text-sm">Welcome back. Sign in to continue.</p>
         </div>
 
         {flow === 'verification' ? (
@@ -219,7 +219,7 @@ export function Login() {
           />
         ) : (
           <>
-            <form onSubmit={handleSubmit} noValidate className="p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-2xl space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="card p-6 space-y-4">
               {globalError && <ErrorBanner message={globalError} />}
 
               <GoogleAuthButton disabled={submitting} />
@@ -238,10 +238,10 @@ export function Login() {
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="login-password" className="block text-sm font-medium text-surface-300">
-                    Password <span className="text-brand-400">*</span>
+                  <label htmlFor="login-password" className="block text-sm font-medium text-surface-700">
+                    Password <span className="text-brand-500">*</span>
                   </label>
-                  <Link to="/forgot-password" className="text-xs text-brand-400 hover:text-brand-300 hover:underline">
+                  <Link to="/forgot-password" className="text-xs text-brand-600 hover:text-brand-700 hover:underline">
                     Forgot password?
                   </Link>
                 </div>
@@ -262,7 +262,7 @@ export function Login() {
                 type="submit"
                 id="login-submit"
                 disabled={submitting}
-                className="btn-primary w-full justify-center mt-2 font-bold py-2.5"
+                className="btn-primary w-full justify-center mt-2"
               >
                 {submitting ? (
                   <>
@@ -275,9 +275,9 @@ export function Login() {
               </button>
             </form>
 
-            <p className="text-center text-sm text-surface-400 mt-5">
+            <p className="text-center text-sm text-surface-500 mt-5">
               Don't have an account?{' '}
-              <Link to="/signup" className="text-brand-400 font-semibold hover:underline">
+              <Link to="/signup" className="text-brand-600 font-semibold hover:underline">
                 Get started
               </Link>
             </p>
@@ -352,14 +352,14 @@ export function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080A0F] flex items-center justify-center px-4 py-8 text-white">
+    <div className="min-h-screen bg-surface-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <GYMTrackLogo size="lg" />
           </div>
-          <h1 className="text-xl font-bold text-white tracking-tight mb-1">Create your account</h1>
-          <p className="text-surface-400 text-sm">Start training smarter today.</p>
+          <h1 className="text-xl font-bold text-surface-900 mb-1">Create your account</h1>
+          <p className="text-surface-500 text-sm">Start training smarter today.</p>
         </div>
 
         {flow === 'verification' ? (
@@ -372,7 +372,7 @@ export function Signup() {
           />
         ) : (
           <>
-            <form onSubmit={handleSubmit} noValidate className="p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-2xl space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="card p-6 space-y-4">
               {globalError && <ErrorBanner message={globalError} />}
 
               <GoogleAuthButton disabled={submitting} />
@@ -440,7 +440,7 @@ export function Signup() {
                 type="submit"
                 id="signup-submit"
                 disabled={submitting}
-                className="btn-primary w-full justify-center mt-2 font-bold py-2.5"
+                className="btn-primary w-full justify-center mt-2"
               >
                 {submitting ? (
                   <>
@@ -457,9 +457,9 @@ export function Signup() {
               </p>
             </form>
 
-            <p className="text-center text-sm text-surface-400 mt-5">
+            <p className="text-center text-sm text-surface-500 mt-5">
               Already have an account?{' '}
-              <Link to="/login" className="text-brand-400 font-semibold hover:underline">
+              <Link to="/login" className="text-brand-600 font-semibold hover:underline">
                 Sign in
               </Link>
             </p>
