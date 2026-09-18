@@ -194,6 +194,21 @@ export async function clearActiveSession(workoutId: string): Promise<void> {
   })
 }
 
+export async function clearAllActiveSessions(): Promise<void> {
+  try {
+    const db = await getDB()
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('active_sessions', 'readwrite')
+      const store = tx.objectStore('active_sessions')
+      const req = store.clear()
+      req.onsuccess = () => resolve()
+      req.onerror = () => reject(req.error)
+    })
+  } catch (err) {
+    console.warn('[GYMTrack] clearAllActiveSessions notice:', err)
+  }
+}
+
 // ─── Cached Workouts Operations ───────────────────────────────────────────────
 
 export async function cacheWorkout(workout: Workout): Promise<void> {

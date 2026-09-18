@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { getProfile, createProfile, updateProfile } from '@/lib/profile'
 import { mapAuthError } from '@/lib/authErrors'
 import { getAuthRedirectUrl, getPasswordResetRedirectUrl } from '@/lib/authRedirect'
+import { clearAllActiveSessions, clearQueuedExercisesForTodayWorkout } from '@/lib/offline/db'
 import type { Profile, ProfileInsert, ProfileUpdate } from '@/types/supabase'
 
 // ─── Context Shape ────────────────────────────────────────────────────────────
@@ -65,6 +66,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
  */
 function purgeUserStorageCache() {
   try {
+    clearQueuedExercisesForTodayWorkout()
+    clearAllActiveSessions().catch(() => {})
+  } catch {}
+
+  try {
     const keysToRemove: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
@@ -77,6 +83,7 @@ function purgeUserStorageCache() {
          key.startsWith('gymtrack:plan_progress_') ||
          key.startsWith('gymtrack:plan_day_completions_') ||
          key.startsWith('gymtrack:cached_') ||
+         key.startsWith('gymtrack_queued_') ||
          key === 'gymtrack_ai_proposal' ||
          key === 'gymtrack:demo_mode')
       ) {

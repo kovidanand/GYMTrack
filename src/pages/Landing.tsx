@@ -471,7 +471,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-surface-800 mt-8 pt-6 text-xs text-center">
-            © {new Date().getFullYear()} GYMTrack. Phase 1 — Development Preview.
+            © {new Date().getFullYear()} GYMTrack. Train. Track. Improve. All rights reserved.
           </div>
         </div>
       </footer>

@@ -92,9 +92,9 @@ export function ExerciseVideoPlayer({
         ) : (
           <div className="flex flex-col items-center gap-2 z-10">
             <AlertCircle className="w-8 h-8 text-surface-400 stroke-1" />
-            <p className="text-sm font-semibold text-surface-700">Demonstration video coming soon</p>
+            <p className="text-sm font-semibold text-surface-700">Exercise demonstration unavailable</p>
             <p className="text-xs text-surface-400 max-w-xs">
-              Check step-by-step instructions below for proper movement execution.
+              Refer to the step-by-step form cues and instructions below for proper movement execution.
             </p>
           </div>
         )}

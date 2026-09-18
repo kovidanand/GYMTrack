@@ -79,9 +79,14 @@ class SyncEngine {
     })
   }
 
-  public async refreshPendingCount(): Promise<number> {
+  public async refreshPendingCount(userId?: string): Promise<number> {
     try {
-      const ops = await getPendingSyncOperations()
+      let targetUserId = userId
+      if (!targetUserId) {
+        const { data } = await supabase.auth.getSession()
+        targetUserId = data.session?.user?.id
+      }
+      const ops = await getPendingSyncOperations(targetUserId)
       this.pendingCount = ops.length
       this.notifyListeners()
       return this.pendingCount
@@ -92,9 +97,9 @@ class SyncEngine {
 
   /**
    * Main synchronization routine: iterates through queued offline operations in FIFO order
-   * and idempotently persists them to Supabase.
+   * strictly scoped to the authenticated user and idempotently persists them to Supabase.
    */
-  public async syncPending(): Promise<{ success: boolean; syncedCount: number; error: string | null }> {
+  public async syncPending(userId?: string): Promise<{ success: boolean; syncedCount: number; error: string | null }> {
     if (this.isSyncing) {
       return { success: true, syncedCount: 0, error: null }
     }
@@ -104,6 +109,19 @@ class SyncEngine {
       return { success: false, syncedCount: 0, error: 'Network is offline' }
     }
 
+    // Strictly enforce that syncing only runs for the authenticated user
+    let targetUserId = userId
+    if (!targetUserId) {
+      const { data } = await supabase.auth.getSession()
+      targetUserId = data.session?.user?.id
+    }
+
+    if (!targetUserId) {
+      this.updateStatus('ONLINE')
+      this.isSyncing = false
+      return { success: true, syncedCount: 0, error: null }
+    }
+
     this.isSyncing = true
     this.updateStatus('SYNCING')
 
@@ -111,7 +129,7 @@ class SyncEngine {
     let failureError: string | null = null
 
     try {
-      const operations = await getPendingSyncOperations()
+      const operations = await getPendingSyncOperations(targetUserId)
       this.pendingCount = operations.length
 
       if (operations.length === 0) {
@@ -121,6 +139,11 @@ class SyncEngine {
       }
 
       for (const op of operations) {
+        // Multi-user security: Skip any operation not matching the active authenticated user
+        if (op.userId !== targetUserId) {
+          continue
+        }
+
         // Prevent infinite loops on broken operations
         if (op.retryCount >= 5) {
           await updateSyncOperation(op.id, { syncStatus: 'failed', lastError: 'Max retries exceeded' })
@@ -129,7 +152,7 @@ class SyncEngine {
 
         await updateSyncOperation(op.id, { syncStatus: 'syncing' })
 
-        const syncResult = await this.executeOperation(op)
+        const syncResult = await this.executeOperation(op, targetUserId)
 
         if (syncResult.success) {
           await removeSyncOperation(op.id)
@@ -148,7 +171,7 @@ class SyncEngine {
         }
       }
 
-      await this.refreshPendingCount()
+      await this.refreshPendingCount(targetUserId)
 
       if (failureError) {
         this.updateStatus('SYNC ERROR', failureError)
@@ -185,7 +208,10 @@ class SyncEngine {
    * Idempotently executes an operation against Supabase.
    * Guarantees that duplicate attempts will NOT duplicate sessions or sets.
    */
-  private async executeOperation(op: SyncOperation): Promise<{ success: boolean; isNetworkError?: boolean; error?: string }> {
+  private async executeOperation(op: SyncOperation, targetUserId: string): Promise<{ success: boolean; isNetworkError?: boolean; error?: string }> {
+    if (op.userId !== targetUserId) {
+      return { success: false, error: 'User ID mismatch on sync operation' }
+    }
     try {
       if (op.operationType === 'SAVE_WORKOUT_SESSION') {
         const { sessionData, setsData } = op.payload

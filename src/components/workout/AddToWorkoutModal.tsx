@@ -187,7 +187,7 @@ export function AddToWorkoutModal({ exercise, isOpen, onOpenChange }: AddToWorko
               </div>
             )}
 
-            {/* ── 1-Tap Fast Logging Action (Phase 15) ── */}
+            {/* ── Quick Fast Logging Action ── */}
             <div className="card p-4 bg-gradient-to-br from-brand-50/60 to-surface-50 border border-brand-200 rounded-2xl space-y-3">
               <div className="flex items-center gap-2">
                 <Zap size={16} className="text-brand-600 fill-brand-600" />

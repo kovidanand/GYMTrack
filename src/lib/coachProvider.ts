@@ -818,6 +818,20 @@ function generateDeterministicAnswer(
           'How did I progress this week?'
         ]
       }
+    } else if (analysis.recentSessionsCount === 0) {
+      return {
+        content: `Progress Analysis\n\n` +
+          `I don't have enough workout history yet. Log a few sessions and I can give you more personalized guidance on your weekly progression.\n\n` +
+          `Recommendation:\n` +
+          `Once you record sets in the Library, Plans, or Home, your volume progression, consistency, and strength trends will automatically update here.\n\n` +
+          `Evidence: 0 workout sessions recorded in your account.`,
+        supportingData: 'Awaiting your first logged workout session.',
+        suggestedQuestions: [
+          'What should I train today?',
+          'How do I do bench press?',
+          'Explain progressive overload.'
+        ]
+      }
     } else {
       return {
         content: `Volume Progression Analysis\n\n` +
@@ -1098,8 +1112,14 @@ function generateDeterministicAnswer(
     }
   }
 
-  // ─── I. General Fitness: "What weight should I use?" ──────────────────────
-  if (query.includes('what weight') || query.includes('weight should i use') || query.includes('increase weight')) {
+  // ─── I. Weight Queries & History Guidance ──────────────────────
+  if (
+    query.includes('what weight') || 
+    query.includes('weight should i use') || 
+    query.includes('increase weight') ||
+    query.includes('weight did i use') ||
+    query.includes('last time')
+  ) {
     const matchedExSlug = findMatchedExerciseSlug(query)
     if (matchedExSlug) {
       const exDetails = get_exercise_details(matchedExSlug)
@@ -1108,7 +1128,7 @@ function generateDeterministicAnswer(
 
       if (histEx && histEx.latest_weight > 0) {
         return {
-          content: `Weight Recommendation: ${exName}\n\n` +
+          content: `Weight Details: ${exName}\n\n` +
             `Your logged history shows your latest working weight was ${histEx.latest_weight} kg for ${histEx.latest_reps} reps.\n\n` +
             `Key Points:\n` +
             `• If you completed all target reps with 1-2 reps in reserve, increase by +1.0 kg to +2.5 kg.\n` +
@@ -1121,12 +1141,27 @@ function generateDeterministicAnswer(
             'Explain progressive overload.'
           ]
         }
+      } else {
+        return {
+          content: `Weight Selection Guidance: ${exName}\n\n` +
+            `I don't have enough workout history yet for ${exName}. Log a few sessions and I can give you more personalized guidance on your past weights.\n\n` +
+            `Key Guidelines For Your First Session:\n` +
+            `• Start with an empty barbell (20 kg) or light dumbbells to practice movement trajectory.\n` +
+            `• Increment load until you find a weight where 8-10 repetitions feel challenging with 2 reps remaining in reserve.\n` +
+            `• Record this in GYMTrack as your baseline.`,
+          supportingData: `No logged sessions for ${exName}.`,
+          suggestedQuestions: [
+            `How do I do ${exName}?`,
+            'What should I train today?',
+            'Explain progressive overload.'
+          ]
+        }
       }
     }
 
     return {
       content: `Weight Selection Guidance\n\n` +
-        `I don't have enough logged data to personalize your weight yet. Log a few sessions and I'll be able to compare your progression.\n\n` +
+        `I don't have enough workout history yet. Log a few sessions and I can give you more personalized guidance on your past weights.\n\n` +
         `Key Guidelines For Your First Session:\n` +
         `• Start with an empty barbell (20 kg) or light dumbbells to practice movement trajectory.\n` +
         `• Increment load until you find a weight where 8-10 repetitions feel challenging with 2 reps remaining in reserve.\n` +

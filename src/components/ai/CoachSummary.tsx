@@ -31,7 +31,7 @@ export function CoachSummary({ analysis }: CoachSummaryProps) {
             )}
           </div>
           <p className="font-bold text-surface-900 text-lg line-clamp-1">
-            {biggestImprovement ? biggestImprovement.exerciseName : totalWorkouts > 0 ? 'Baseline Phase' : 'No Workouts'}
+            {biggestImprovement ? biggestImprovement.exerciseName : totalWorkouts > 0 ? 'Baseline' : 'No Workouts'}
           </p>
           <p className="text-xs text-surface-500 mt-0.5">
             {biggestImprovement?.oneRMChangePct
