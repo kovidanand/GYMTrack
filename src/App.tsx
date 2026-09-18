@@ -58,7 +58,7 @@ export default function App() {
               <Route path="/history" element={<Navigate to="/progress" replace />} />
               <Route path="/history/:id" element={<SessionDetail />} />
               <Route path="/progress"  element={<Progress />} />
-              <Route path="/ai-coach"  element={<Navigate to="/dashboard" replace />} />
+              <Route path="/ai-coach"  element={<AiCoach />} />
               <Route path="/profile"   element={<Profile />} />
             </Route>
           </Route>

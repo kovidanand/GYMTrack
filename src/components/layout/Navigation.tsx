@@ -50,14 +50,14 @@ export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
                   id={`top-nav-${item.label.toLowerCase()}`}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                      'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all',
                       isActive
-                        ? 'bg-surface-100 text-surface-900 font-semibold shadow-2xs'
-                        : 'text-surface-600 hover:text-surface-900 hover:bg-surface-50'
+                        ? 'bg-brand-50 text-brand-700 shadow-2xs ring-1 ring-brand-200'
+                        : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100/70'
                     )
                   }
                 >
-                  <item.icon size={17} aria-hidden="true" className="text-surface-500" />
+                  <item.icon size={16} aria-hidden="true" className={cn('transition-colors', 'text-current')} />
                   <span>{item.label}</span>
                 </NavLink>
               </li>
@@ -133,10 +133,10 @@ const mobileNavItems = [
 export function MobileNav() {
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-surface-200 safe-area-inset-bottom shadow-[0_-4px_16px_rgba(0,0,0,0.05)]"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-surface-200 safe-area-inset-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
       aria-label="Mobile navigation"
     >
-      <ul className="flex items-center h-14" role="list">
+      <ul className="flex items-center h-16 px-1" role="list">
         {mobileNavItems.map(item => (
           <li key={item.to} className="flex-1">
             <NavLink
@@ -144,7 +144,7 @@ export function MobileNav() {
               id={`mobile-nav-${item.label.toLowerCase()}`}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center justify-center gap-1 py-1 text-xs font-medium transition-colors w-full',
+                  'flex flex-col items-center justify-center gap-1 py-1.5 text-xs font-semibold transition-all w-full rounded-lg select-none',
                   isActive
                     ? 'text-brand-600 font-bold'
                     : 'text-surface-500 hover:text-surface-800'
@@ -152,8 +152,14 @@ export function MobileNav() {
               }
               aria-label={item.label}
             >
-              <item.icon size={19} aria-hidden="true" />
-              <span className="text-[10px] tracking-tight">{item.label}</span>
+              {({ isActive }) => (
+                <>
+                  <div className={cn('relative flex items-center justify-center p-1 rounded-full transition-colors', isActive && 'bg-brand-50')}>
+                    <item.icon size={20} aria-hidden="true" className={isActive ? 'text-brand-600 stroke-[2.5]' : 'text-surface-500'} />
+                  </div>
+                  <span className={cn('text-[10px] tracking-tight leading-none', isActive ? 'font-bold text-brand-700' : 'text-surface-500')}>{item.label}</span>
+                </>
+              )}
             </NavLink>
           </li>
         ))}

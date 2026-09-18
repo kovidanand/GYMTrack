@@ -10,6 +10,7 @@ import {
   Dumbbell,
   ChevronDown,
   ChevronUp,
+  X,
 } from 'lucide-react'
 import { PageHeader, StatCard, EmptyState } from '@/components/shared'
 import { FourteenDayHistory } from '@/components/progress/FourteenDayHistory'
@@ -150,6 +151,20 @@ export default function Progress() {
 
   const [historyViewMode, setHistoryViewMode] = useState<'14day' | 'list'>('list')
   const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
+  const [selectedVolumeDay, setSelectedVolumeDay] = useState<{ date: string; value: number; label?: string } | null>(null)
+
+  // Find sessions for selected volume day
+  const inspectedDaySessions = useMemo(() => {
+    if (!selectedVolumeDay) return []
+    const targetLabel = selectedVolumeDay.label
+    return history.filter(s => {
+      if (!s.started_at) return false
+      if (targetLabel && s.started_at.startsWith(targetLabel)) return true
+      const d = new Date(s.started_at)
+      const displayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      return displayDate === selectedVolumeDay.date
+    })
+  }, [history, selectedVolumeDay])
 
   // Derived exercise progression
   const exerciseProgressList = useMemo(() => {
@@ -302,11 +317,20 @@ export default function Progress() {
           <div className="min-h-[220px]">
             {hasWorkoutData && volumeChart && volumeChart.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={volumeChart} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart
+                  data={volumeChart}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  onClick={(state) => {
+                    if (state && state.activePayload && state.activePayload[0]) {
+                      setSelectedVolumeDay(state.activePayload[0].payload)
+                    }
+                  }}
+                  className="cursor-pointer"
+                >
                   <defs>
                     <linearGradient id="volumeGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.18} />
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -332,7 +356,7 @@ export default function Progress() {
                     }}
                   />
                   <Tooltip
-                    cursor={{ stroke: '#7C3AED', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    cursor={{ stroke: '#2563eb', strokeWidth: 1.5, strokeDasharray: '4 4' }}
                     contentStyle={{
                       backgroundColor: '#0F172A',
                       borderRadius: '10px',
@@ -347,9 +371,10 @@ export default function Progress() {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#7C3AED"
-                    strokeWidth={2}
+                    stroke="#2563eb"
+                    strokeWidth={2.5}
                     fill="url(#volumeGrad)"
+                    activeDot={{ r: 5, fill: '#2563eb', stroke: '#ffffff', strokeWidth: 2 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -365,6 +390,83 @@ export default function Progress() {
               </div>
             )}
           </div>
+
+          {/* Interactive Date Inspection Drawer */}
+          {selectedVolumeDay && (
+            <div className="mt-4 p-4 rounded-xl bg-surface-50 border border-surface-200 animate-slide-up space-y-2 relative">
+              <button
+                type="button"
+                onClick={() => setSelectedVolumeDay(null)}
+                className="absolute top-3 right-3 p-1 rounded-lg text-surface-400 hover:text-surface-700"
+                aria-label="Close date details"
+              >
+                <X size={14} />
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-surface-900">
+                  {selectedVolumeDay.date}
+                </span>
+                <span className={cn(
+                  'badge text-[10px] font-bold',
+                  selectedVolumeDay.value > 0
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-surface-100 text-surface-500'
+                )}>
+                  {formatVolumeDisplay(selectedVolumeDay.value)}
+                </span>
+              </div>
+
+              {inspectedDaySessions.length > 0 ? (
+                <div className="space-y-3 pt-1">
+                  {inspectedDaySessions.map((session, sIdx) => {
+                    const sets = session.workout_session_sets || []
+                    const exMap = new Map<string, Array<{ weight: number; reps: number }>>()
+                    sets.forEach((s: any) => {
+                      if (!s.completed) return
+                      const name = s.exercise_name || 'Exercise'
+                      const cur = exMap.get(name) || []
+                      cur.push({ weight: Number(s.weight) || 0, reps: Number(s.reps) || 0 })
+                      exMap.set(name, cur)
+                    })
+                    const exercises = Array.from(exMap.entries())
+
+                    return (
+                      <div key={sIdx} className="text-xs space-y-1.5 border-t border-surface-200/60 pt-2 first:border-0 first:pt-0">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-surface-900">{session.workout_name || 'Workout'}</span>
+                          <span className="text-surface-500 font-mono text-[11px]">
+                            {session.duration_seconds != null && session.duration_seconds > 0 && `${formatDuration(session.duration_seconds)} · `}
+                            {formatVolumeDisplay(Number(session.total_volume) || 0)}
+                          </span>
+                        </div>
+                        {exercises.length > 0 && (
+                          <div className="space-y-1 pl-2">
+                            {exercises.map(([exName, exSets], eIdx) => (
+                              <div key={eIdx} className="flex justify-between text-[11px] text-surface-600">
+                                <span>• {exName}</span>
+                                <span className="font-mono text-surface-500">
+                                  {exSets.map(s => s.weight > 0 ? `${s.weight}kg×${s.reps}` : `${s.reps}r`).join(', ')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : selectedVolumeDay.value > 0 ? (
+                <p className="text-xs text-surface-600">
+                  {formatVolumeDisplay(selectedVolumeDay.value)} total volume recorded on this date.
+                </p>
+              ) : (
+                <p className="text-xs text-surface-500">
+                  Rest day · No workouts logged on this date.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </section>
 

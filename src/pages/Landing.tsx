@@ -1,42 +1,53 @@
 import { Link } from 'react-router-dom'
 import {
   BarChart2, BookOpen, Timer, TrendingUp,
-  ChevronRight, Star, ArrowRight,
+  ChevronRight, ArrowRight,
   Dumbbell, Target, Zap, CheckCircle2,
+  CalendarDays, Bot, WifiOff, Star
 } from 'lucide-react'
 import { GYMTrackLogo } from '@/components/shared'
 import { SparkLine } from '@/components/progress/ProgressComponents'
 import { useState } from 'react'
 
-// ─── Mock data for previews ────────────────────────────────────────────────────
-
 const benchData = [60, 65, 67.5, 70, 72.5, 75, 80, 82.5, 87.5, 92.5]
 const squatData  = [80, 85, 90,  95,  100, 105, 110, 115, 120]
-const dlData     = [100,110,115,120, 125, 130, 132.5, 135, 140]
+const dlData     = [100, 110, 115, 120, 125, 130, 132.5, 135, 140]
 
 const features = [
   {
     icon: BarChart2,
     title: 'Workout Tracking',
-    description: 'Log exercises, sets, reps, weight and training duration. Every session recorded automatically.',
+    description: 'Log exercises, sets, reps, weight and training duration. Instant set tracking with zero friction.',
     color: 'bg-brand-50 text-brand-600',
   },
   {
     icon: BookOpen,
     title: 'Exercise Library',
-    description: 'Learn exercises with clear instructions, target muscles, tips and visual demonstrations.',
+    description: 'Master exercises with high-definition video demonstrations, target muscles, and form cues.',
     color: 'bg-sky-50 text-sky-600',
+  },
+  {
+    icon: CalendarDays,
+    title: 'Personalized Plans',
+    description: 'Goal-driven programs for muscle growth, strength, and conditioning with clear daily structure.',
+    color: 'bg-indigo-50 text-indigo-600',
   },
   {
     icon: TrendingUp,
     title: 'Progress Analytics',
-    description: 'Understand your strength, consistency and training volume over time with clean charts.',
+    description: 'Understand strength, consistency, and volume trends over time based on real logged lifts.',
     color: 'bg-emerald-50 text-emerald-600',
   },
   {
-    icon: Timer,
-    title: 'Training Timer',
-    description: 'Use a simple stopwatch and rest timer while training, so you stay focused and on pace.',
+    icon: Bot,
+    title: 'AI Coach',
+    description: 'Grounded fitness intelligence that analyzes your training history and guides your next session.',
+    color: 'bg-violet-50 text-violet-600',
+  },
+  {
+    icon: WifiOff,
+    title: 'Offline Workout Logging',
+    description: 'Train anywhere with full local offline recording that automatically syncs when you reconnect.',
     color: 'bg-amber-50 text-amber-600',
   },
 ]
@@ -205,32 +216,31 @@ export default function Landing() {
               Train. Track. Improve.
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-surface-900 leading-[1.1] tracking-tight mb-6">
-              Train smarter.{' '}
-              <span className="gradient-text">Track your</span>{' '}
-              progress.
+            <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-extrabold text-surface-900 leading-[1.12] tracking-tight mb-6">
+              Track every workout.<br />
+              <span className="text-brand-600">Understand your progress.</span><br />
+              Train with purpose.
             </h1>
 
             <p className="text-lg text-surface-600 leading-relaxed mb-8 max-w-xl">
-              GYMTrack helps you plan workouts, learn exercises, track every session
-              and understand your progress — all in one simple experience.
+              GYMTrack is your serious training companion. Plan structured routines, log every set with precision, and analyze real performance metrics — online or offline.
             </p>
 
             <div className="flex flex-wrap gap-3">
               <Link
                 to="/signup"
-                id="hero-start-training"
-                className="btn-primary text-base px-7 py-3.5"
+                id="hero-get-started"
+                className="btn-primary text-base px-7 py-3.5 shadow-sm font-bold"
               >
-                Start Tracking
+                Get Started
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link
-                to="/exercises"
-                id="hero-explore-exercises"
-                className="btn-secondary text-base px-7 py-3.5"
+                to="/login"
+                id="hero-login"
+                className="btn-secondary text-base px-7 py-3.5 font-bold"
               >
-                Explore Exercises
+                Log In
               </Link>
             </div>
 
@@ -444,7 +454,7 @@ export default function Landing() {
             id="landing-final-cta"
             className="inline-flex items-center gap-2 bg-white text-brand-700 font-bold text-base px-8 py-4 rounded-xl shadow-lg hover:bg-brand-50 transition-colors"
           >
-            Start Tracking
+            Get Started
             <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </div>

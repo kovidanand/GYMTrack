@@ -25,11 +25,12 @@ const muscleIllustrationColors: Record<string, { bg: string; accent: string }> =
 }
 
 export function ExerciseIllustration({ muscleGroup, className }: { muscleGroup: string; className?: string }) {
-  const style = muscleIllustrationColors[muscleGroup] ?? { bg: 'bg-surface-50', accent: 'text-surface-300' }
+  const style = muscleIllustrationColors[muscleGroup] ?? { bg: 'bg-surface-50', accent: 'text-surface-400' }
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-1.5 rounded-lg', style.bg, className)}>
-      <Dumbbell className={cn('w-8 h-8 opacity-60', style.accent)} aria-hidden="true" />
-      <span className="text-[10px] font-semibold text-surface-500 capitalize">{muscleGroup.replace('_', ' ')}</span>
+    <div className={cn('flex flex-col items-center justify-center gap-1 rounded-lg p-2 text-center select-none', style.bg, className)}>
+      <Dumbbell className={cn('w-6 h-6 opacity-60', style.accent)} aria-hidden="true" />
+      <span className="text-[10px] font-bold text-surface-700 capitalize">{muscleGroup.replace('_', ' ')}</span>
+      <span className="text-[9px] text-surface-400 font-medium">Demonstration unavailable</span>
     </div>
   )
 }

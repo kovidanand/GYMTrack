@@ -396,6 +396,7 @@ export function computeVolumeChartData(
     chartData.push({
       date: displayDate,
       value: dayVol,
+      label: dateKey,
     })
   }
 
