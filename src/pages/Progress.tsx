@@ -19,6 +19,7 @@ import { MuscleDistributionChart } from '@/components/progress/MuscleDistributio
 import { AiCoachInsightsPanel } from '@/components/progress/AiCoachInsightsPanel'
 import { useProgress, type TimeRange } from '@/hooks/useProgress'
 import { useWorkouts } from '@/hooks/useWorkouts'
+import type { PersonalRecord } from '@/types'
 import { formatDuration, formatRelativeDate, cn, formatVolumeDisplay } from '@/lib/utils'
 import { ExerciseDetailModal } from '@/components/exercise/ExerciseDetailModal'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
@@ -43,89 +44,73 @@ function HistorySessionRow({ session }: { session: any }) {
     for (const set of sets) {
       if (!set.completed) continue
       const name = set.exercise_name || 'Exercise'
-      const cur = map.get(name) || { name, sets: [] as Array<{ weight: number; reps: number }> }
-      cur.sets.push({ weight: Number(set.weight) || 0, reps: Number(set.reps) || 0 })
-      map.set(name, cur)
+      const existing = map.get(name) || { name, sets: [] as Array<{ weight: number; reps: number }> }
+      existing.sets.push({ weight: set.weight || 0, reps: set.reps || 0 })
+      map.set(name, existing)
     }
     return Array.from(map.values())
   }, [sets])
 
-  const totalVolume = sets
-    .filter((s: any) => s.completed)
-    .reduce((acc: number, s: any) => acc + (Number(s.weight) || 0) * (Number(s.reps) || 0), 0)
+  const totalSessionVolume = sets.reduce(
+    (acc: number, s: any) => acc + (s.completed && s.weight && s.reps ? s.weight * s.reps : 0),
+    0
+  )
+
+  const durationMin = session.duration_seconds ? Math.round(session.duration_seconds / 60) : null
 
   return (
-    <article className="card bg-white border border-surface-200 rounded-xl shadow-2xs overflow-hidden">
-      <button
-        className="w-full p-4 sm:p-5 text-left flex items-start justify-between gap-3 hover:bg-surface-50 transition-colors"
-        onClick={() => setExpanded(v => !v)}
-        aria-expanded={expanded}
-        aria-label={`${session.workout_name} — expand details`}
+    <div className="card p-4 transition-all bg-[#151A23] border border-[#202733] hover:border-brand-500/30 rounded-2xl">
+      <div
+        className="flex items-center justify-between cursor-pointer gap-2"
+        onClick={() => setExpanded(!expanded)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && setExpanded(!expanded)}
       >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h3 className="font-bold text-surface-900 text-sm">
-              {session.workout_name || 'Workout'}
-            </h3>
-            <span className={cn(
-              'badge text-[10px] font-bold',
-              session.status === 'completed'
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                : 'bg-surface-100 text-surface-500 border border-surface-200'
-            )}>
-              {session.status}
-            </span>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center shrink-0">
+            <Dumbbell size={18} className="text-brand-400" />
           </div>
-          <p className="text-xs text-surface-400">{formatRelativeDate(session.started_at)}</p>
-          <div className="flex flex-wrap items-center gap-3 text-xs text-surface-600 mt-2">
-            {exerciseMap.length > 0 && (
-              <span>{exerciseMap.length} exercise{exerciseMap.length !== 1 ? 's' : ''}</span>
-            )}
-            {sets.filter((s: any) => s.completed).length > 0 && (
-              <span>{sets.filter((s: any) => s.completed).length} sets</span>
-            )}
-            {totalVolume > 0 && (
-              <span className="font-semibold text-surface-800">
-                {(totalVolume / 1000).toFixed(1)}k kg
-              </span>
-            )}
-            {session.duration_seconds > 0 && (
-              <span>{formatDuration(session.duration_seconds)}</span>
-            )}
+          <div className="min-w-0">
+            <h3 className="font-bold text-white text-sm truncate">{session.workout_title || 'Workout Session'}</h3>
+            <p className="text-xs text-surface-400">
+              {formatRelativeDate(session.started_at)}
+              {durationMin ? ` · ${durationMin} min` : ''}
+              {totalSessionVolume > 0 ? ` · ${formatVolumeDisplay(totalSessionVolume)}` : ''}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-semibold text-surface-300 hidden sm:inline">
+            {sets.filter((s: any) => s.completed).length} sets
+          </span>
           <button
-            onClick={e => { e.stopPropagation(); navigate(`/history/${session.id}`) }}
-            className="text-xs text-brand-600 hover:text-brand-700 font-bold hidden sm:flex items-center gap-0.5"
-            aria-label="View full session record"
+            type="button"
+            className="p-1 text-surface-400 hover:text-white transition-colors"
+            aria-label={expanded ? 'Collapse details' : 'Expand details'}
           >
-            View <ChevronRight size={13} />
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
-          {expanded ? <ChevronUp size={16} className="text-surface-400" /> : <ChevronDown size={16} className="text-surface-400" />}
         </div>
-      </button>
+      </div>
 
-      {expanded && exerciseMap.length > 0 && (
-        <div className="border-t border-surface-100 px-4 sm:px-5 py-3 space-y-2 animate-fade-in">
-          {exerciseMap.map((ex, i) => (
-            <div key={i} className="flex items-start justify-between text-xs gap-4">
-              <span className="font-semibold text-surface-800 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-400 flex-shrink-0 mt-0.5" />
-                {ex.name}
-              </span>
-              <div className="text-surface-500 text-right flex-shrink-0">
-                {ex.sets.map((s, si) => (
-                  <div key={si} className="font-mono">
-                    {s.weight > 0 ? `${s.weight} kg × ${s.reps}` : `${s.reps} reps`}
-                  </div>
-                ))}
+      {expanded && (
+        <div className="mt-3 pt-3 border-t border-[#1F2633] space-y-2 animate-fade-in text-xs">
+          {exerciseMap.length > 0 ? (
+            exerciseMap.map((ex, idx) => (
+              <div key={idx} className="flex items-start justify-between py-1 border-b border-[#1F2633]/60 last:border-0">
+                <span className="font-medium text-surface-200">{ex.name}</span>
+                <span className="text-surface-400 font-mono text-[11px]">
+                  {ex.sets.map((s) => `${s.weight}kg×${s.reps}`).join(', ')}
+                </span>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-surface-500 text-xs italic">No set details recorded for this session.</p>
+          )}
         </div>
       )}
-    </article>
+    </div>
   )
 }
 
@@ -145,31 +130,28 @@ export default function Progress() {
     setTimeRange,
     loading,
     error,
+    refresh
   } = useProgress()
 
   const { activePlan, workouts } = useWorkouts()
 
-  const [historyViewMode, setHistoryViewMode] = useState<'14day' | 'list'>('list')
-  const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
   const [selectedVolumeDay, setSelectedVolumeDay] = useState<{ date: string; value: number; label?: string } | null>(null)
+  const [selectedExercise, setSelectedExercise] = useState<{ id: string; name: string } | null>(null)
+  const [historyViewMode, setHistoryViewMode] = useState<'list' | '14day'>('list')
 
-  // Find sessions for selected volume day
   const inspectedDaySessions = useMemo(() => {
     if (!selectedVolumeDay) return []
-    const targetLabel = selectedVolumeDay.label
     return history.filter(s => {
-      if (!s.started_at) return false
-      if (targetLabel && s.started_at.startsWith(targetLabel)) return true
-      const d = new Date(s.started_at)
-      const displayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      return displayDate === selectedVolumeDay.date
+      if (s.status !== 'completed' || !s.started_at) return false
+      const sessionDate = new Date(s.started_at).toISOString().split('T')[0]
+      return sessionDate === selectedVolumeDay.label || sessionDate === selectedVolumeDay.date
     })
   }, [history, selectedVolumeDay])
 
   // Derived exercise progression
   const exerciseProgressList = useMemo(() => {
     if (!personalRecords || personalRecords.length === 0) return []
-    return personalRecords.slice(0, 6).map(pr => {
+    return personalRecords.slice(0, 6).map((pr: PersonalRecord) => {
       let latestWeight = pr.value
       filteredHistory.forEach(session => {
         const matchingSet = session.workout_session_sets?.find(
@@ -192,30 +174,22 @@ export default function Progress() {
     })
   }, [personalRecords, filteredHistory])
 
-  // Training consistency for the filtered period
   const consistencyStats = useMemo(() => {
     const completed = filteredHistory.filter(s => s.status === 'completed')
-    const uniqueDays = new Set(
-      completed.map(s => {
-        const d = new Date(s.started_at)
-        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-      })
-    )
-    const daysWithWorkout = uniqueDays.size
-    const weeksInPeriod = timeRange === '7d' ? 1 : timeRange === '30d' ? 4.3 : null
-    const avgPerWeek = weeksInPeriod && weeksInPeriod > 0
-      ? (completed.length / weeksInPeriod).toFixed(1)
-      : null
-
+    const daysWithWorkout = new Set(
+      completed.map(s => new Date(s.started_at).toDateString())
+    ).size
+    const weeks = timeRange === '7d' ? 1 : timeRange === '30d' ? 4.3 : 12
+    const avgPerWeek = (daysWithWorkout / weeks).toFixed(1)
     return { sessions: completed.length, daysWithWorkout, avgPerWeek }
   }, [filteredHistory, timeRange])
 
   if (loading && history.length === 0) {
-    return <div className="p-12 text-center text-surface-500 font-medium animate-pulse">Loading training progress...</div>
+    return <div className="p-12 text-center text-surface-400 font-medium animate-pulse">Loading training progress...</div>
   }
 
   if (error) {
-    return <div className="p-8 text-center text-red-500 font-medium">{error}</div>
+    return <div className="p-8 text-center text-red-400 font-medium">{error}</div>
   }
 
   const periodLabels: Record<TimeRange, string> = {
@@ -227,13 +201,13 @@ export default function Progress() {
   return (
     <div className="animate-fade-in space-y-8 pb-28 max-w-5xl mx-auto">
       <PageHeader
-        title="Progress & History"
-        description="Historical analytics, exercise progression, training balance, and AI-grounded insights."
+        title="Progress & Analytics"
+        description="Historical volume, training consistency, progressive overload, and personal records."
       />
 
       {/* ── 1. PERIOD SELECTOR ── */}
       <section aria-label="Period selector">
-        <div className="flex items-center gap-1 bg-surface-100 p-1 rounded-xl border border-surface-200 w-fit">
+        <div className="flex items-center gap-1 bg-[#11151D] p-1.5 rounded-2xl border border-[#1F2633] w-fit shadow-xs">
           {(['7d', '30d', 'all'] as TimeRange[]).map(range => (
             <button
               key={range}
@@ -241,10 +215,10 @@ export default function Progress() {
               aria-pressed={timeRange === range}
               onClick={() => setTimeRange(range)}
               className={cn(
-                'px-4 py-2 rounded-lg text-xs font-bold transition-all',
+                'px-4 py-2 rounded-xl text-xs font-bold transition-all',
                 timeRange === range
-                  ? 'bg-white text-brand-600 shadow-sm'
-                  : 'text-surface-600 hover:text-surface-900 hover:bg-white/50'
+                  ? 'bg-brand-500 text-white shadow-sm'
+                  : 'text-surface-400 hover:text-white hover:bg-[#151A23]'
               )}
             >
               {periodLabels[range]}
@@ -255,7 +229,7 @@ export default function Progress() {
 
       {/* ── 2. PERFORMANCE SUMMARY ── */}
       <section aria-label="Performance summary" className="space-y-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">
+        <h2 className="text-xs font-black uppercase tracking-wider text-surface-400">
           Performance Summary — {periodLabels[timeRange]}
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
@@ -299,16 +273,16 @@ export default function Progress() {
 
       {/* ── 4. VOLUME TREND CHART ── */}
       <section aria-label="Volume trend" className="space-y-3">
-        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs">
+        <div className="card p-5 sm:p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-card">
           <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 mb-4">
             <div>
-              <h3 className="text-sm font-bold text-surface-900">Volume Trend</h3>
-              <p className="text-xs text-surface-500 mt-0.5">Aggregate tonnage lifted per day — {periodLabels[timeRange].toLowerCase()}.</p>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wide">Volume Trend</h3>
+              <p className="text-xs text-surface-400 mt-0.5">Aggregate tonnage lifted per day — {periodLabels[timeRange].toLowerCase()}.</p>
             </div>
             {hasWorkoutData && (
               <div className="text-left sm:text-right">
                 <span className="text-xs text-surface-400 font-medium">Total volume: </span>
-                <span className="text-base font-extrabold text-brand-700">
+                <span className="text-base font-black text-brand-400">
                   {formatVolumeDisplay(totalPeriodVolume)}
                 </span>
               </div>
@@ -329,23 +303,23 @@ export default function Progress() {
                 >
                   <defs>
                     <linearGradient id="volumeGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.18} />
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1F2633" />
                   <XAxis
                     dataKey="date"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#64748B', fontSize: 11 }}
+                    tick={{ fill: '#94A3B8', fontSize: 11 }}
                     dy={10}
                     interval={timeRange === '7d' ? 0 : timeRange === '30d' ? 4 : 'preserveStartEnd'}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#64748B', fontSize: 11 }}
+                    tick={{ fill: '#94A3B8', fontSize: 11 }}
                     tickFormatter={(val: number) => {
                       if (val === 0) return '0'
                       if (val >= 1000) {
@@ -356,35 +330,35 @@ export default function Progress() {
                     }}
                   />
                   <Tooltip
-                    cursor={{ stroke: '#2563eb', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+                    cursor={{ stroke: '#8b5cf6', strokeWidth: 1.5, strokeDasharray: '4 4' }}
                     contentStyle={{
-                      backgroundColor: '#0F172A',
-                      borderRadius: '10px',
-                      border: 'none',
+                      backgroundColor: '#0D1017',
+                      borderRadius: '12px',
+                      border: '1px solid #242D3C',
                       padding: '8px 12px',
-                      boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.2)'
+                      boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.6)'
                     }}
-                    itemStyle={{ color: '#F8FAFC', fontSize: '12px', fontWeight: 700 }}
+                    itemStyle={{ color: '#FFFFFF', fontSize: '12px', fontWeight: 700 }}
                     labelStyle={{ color: '#94A3B8', fontSize: '11px', fontWeight: 500, marginBottom: '2px' }}
                     formatter={(value: number) => [`${value.toLocaleString()} kg`, 'Volume']}
                   />
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#2563eb"
+                    stroke="#8b5cf6"
                     strokeWidth={2.5}
                     fill="url(#volumeGrad)"
-                    activeDot={{ r: 5, fill: '#2563eb', stroke: '#ffffff', strokeWidth: 2 }}
+                    activeDot={{ r: 5, fill: '#8b5cf6', stroke: '#ffffff', strokeWidth: 2 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-[220px] flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mb-2.5 text-surface-400">
+                <div className="w-12 h-12 rounded-full bg-[#11151D] border border-[#1F2633] flex items-center justify-center mb-2.5 text-surface-400">
                   <TrendingUp size={22} />
                 </div>
-                <p className="text-sm font-bold text-surface-800">No volume data yet</p>
-                <p className="text-xs text-surface-500 mt-1 max-w-xs leading-relaxed">
+                <p className="text-sm font-bold text-white">No volume data yet</p>
+                <p className="text-xs text-surface-400 mt-1 max-w-xs leading-relaxed">
                   Log your first workout to start tracking your training volume.
                 </p>
               </div>
@@ -393,25 +367,25 @@ export default function Progress() {
 
           {/* Interactive Date Inspection Drawer */}
           {selectedVolumeDay && (
-            <div className="mt-4 p-4 rounded-xl bg-surface-50 border border-surface-200 animate-slide-up space-y-2 relative">
+            <div className="mt-4 p-4 rounded-xl bg-[#11151D] border border-[#1F2633] animate-slide-up space-y-2 relative">
               <button
                 type="button"
                 onClick={() => setSelectedVolumeDay(null)}
-                className="absolute top-3 right-3 p-1 rounded-lg text-surface-400 hover:text-surface-700"
+                className="absolute top-3 right-3 p-1 rounded-lg text-surface-400 hover:text-white"
                 aria-label="Close date details"
               >
                 <X size={14} />
               </button>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-surface-900">
+                <span className="text-xs font-black text-white">
                   {selectedVolumeDay.date}
                 </span>
                 <span className={cn(
                   'badge text-[10px] font-bold',
                   selectedVolumeDay.value > 0
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-surface-100 text-surface-500'
+                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-[#1A202B] text-surface-400 border border-[#242D3C]'
                 )}>
                   {formatVolumeDisplay(selectedVolumeDay.value)}
                 </span>
@@ -432,10 +406,10 @@ export default function Progress() {
                     const exercises = Array.from(exMap.entries())
 
                     return (
-                      <div key={sIdx} className="text-xs space-y-1.5 border-t border-surface-200/60 pt-2 first:border-0 first:pt-0">
+                      <div key={sIdx} className="text-xs space-y-1.5 border-t border-[#1F2633] pt-2 first:border-0 first:pt-0">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-surface-900">{session.workout_name || 'Workout'}</span>
-                          <span className="text-surface-500 font-mono text-[11px]">
+                          <span className="font-bold text-white">{session.workout_name || 'Workout'}</span>
+                          <span className="text-surface-400 font-mono text-[11px]">
                             {session.duration_seconds != null && session.duration_seconds > 0 && `${formatDuration(session.duration_seconds)} · `}
                             {formatVolumeDisplay(Number(session.total_volume) || 0)}
                           </span>
@@ -443,9 +417,9 @@ export default function Progress() {
                         {exercises.length > 0 && (
                           <div className="space-y-1 pl-2">
                             {exercises.map(([exName, exSets], eIdx) => (
-                              <div key={eIdx} className="flex justify-between text-[11px] text-surface-600">
+                              <div key={eIdx} className="flex justify-between text-[11px] text-surface-400">
                                 <span>• {exName}</span>
-                                <span className="font-mono text-surface-500">
+                                <span className="font-mono text-surface-300">
                                   {exSets.map(s => s.weight > 0 ? `${s.weight}kg×${s.reps}` : `${s.reps}r`).join(', ')}
                                 </span>
                               </div>
@@ -457,11 +431,11 @@ export default function Progress() {
                   })}
                 </div>
               ) : selectedVolumeDay.value > 0 ? (
-                <p className="text-xs text-surface-600">
+                <p className="text-xs text-surface-300">
                   {formatVolumeDisplay(selectedVolumeDay.value)} total volume recorded on this date.
                 </p>
               ) : (
-                <p className="text-xs text-surface-500">
+                <p className="text-xs text-surface-400">
                   Rest day · No workouts logged on this date.
                 </p>
               )}
@@ -515,8 +489,8 @@ export default function Progress() {
       <section aria-label="Exercise progression" className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-surface-900 tracking-tight">Exercise Progression</h2>
-            <p className="text-xs text-surface-500 mt-0.5">Select an exercise to view 1RM trajectory and detailed logs.</p>
+            <h2 className="text-lg font-bold text-white tracking-tight">Exercise Progression</h2>
+            <p className="text-xs text-surface-400 mt-0.5">Select an exercise to view 1RM trajectory and detailed logs.</p>
           </div>
           <select
             aria-label="Select exercise to view progression"
@@ -525,40 +499,40 @@ export default function Progress() {
               if (ex) setSelectedExercise({ id: ex.id, name: ex.name })
             }}
             defaultValue=""
-            className="bg-white border border-surface-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-surface-700 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-2xs"
+            className="bg-[#11151D] border border-[#202733] rounded-xl px-3.5 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-2xs"
           >
-            <option value="" disabled>Select exercise...</option>
-            {DEFAULT_EXERCISES.map(ex => (
-              <option key={ex.id} value={ex.id}>{ex.name} ({ex.muscle_group})</option>
+            <option value="" disabled className="bg-[#151A23]">Select exercise...</option>
+            {DEFAULT_EXERCISES.map((ex: any) => (
+              <option key={ex.id} value={ex.id} className="bg-[#151A23]">{ex.name} ({ex.muscle_group})</option>
             ))}
           </select>
         </div>
 
         {exerciseProgressList.length > 0 && (
-          <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">Key Movement Benchmarks</h3>
+          <div className="card p-5 sm:p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-card space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-wider text-surface-400">Key Movement Benchmarks</h3>
             <div className="space-y-4">
-              {exerciseProgressList.map(ex => (
+              {exerciseProgressList.map((ex: any) => (
                 <div
                   key={ex.id}
                   onClick={() => setSelectedExercise({ id: ex.id, name: ex.name })}
-                  className="group cursor-pointer space-y-1.5 p-2 rounded-xl hover:bg-surface-50 transition-colors"
+                  className="group cursor-pointer space-y-1.5 p-2.5 rounded-xl hover:bg-[#1A202B] transition-colors"
                   role="button"
                   tabIndex={0}
                   onKeyDown={e => e.key === 'Enter' && setSelectedExercise({ id: ex.id, name: ex.name })}
                 >
                   <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="font-bold text-surface-900 group-hover:text-brand-600 transition-colors flex items-center gap-1.5">
-                      <Dumbbell size={14} className="text-surface-400" />
+                    <span className="font-bold text-white group-hover:text-brand-300 transition-colors flex items-center gap-2">
+                      <Dumbbell size={14} className="text-brand-400" />
                       {ex.name}
                     </span>
-                    <span className="font-mono text-surface-600 font-semibold text-xs">
-                      {ex.latestWeight} {ex.unit} <span className="text-surface-400 font-normal">/ {ex.bestWeight} {ex.unit} peak</span>
+                    <span className="font-mono text-surface-300 font-semibold text-xs">
+                      {ex.latestWeight} {ex.unit} <span className="text-surface-500 font-normal">/ {ex.bestWeight} {ex.unit} peak</span>
                     </span>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-surface-100 overflow-hidden">
+                  <div className="w-full h-2 rounded-full bg-[#11151D] overflow-hidden border border-[#1F2633]">
                     <div
-                      className="h-full bg-brand-600 rounded-full transition-all duration-700 ease-out"
+                      className="h-full bg-brand-500 rounded-full transition-all duration-700 ease-out"
                       style={{ width: `${ex.progressPct}%` }}
                     />
                   </div>
@@ -572,43 +546,43 @@ export default function Progress() {
       {/* ── 8. PERSONAL BESTS ── */}
       <section aria-label="Personal records" className="space-y-4">
         <div>
-          <h2 className="text-lg font-bold text-surface-900 tracking-tight">Personal Bests</h2>
-          <p className="text-xs text-surface-500 mt-0.5">Highest recorded working weight per exercise.</p>
+          <h2 className="text-lg font-bold text-white tracking-tight">Personal Bests</h2>
+          <p className="text-xs text-surface-400 mt-0.5">Highest recorded working weight per exercise.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {personalRecords && personalRecords.length > 0 ? (
-            personalRecords.map(pr => (
+            personalRecords.map((pr: PersonalRecord) => (
               <div
                 key={pr.id}
-                className="card p-5 relative overflow-hidden group hover:border-amber-300 hover:shadow-md transition-all cursor-pointer bg-white border border-surface-200 rounded-2xl shadow-xs"
+                className="card p-5 relative overflow-hidden group hover:border-amber-500/40 hover:bg-[#1A202B] transition-all cursor-pointer bg-[#151A23] border border-[#202733] rounded-2xl shadow-card"
                 onClick={() => setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 mb-3 group-hover:scale-105 transition-transform">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 mb-3 group-hover:scale-105 transition-transform">
                     <Trophy size={18} aria-hidden="true" />
                   </div>
-                  <span className="text-[11px] font-medium text-surface-500 bg-surface-100 px-2 py-0.5 rounded-full">
+                  <span className="text-[11px] font-medium text-surface-400 bg-[#11151D] border border-[#1F2633] px-2.5 py-0.5 rounded-full">
                     {formatRelativeDate(pr.achievedAt)}
                   </span>
                 </div>
-                <h3 className="font-bold text-surface-900 mb-1 group-hover:text-brand-600 transition-colors flex items-center justify-between text-sm">
+                <h3 className="font-bold text-white mb-1 group-hover:text-brand-300 transition-colors flex items-center justify-between text-sm">
                   <span>{pr.exerciseName}</span>
                   <ChevronRight size={15} className="text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </h3>
                 <div className="flex items-end gap-1.5 mt-2">
-                  <span className="text-2xl sm:text-3xl font-black text-brand-600 tracking-tight">{pr.value}</span>
-                  <span className="text-xs font-semibold text-surface-500 mb-1">{pr.unit}</span>
+                  <span className="text-2xl sm:text-3xl font-black text-amber-400 tracking-tight">{pr.value}</span>
+                  <span className="text-xs font-semibold text-surface-400 mb-1">{pr.unit}</span>
                 </div>
                 <p className="text-[10px] text-surface-400 mt-2 flex items-center gap-1">
-                  <TrendingUp size={11} className="text-brand-500" /> View 1RM & progression graph
+                  <TrendingUp size={11} className="text-brand-400" /> View 1RM & progression graph
                 </p>
               </div>
             ))
           ) : (
-            <div className="col-span-full card p-8 text-center text-surface-500 bg-white border border-surface-200 text-xs rounded-2xl">
+            <div className="col-span-full card p-8 text-center text-surface-400 bg-[#151A23] border border-[#202733] text-xs rounded-2xl">
               No personal records yet. Complete your first session to set baselines!
             </div>
           )}
@@ -617,23 +591,23 @@ export default function Progress() {
 
       {/* ── 9. TRAINING HISTORY ── */}
       <section aria-label="Training history" className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-100 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1F2633] pb-3">
           <div>
-            <h2 className="text-lg font-bold text-surface-900 tracking-tight">Training History</h2>
-            <p className="text-xs text-surface-500 mt-0.5">
+            <h2 className="text-lg font-bold text-white tracking-tight">Training History</h2>
+            <p className="text-xs text-surface-400 mt-0.5">
               {filteredHistory.length} session{filteredHistory.length !== 1 ? 's' : ''} — {periodLabels[timeRange].toLowerCase()}
             </p>
           </div>
 
           {filteredHistory.length > 0 && (
-            <div className="flex items-center bg-surface-100 rounded-lg p-1 border border-surface-200 self-start sm:self-auto">
+            <div className="flex items-center bg-[#11151D] rounded-xl p-1 border border-[#1F2633] self-start sm:self-auto">
               <button
                 onClick={() => setHistoryViewMode('list')}
                 id="progress-tab-list"
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                   historyViewMode === 'list'
-                    ? 'bg-white text-brand-600 shadow-sm'
-                    : 'text-surface-600 hover:text-surface-900'
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'text-surface-400 hover:text-white'
                 }`}
               >
                 <List size={13} /> All Sessions ({filteredHistory.length})
@@ -642,10 +616,10 @@ export default function Progress() {
                 <button
                   onClick={() => setHistoryViewMode('14day')}
                   id="progress-tab-14day"
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                     historyViewMode === '14day'
-                      ? 'bg-white text-brand-600 shadow-sm'
-                      : 'text-surface-600 hover:text-surface-900'
+                      ? 'bg-brand-500 text-white shadow-sm'
+                      : 'text-surface-400 hover:text-white'
                   }`}
                 >
                   <Calendar size={13} /> Calendar

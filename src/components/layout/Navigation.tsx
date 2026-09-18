@@ -33,14 +33,14 @@ export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
   const isProfileActive = location.pathname === '/profile'
 
   return (
-    <header className="hidden lg:block fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-surface-200 shadow-2xs">
+    <header className="hidden lg:block fixed top-0 left-0 right-0 z-30 bg-[#0D1017]/95 backdrop-blur-md border-b border-[#1F2633] shadow-md">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* LEFT: Logo + Brand */}
         <div className="flex items-center gap-8">
           <GYMTrackLogo size="md" />
         </div>
 
-        {/* CENTER: Clean Navigation Links (Home, Progress, Library) */}
+        {/* CENTER: Clean Navigation Links (Home, Progress, Library, Plans) */}
         <nav aria-label="Desktop primary navigation">
           <ul className="flex items-center gap-1.5" role="list">
             {primaryNavItems.map(item => (
@@ -50,10 +50,10 @@ export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
                   id={`top-nav-${item.label.toLowerCase()}`}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all',
+                      'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all',
                       isActive
-                        ? 'bg-brand-50 text-brand-700 shadow-2xs ring-1 ring-brand-200'
-                        : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100/70'
+                        ? 'bg-brand-500/15 text-brand-300 shadow-2xs ring-1 ring-brand-500/30'
+                        : 'text-surface-400 hover:text-white hover:bg-[#151A23]'
                     )
                   }
                 >
@@ -72,17 +72,17 @@ export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
             <button
               onClick={onOpenTimer}
               id="top-nav-timer"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-surface-100 hover:text-brand-600 border border-surface-200 transition-colors shadow-2xs"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-surface-300 bg-[#151A23] hover:bg-[#1A202B] hover:text-white border border-[#242D3C] transition-colors shadow-2xs"
               title="Open Workout Timer / Stopwatch"
               aria-label="Open Workout Timer"
             >
-              <Timer size={16} className="text-brand-600" />
+              <Timer size={16} className="text-brand-400" />
               <span>Timer</span>
             </button>
           )}
 
           {/* Divider */}
-          <div className="h-5 w-px bg-surface-200 mx-1" aria-hidden="true" />
+          <div className="h-5 w-px bg-[#1F2633] mx-1" aria-hidden="true" />
 
           {/* Profile & Avatar */}
           {user && (
@@ -91,23 +91,23 @@ export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
                 to="/profile"
                 id="top-nav-profile"
                 className={cn(
-                  'flex items-center gap-2 px-2.5 py-1 rounded-lg transition-colors',
+                  'flex items-center gap-2 px-2.5 py-1 rounded-xl transition-colors',
                   isProfileActive
-                    ? 'bg-surface-100 text-surface-900 ring-1 ring-surface-300'
-                    : 'text-surface-700 hover:bg-surface-50'
+                    ? 'bg-[#151A23] text-white ring-1 ring-[#2E3848]'
+                    : 'text-surface-400 hover:text-white hover:bg-[#151A23]'
                 )}
                 title={`Profile: ${fullName}`}
                 aria-label={`View profile for ${fullName}`}
               >
                 <Avatar name={fullName} size="sm" />
-                <span className="text-xs font-semibold max-w-[110px] truncate">
+                <span className="text-xs font-semibold max-w-[110px] truncate text-surface-200">
                   {fullName}
                 </span>
               </NavLink>
 
               <button
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors"
+                className="p-1.5 rounded-lg text-surface-400 hover:text-white hover:bg-[#151A23] transition-colors"
                 aria-label="Log out"
                 title="Log out"
               >
@@ -133,7 +133,7 @@ const mobileNavItems = [
 export function MobileNav() {
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-surface-200 safe-area-inset-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#0D1017]/95 backdrop-blur-md border-t border-[#1F2633] safe-area-inset-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.4)]"
       aria-label="Mobile navigation"
     >
       <ul className="flex items-center h-16 px-1" role="list">
@@ -144,20 +144,20 @@ export function MobileNav() {
               id={`mobile-nav-${item.label.toLowerCase()}`}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center justify-center gap-1 py-1.5 text-xs font-semibold transition-all w-full rounded-lg select-none',
+                  'flex flex-col items-center justify-center gap-1 py-1 text-xs font-semibold transition-all w-full rounded-lg select-none',
                   isActive
-                    ? 'text-brand-600 font-bold'
-                    : 'text-surface-500 hover:text-surface-800'
+                    ? 'text-brand-400 font-bold'
+                    : 'text-surface-500 hover:text-surface-300'
                 )
               }
               aria-label={item.label}
             >
               {({ isActive }) => (
                 <>
-                  <div className={cn('relative flex items-center justify-center p-1 rounded-full transition-colors', isActive && 'bg-brand-50')}>
-                    <item.icon size={20} aria-hidden="true" className={isActive ? 'text-brand-600 stroke-[2.5]' : 'text-surface-500'} />
+                  <div className={cn('relative flex items-center justify-center p-1 rounded-full transition-colors', isActive && 'bg-brand-500/15')}>
+                    <item.icon size={20} aria-hidden="true" className={isActive ? 'text-brand-400 stroke-[2.5]' : 'text-surface-500'} />
                   </div>
-                  <span className={cn('text-[10px] tracking-tight leading-none', isActive ? 'font-bold text-brand-700' : 'text-surface-500')}>{item.label}</span>
+                  <span className={cn('text-[10px] tracking-tight leading-none', isActive ? 'font-bold text-brand-300' : 'text-surface-500')}>{item.label}</span>
                 </>
               )}
             </NavLink>
@@ -176,7 +176,7 @@ export function MobileTopBar({ onOpenTimer }: TopNavigationProps) {
     : (user?.email?.split('@')[0] || 'Athlete')
 
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-b border-surface-200 px-4 h-14 flex items-center justify-between shadow-2xs">
+    <header className="lg:hidden fixed top-0 left-0 right-0 z-20 bg-[#0D1017]/95 backdrop-blur-md border-b border-[#1F2633] px-4 h-14 flex items-center justify-between shadow-sm">
       <GYMTrackLogo size="sm" />
 
       <div className="flex items-center gap-2">
@@ -184,11 +184,11 @@ export function MobileTopBar({ onOpenTimer }: TopNavigationProps) {
           <button
             onClick={onOpenTimer}
             id="mobile-header-timer"
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-surface-700 bg-surface-100 hover:bg-surface-200 transition-colors border border-surface-200"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold text-surface-300 bg-[#151A23] hover:bg-[#1A202B] hover:text-white transition-colors border border-[#242D3C]"
             title="Open Workout Timer / Stopwatch"
             aria-label="Open Workout Timer"
           >
-            <Timer size={15} className="text-brand-600" />
+            <Timer size={15} className="text-brand-400" />
             <span>Timer</span>
           </button>
         )}
@@ -196,7 +196,7 @@ export function MobileTopBar({ onOpenTimer }: TopNavigationProps) {
         {user && (
           <NavLink
             to="/profile"
-            className="p-1 rounded-full hover:ring-2 hover:ring-brand-500 transition-all"
+            className="p-0.5 rounded-full hover:ring-2 hover:ring-brand-500 transition-all"
             aria-label="View profile"
           >
             <Avatar name={fullName} size="sm" />

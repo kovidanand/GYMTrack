@@ -117,7 +117,7 @@ export default function ExerciseDetail() {
       </button>
 
       {/* ── Hero Section ── */}
-      <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-surface-200">
+      <section className="bg-[#151A23] rounded-2xl overflow-hidden shadow-xl border border-[#202733]">
         <div className="relative">
           {/* Continuous Demonstration Video */}
           <ExerciseVideoPlayer
@@ -133,7 +133,7 @@ export default function ExerciseDetail() {
           {/* Favorite Floating Button */}
           <button
             onClick={handleToggleFavorite}
-            className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:scale-110 transition-transform z-10"
+            className="absolute top-4 right-4 p-3 bg-[#151A23]/80 backdrop-blur-md rounded-full border border-[#202733] shadow-md hover:scale-110 transition-transform z-10"
             aria-label={isFavorite ? `Remove ${exercise.name} from favorites` : `Add ${exercise.name} to favorites`}
           >
             <Heart 
@@ -150,14 +150,14 @@ export default function ExerciseDetail() {
               <div className="flex flex-wrap gap-2 items-center">
                 <MuscleGroupBadge group={exercise.muscle_group} />
                 {exercise.equipment && exercise.equipment.map(eq => (
-                  <span key={eq} className="badge bg-surface-100 text-surface-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  <span key={eq} className="badge bg-[#11151D] text-surface-300 border border-[#202733] text-xs font-semibold px-2.5 py-1 rounded-full">
                     {formatTagLabel(eq)}
                   </span>
                 ))}
                 <span className={cn('badge border text-xs font-semibold px-2.5 py-1 rounded-full', difficultyClass)}>
                   {formatTagLabel(exercise.difficulty)}
                 </span>
-                <span className="badge bg-brand-50 text-brand-700 border border-brand-200 text-xs font-semibold px-2.5 py-1 rounded-full">
+                <span className="badge bg-brand-950/40 text-brand-400 border border-brand-500/30 text-xs font-semibold px-2.5 py-1 rounded-full">
                   {formatTagLabel(exercise.exercise_type)}
                 </span>
               </div>
@@ -175,7 +175,7 @@ export default function ExerciseDetail() {
             </div>
           </div>
 
-          <p className="text-surface-600 text-base leading-relaxed max-w-3xl">
+          <p className="text-surface-400 text-base leading-relaxed max-w-3xl">
             {exercise.description}
           </p>
         </div>
@@ -184,10 +184,10 @@ export default function ExerciseDetail() {
       {/* ── Personal Intelligence & Progression Curve ── */}
       {user && (
         <section className="card p-6 sm:p-8 space-y-6" aria-label="Personal exercise analytics">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-100 pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#202733] pb-5">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="p-1 rounded bg-brand-50 text-brand-600">
+                <span className="p-1 rounded bg-brand-950/50 text-brand-400 border border-brand-500/20">
                   <Activity size={16} />
                 </span>
                 <h2 className="text-lg font-bold text-surface-900">Your Performance & 1RM</h2>
@@ -216,8 +216,8 @@ export default function ExerciseDetail() {
             <div className="space-y-6">
               {/* Stat Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
-                  <p className="text-[11px] font-bold text-brand-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <div className="p-4 rounded-xl bg-[#11151D] border border-[#202733]">
+                  <p className="text-[11px] font-bold text-brand-400 uppercase tracking-wider mb-1 flex items-center gap-1">
                     <Trophy size={13} className="text-brand-500" /> Current 1RM
                   </p>
                   <p className="text-2xl font-black text-surface-900 tracking-tight">
@@ -232,8 +232,8 @@ export default function ExerciseDetail() {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
-                  <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <div className="p-4 rounded-xl bg-[#11151D] border border-[#202733]">
+                  <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-1 flex items-center gap-1">
                     <Trophy size={13} className="text-amber-500" /> Personal Best
                   </p>
                   <p className="text-2xl font-black text-surface-900 tracking-tight">
@@ -248,8 +248,8 @@ export default function ExerciseDetail() {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
-                  <p className="text-[11px] font-bold text-surface-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                <div className="p-4 rounded-xl bg-[#11151D] border border-[#202733]">
+                  <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider mb-1 flex items-center gap-1">
                     <Flame size={13} className="text-orange-500" /> Latest Effort
                   </p>
                   <p className="text-2xl font-black text-surface-900 tracking-tight">
@@ -266,9 +266,9 @@ export default function ExerciseDetail() {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-surface-50/70 border border-surface-100">
-                  <p className="text-[11px] font-bold text-surface-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <History size={13} className="text-indigo-500" /> Workouts
+                <div className="p-4 rounded-xl bg-[#11151D] border border-[#202733]">
+                  <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <History size={13} className="text-indigo-400" /> Workouts
                   </p>
                   <p className="text-2xl font-black text-surface-900 tracking-tight">
                     {intelligence.totalSessions}
@@ -307,10 +307,10 @@ export default function ExerciseDetail() {
               <ol className="space-y-5">
                 {exercise.instructions.map((step, i) => (
                   <li key={i} className="flex gap-4">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-50 text-brand-700 font-bold flex items-center justify-center border border-brand-100">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-950/60 text-brand-400 font-bold flex items-center justify-center border border-brand-500/30">
                       {i + 1}
                     </span>
-                    <p className="text-surface-700 leading-relaxed pt-1">{step}</p>
+                    <p className="text-surface-300 leading-relaxed pt-1">{step}</p>
                   </li>
                 ))}
               </ol>
@@ -319,14 +319,14 @@ export default function ExerciseDetail() {
 
           {/* Pro Tips / Coach Tip */}
           {exercise.tips && exercise.tips.length > 0 && (
-            <section className="card p-6 sm:p-8 border-brand-100 bg-brand-50/30">
-              <h2 className="text-lg font-bold text-brand-900 mb-4 flex items-center gap-2">
-                <Lightbulb size={18} className="text-brand-600" /> COACH TIP
+            <section className="card p-6 sm:p-8 border-brand-500/30 bg-brand-950/20">
+              <h2 className="text-lg font-bold text-brand-300 mb-4 flex items-center gap-2">
+                <Lightbulb size={18} className="text-brand-400" /> COACH TIP
               </h2>
               <ul className="space-y-3">
                 {exercise.tips.map((tip, i) => (
-                  <li key={i} className="flex gap-3 text-surface-700">
-                    <Check size={16} className="text-brand-600 mt-0.5 flex-shrink-0" />
+                  <li key={i} className="flex gap-3 text-surface-300">
+                    <Check size={16} className="text-brand-400 mt-0.5 flex-shrink-0" />
                     <span>{tip}</span>
                   </li>
                 ))}
@@ -336,14 +336,14 @@ export default function ExerciseDetail() {
 
           {/* Common Mistakes */}
           {exercise.common_mistakes && exercise.common_mistakes.length > 0 && (
-            <section className="card p-6 sm:p-8 border-amber-100 bg-amber-50/30">
-              <h2 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
-                <AlertTriangle size={18} className="text-amber-600" /> COMMON MISTAKES
+            <section className="card p-6 sm:p-8 border-amber-500/30 bg-amber-950/20">
+              <h2 className="text-lg font-bold text-amber-300 mb-4 flex items-center gap-2">
+                <AlertTriangle size={18} className="text-amber-400" /> COMMON MISTAKES
               </h2>
               <ul className="space-y-3">
                 {exercise.common_mistakes.map((mistake, i) => (
-                  <li key={i} className="flex gap-3 text-surface-700">
-                    <XIcon size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                  <li key={i} className="flex gap-3 text-surface-300">
+                    <XIcon size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
                     <span>{mistake}</span>
                   </li>
                 ))}
@@ -355,13 +355,13 @@ export default function ExerciseDetail() {
         {/* ── Sidebar (Muscles, Details) ── */}
         <div className="space-y-6">
           {/* Target Muscles */}
-          <section className="card p-6">
+          <section className="card p-6 bg-[#151A23] border border-[#202733]">
             <h3 className="font-bold text-surface-900 mb-4">Target Muscles</h3>
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-medium text-surface-500 uppercase tracking-wider mb-2">Primary</p>
+                <p className="text-xs font-medium text-surface-400 uppercase tracking-wider mb-2">Primary</p>
                 <div className="inline-flex">
-                  <span className="badge bg-brand-50 text-brand-700 border border-brand-200 text-sm py-1.5 px-3">
+                  <span className="badge bg-brand-950/40 text-brand-400 border border-brand-500/30 text-sm py-1.5 px-3">
                     {exercise.primary_muscle}
                   </span>
                 </div>
@@ -369,10 +369,10 @@ export default function ExerciseDetail() {
               
               {exercise.secondary_muscles && exercise.secondary_muscles.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-surface-500 uppercase tracking-wider mb-2">Secondary</p>
+                  <p className="text-xs font-medium text-surface-400 uppercase tracking-wider mb-2">Secondary</p>
                   <div className="flex flex-wrap gap-2">
                     {exercise.secondary_muscles.map(m => (
-                      <span key={m} className="badge bg-surface-50 text-surface-600 border border-surface-200 text-sm py-1.5 px-3">
+                      <span key={m} className="badge bg-[#11151D] text-surface-300 border border-[#202733] text-sm py-1.5 px-3">
                         {m}
                       </span>
                     ))}
@@ -383,20 +383,20 @@ export default function ExerciseDetail() {
           </section>
 
           {/* Exercise Info */}
-          <section className="card p-6">
+          <section className="card p-6 bg-[#151A23] border border-[#202733]">
             <h3 className="font-bold text-surface-900 mb-4">Information</h3>
-            <ul className="space-y-3 divide-y divide-surface-100">
+            <ul className="space-y-3 divide-y divide-[#202733]">
               <li className="flex justify-between items-center pt-2 first:pt-0">
-                <span className="text-sm text-surface-500">Pattern</span>
-                <span className="text-sm font-medium text-surface-900 capitalize">{exercise.movement_pattern.replace('_', ' ')}</span>
+                <span className="text-sm text-surface-400">Pattern</span>
+                <span className="text-sm font-medium text-surface-200 capitalize">{exercise.movement_pattern.replace('_', ' ')}</span>
               </li>
               <li className="flex justify-between items-center pt-2">
-                <span className="text-sm text-surface-500">Mechanics</span>
-                <span className="text-sm font-medium text-surface-900">{exercise.is_compound ? 'Compound' : 'Isolation'}</span>
+                <span className="text-sm text-surface-400">Mechanics</span>
+                <span className="text-sm font-medium text-surface-200">{exercise.is_compound ? 'Compound' : 'Isolation'}</span>
               </li>
               <li className="flex justify-between items-center pt-2">
-                <span className="text-sm text-surface-500">Force</span>
-                <span className="text-sm font-medium text-surface-900">{exercise.is_unilateral ? 'Unilateral' : 'Bilateral'}</span>
+                <span className="text-sm text-surface-400">Force</span>
+                <span className="text-sm font-medium text-surface-200">{exercise.is_unilateral ? 'Unilateral' : 'Bilateral'}</span>
               </li>
             </ul>
           </section>

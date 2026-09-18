@@ -87,24 +87,24 @@ export function FloatingAiCoach() {
       {/* ── Expanded Chat Panel ── */}
       {isOpen && (
         <div 
-          className="w-[92vw] sm:w-[400px] h-[580px] max-h-[82vh] bg-white rounded-2xl shadow-2xl border border-surface-200 flex flex-col overflow-hidden animate-scale-in"
+          className="w-[92vw] sm:w-[420px] h-[580px] max-h-[82vh] bg-[#151A23] rounded-2xl shadow-2xl border border-[#202733] flex flex-col overflow-hidden animate-scale-in"
           role="dialog"
           aria-label="GYMTrack AI Fitness Coach"
         >
           {/* ── Header ── */}
-          <div className="p-3.5 px-4 bg-gradient-to-r from-surface-900 to-surface-800 text-white flex items-center justify-between shadow-sm flex-shrink-0">
+          <div className="p-3.5 px-4 bg-[#0D1017] border-b border-[#202733] text-white flex items-center justify-between shadow-sm flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white">
+                <div className="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center text-white">
                   <Bot size={18} />
                 </div>
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-surface-900" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0D1017]" />
               </div>
               <div>
-                <h3 className="text-sm font-bold leading-none">
+                <h3 className="text-sm font-bold leading-none text-white">
                   GYMTrack AI Coach
                 </h3>
-                <p className="text-[11px] text-surface-300 mt-0.5">
+                <p className="text-[11px] text-surface-400 mt-0.5">
                   {analysis?.hasData 
                     ? `Based on ${analysis.totalWorkouts} logged sessions` 
                     : 'Ready to guide your training'}
@@ -115,7 +115,7 @@ export function FloatingAiCoach() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-surface-400 hover:text-white hover:bg-white/15 transition-colors"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-surface-400 hover:text-white hover:bg-surface-800 transition-colors"
                 aria-label="Minimize AI Coach"
               >
                 <X size={16} />
@@ -124,16 +124,16 @@ export function FloatingAiCoach() {
           </div>
 
           {/* ── Status Ribbon ── */}
-          <div className="p-2 px-3 bg-brand-50 border-b border-brand-100 flex items-center justify-between text-[11px] text-brand-800 flex-shrink-0">
+          <div className="p-2 px-3 bg-[#11151D] border-b border-[#202733] flex items-center justify-between text-[11px] text-surface-300 flex-shrink-0">
             <span className="flex items-center gap-1 font-medium truncate">
               {analysis && analysis.hasData ? (
                 <>
-                  <CheckCircle2 size={12} className="text-emerald-600 flex-shrink-0" />
-                  <span>Last 14D: <strong>{analysis.recentSessionsCount} sessions</strong> ({analysis.recentVolume.toLocaleString()} kg)</span>
+                  <CheckCircle2 size={12} className="text-emerald-400 flex-shrink-0" />
+                  <span>Last 14D: <strong className="text-white">{analysis.recentSessionsCount} sessions</strong> ({analysis.recentVolume.toLocaleString()} kg)</span>
                 </>
               ) : (
                 <>
-                  <Dumbbell size={12} className="text-brand-600 flex-shrink-0" />
+                  <Dumbbell size={12} className="text-brand-400 flex-shrink-0" />
                   <span>Ready to guide your training</span>
                 </>
               )}
@@ -141,18 +141,18 @@ export function FloatingAiCoach() {
           </div>
 
           {/* ── Chat Messages Scroll Area ── */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-surface-50/50 text-xs">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[#080A0F] text-xs">
             {/* Welcome Greeting */}
             <div className="flex items-start gap-2.5 animate-fade-in">
-              <div className="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                 <Bot size={13} />
               </div>
-              <div className="bg-white border border-surface-200 rounded-2xl rounded-tl-none p-3 shadow-xs max-w-[85%] text-surface-800 leading-relaxed">
-                <p className="font-bold text-surface-900 mb-1">
+              <div className="bg-[#151A23] border border-[#202733] rounded-2xl rounded-tl-none p-3 shadow-xs max-w-[85%] text-surface-200 leading-relaxed">
+                <p className="font-bold text-white mb-1">
                   Hello, {profile?.first_name || 'Athlete'}
                 </p>
                 <p>
-                  I can help with <strong>exercise technique</strong>, <strong>what to train today</strong>, your <strong>recent progress</strong>, or <strong>target muscle groups</strong>.
+                  I can help with <strong className="text-white">exercise technique</strong>, <strong className="text-white">what to train today</strong>, your <strong className="text-white">recent progress</strong>, or <strong className="text-white">target muscle groups</strong>.
                 </p>
               </div>
             </div>
@@ -166,7 +166,7 @@ export function FloatingAiCoach() {
                 }`}
               >
                 {msg.role === 'assistant' && (
-                  <div className="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Bot size={13} />
                   </div>
                 )}
@@ -174,8 +174,8 @@ export function FloatingAiCoach() {
                 <div
                   className={`rounded-2xl p-3 shadow-xs max-w-[85%] leading-relaxed ${
                     msg.role === 'user'
-                      ? 'bg-brand-500 text-white rounded-tr-none font-medium'
-                      : 'bg-white border border-surface-200 rounded-tl-none text-surface-800'
+                      ? 'bg-brand-600 text-white rounded-tr-none font-medium'
+                      : 'bg-[#151A23] border border-[#202733] rounded-tl-none text-surface-200'
                   }`}
                 >
                   {msg.role === 'assistant' ? (
@@ -186,29 +186,29 @@ export function FloatingAiCoach() {
                       structuredRecommendation={msg.structuredRecommendation}
                     />
                   ) : (
-                    <div className="whitespace-pre-line break-words">
+                    <div className="whitespace-pre-line break-words text-white">
                       {msg.content}
                     </div>
                   )}
 
                   {msg.pendingLog && !msg.pendingLog.logged && (
-                    <div className="mt-3 p-3 bg-brand-50/70 border border-brand-200 rounded-xl space-y-2 text-left">
-                      <div className="text-xs font-bold text-brand-950 flex items-center justify-between">
+                    <div className="mt-3 p-3 bg-[#11151D] border border-brand-800/40 rounded-xl space-y-2 text-left">
+                      <div className="text-xs font-bold text-white flex items-center justify-between">
                         <span>{msg.pendingLog.exerciseName}</span>
-                        <span className="text-brand-700 font-mono text-[11px]">{msg.pendingLog.sets} sets × {msg.pendingLog.reps} reps @ {msg.pendingLog.weight} kg</span>
+                        <span className="text-brand-300 font-mono text-[11px]">{msg.pendingLog.sets} sets × {msg.pendingLog.reps} reps @ {msg.pendingLog.weight} kg</span>
                       </div>
                       <div className="flex items-center gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() => cancelPendingLog(msg.id)}
-                          className="flex-1 py-1.5 px-3 bg-white border border-surface-200 hover:bg-surface-100 text-surface-700 rounded-lg text-xs font-bold transition-colors"
+                          className="flex-1 py-1.5 px-3 bg-[#151A23] border border-[#202733] hover:bg-surface-800 text-surface-300 rounded-lg text-xs font-bold transition-colors"
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
                           onClick={() => confirmPendingLog(msg.id)}
-                          className="flex-1 py-1.5 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1"
+                          className="flex-1 py-1.5 px-3 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1"
                         >
                           <CheckCircle2 size={13} />
                           <span>Confirm & Log</span>
@@ -218,13 +218,13 @@ export function FloatingAiCoach() {
                   )}
 
                   {msg.supportingData && (
-                    <div className="mt-2 pt-1.5 border-t border-surface-100 text-[10px] text-surface-400 italic">
+                    <div className="mt-2 pt-1.5 border-t border-[#202733] text-[10px] text-surface-400 italic">
                       {msg.supportingData}
                     </div>
                   )}
 
                   {msg.suggestedQuestions && msg.suggestedQuestions.length > 0 && (
-                    <div className="mt-2.5 pt-2 border-t border-surface-100 space-y-1">
+                    <div className="mt-2.5 pt-2 border-t border-[#202733] space-y-1">
                       <p className="text-[10px] font-bold text-surface-400 uppercase tracking-wide">
                         Follow-ups
                       </p>
@@ -233,7 +233,7 @@ export function FloatingAiCoach() {
                           <button
                             key={i}
                             onClick={() => handleSend(sq)}
-                            className="text-[11px] text-left px-2 py-1 bg-surface-100 hover:bg-brand-50 hover:text-brand-700 rounded-md transition-colors text-surface-700"
+                            className="text-[11px] text-left px-2 py-1 bg-[#11151D] hover:bg-brand-950/60 hover:text-brand-300 rounded-md transition-colors text-surface-300 border border-[#202733]"
                           >
                             {sq}
                           </button>
@@ -248,14 +248,14 @@ export function FloatingAiCoach() {
             {/* Loading Indicator */}
             {isAsking && (
               <div className="flex items-start gap-2.5 animate-fade-in">
-                <div className="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center flex-shrink-0">
+                <div className="w-6 h-6 rounded-full bg-brand-600 text-white flex items-center justify-center flex-shrink-0">
                   <Bot size={13} />
                 </div>
-                <div className="bg-white border border-surface-200 rounded-2xl rounded-tl-none p-3 shadow-xs text-surface-500 flex items-center gap-1.5">
+                <div className="bg-[#151A23] border border-[#202733] rounded-2xl rounded-tl-none p-3 shadow-xs text-surface-400 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce" />
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:0.2s]" />
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:0.4s]" />
-                  <span className="text-[11px] font-medium ml-1">Thinking...</span>
+                  <span className="text-[11px] font-medium ml-1">Analyzing training...</span>
                 </div>
               </div>
             )}
@@ -265,12 +265,12 @@ export function FloatingAiCoach() {
 
           {/* ── Quick Prompts (when few messages) ── */}
           {messages.length < 3 && !isAsking && (
-            <div className="p-2 px-3 border-t border-surface-100 bg-white flex gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0">
+            <div className="p-2 px-3 border-t border-[#202733] bg-[#0D1017] flex gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0">
               {defaultQuickPrompts.map((prompt, i) => (
                 <button
                   key={i}
                   onClick={() => handleSend(prompt)}
-                  className="whitespace-nowrap text-[11px] font-medium px-2.5 py-1 rounded-full bg-surface-100 hover:bg-brand-50 hover:text-brand-700 text-surface-700 transition-colors flex-shrink-0"
+                  className="whitespace-nowrap text-[11px] font-medium px-2.5 py-1 rounded-full bg-[#151A23] hover:bg-brand-950/60 hover:text-brand-300 text-surface-300 border border-[#202733] transition-colors flex-shrink-0"
                 >
                   {prompt}
                 </button>
@@ -279,8 +279,8 @@ export function FloatingAiCoach() {
           )}
 
           {/* ── Input Box ── */}
-          <div className="p-3 bg-white border-t border-surface-200 flex-shrink-0">
-            <div className="flex items-center gap-2 bg-surface-100 rounded-xl p-1 px-3 focus-within:ring-2 focus-within:ring-brand-500 focus-within:bg-white transition-all">
+          <div className="p-3 bg-[#0D1017] border-t border-[#202733] flex-shrink-0">
+            <div className="flex items-center gap-2 bg-[#11151D] border border-[#202733] rounded-xl p-1 px-3 focus-within:border-brand-500 transition-all">
               <input
                 ref={inputRef}
                 type="text"
@@ -288,13 +288,13 @@ export function FloatingAiCoach() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about your training, exercises or progress..."
-                className="flex-1 bg-transparent border-0 text-xs text-surface-900 placeholder-surface-400 focus:outline-none py-1.5"
+                className="flex-1 bg-transparent border-0 text-xs text-white placeholder-surface-500 focus:outline-none py-1.5"
                 disabled={isAsking}
               />
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isAsking}
-                className="w-7 h-7 rounded-lg bg-brand-500 text-white flex items-center justify-center hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 aria-label="Send message"
               >
                 <Send size={13} />

@@ -565,26 +565,26 @@ export function TrainingLoggerModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-labelledby="training-logger-title"
     >
       <div 
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-surface-200 overflow-hidden"
+        className="bg-[#151A23] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border border-[#202733] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* ── MODAL HEADER ── */}
-        <div className="p-4 sm:px-6 bg-surface-50 border-b border-surface-200 flex items-center justify-between flex-shrink-0">
+        <div className="p-4 sm:px-6 bg-[#0D1017] border-b border-[#202733] flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-500 text-white flex items-center justify-center shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-xs">
               <Dumbbell size={20} />
             </div>
             <div>
-              <h2 id="training-logger-title" className="text-base sm:text-lg font-bold text-surface-900 leading-tight">
+              <h2 id="training-logger-title" className="text-base sm:text-lg font-bold text-white leading-tight">
                 {step === 'confirmation' ? 'Review & Confirm Training' : 'Log Today’s Training'}
               </h2>
-              <p className="text-xs text-surface-500">
+              <p className="text-xs text-surface-400">
                 {step === 'confirmation' 
                   ? 'Verify your sets and volume before saving' 
                   : 'Fast manual entry or conversational voice logging'}
@@ -594,7 +594,7 @@ export function TrainingLoggerModal({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-surface-400 hover:text-surface-700 hover:bg-surface-200 transition-colors"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-surface-400 hover:text-white hover:bg-surface-800 transition-colors"
             aria-label="Close dialog"
           >
             <X size={18} />
@@ -605,15 +605,15 @@ export function TrainingLoggerModal({
         {step === 'input' && (
           <>
             {/* Mode Switcher Tabs */}
-            <div className="flex border-b border-surface-200 px-6 pt-2 bg-white flex-shrink-0">
+            <div className="flex border-b border-[#202733] px-6 pt-2 bg-[#0D1017] flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveTab('manual')}
                 className={cn(
                   'py-2.5 px-4 text-xs font-bold border-b-2 -mb-px transition-colors flex items-center gap-2',
                   activeTab === 'manual'
-                    ? 'border-brand-600 text-brand-600'
-                    : 'border-transparent text-surface-500 hover:text-surface-900'
+                    ? 'border-brand-500 text-brand-400'
+                    : 'border-transparent text-surface-400 hover:text-white'
                 )}
               >
                 <Dumbbell size={15} />
@@ -626,13 +626,13 @@ export function TrainingLoggerModal({
                 className={cn(
                   'py-2.5 px-4 text-xs font-bold border-b-2 -mb-px transition-colors flex items-center gap-2',
                   activeTab === 'voice'
-                    ? 'border-brand-600 text-brand-600'
-                    : 'border-transparent text-surface-500 hover:text-surface-900'
+                    ? 'border-brand-500 text-brand-400'
+                    : 'border-transparent text-surface-400 hover:text-white'
                 )}
               >
                 <Mic size={15} />
                 Voice Logging
-                <span className="badge bg-brand-50 text-brand-700 border-brand-200 text-[10px] py-0 px-1.5 font-bold">
+                <span className="badge bg-brand-950/60 text-brand-300 border-brand-800 text-[10px] py-0 px-1.5 font-bold">
                   Hands-free
                 </span>
               </button>
@@ -647,15 +647,15 @@ export function TrainingLoggerModal({
                   {/* Active Exercise Cards */}
                   <div className="space-y-4">
                     {loggedItems.map((item, itemIdx) => (
-                      <div key={item.id} className="card p-4 sm:p-5 bg-white border border-surface-200 shadow-2xs rounded-xl space-y-4">
+                      <div key={item.id} className="p-4 sm:p-5 bg-[#11151D] border border-[#202733] shadow-xs rounded-xl space-y-4">
                         {/* Exercise Title Header */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5">
-                            <span className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 font-black text-xs flex items-center justify-center">
+                            <span className="w-6 h-6 rounded-full bg-brand-950/80 text-brand-400 font-black text-xs flex items-center justify-center border border-brand-800/50">
                               {itemIdx + 1}
                             </span>
                             <div>
-                              <h3 className="font-bold text-surface-900 text-sm sm:text-base">
+                              <h3 className="font-bold text-white text-sm sm:text-base">
                                 {item.exercise.name}
                               </h3>
                               <span className="text-[11px] font-semibold text-surface-400 capitalize">
@@ -668,7 +668,7 @@ export function TrainingLoggerModal({
                             <button
                               type="button"
                               onClick={() => handleRemoveExercise(item.id)}
-                              className="text-xs text-red-500 hover:text-red-700 p-1 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1"
+                              className="text-xs text-red-400 hover:text-red-300 p-1 rounded-lg hover:bg-red-950/30 transition-colors flex items-center gap-1"
                               title="Remove exercise"
                             >
                               <Trash2 size={14} />
@@ -689,10 +689,10 @@ export function TrainingLoggerModal({
                           {item.sets.map(s => (
                             <div 
                               key={s.id} 
-                              className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-surface-50 border border-surface-100 hover:border-surface-200 transition-colors"
+                              className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-[#080A0F] border border-[#202733] hover:border-surface-700 transition-colors"
                             >
                               {/* Set Number */}
-                              <div className="col-span-2 text-center font-bold text-xs text-surface-700">
+                              <div className="col-span-2 text-center font-bold text-xs text-white">
                                 #{s.set_number}
                               </div>
 
@@ -701,7 +701,7 @@ export function TrainingLoggerModal({
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateSet(item.id, s.id, 'weight', -5)}
-                                  className="w-6 h-6 rounded bg-white border border-surface-200 text-surface-600 hover:bg-surface-100 flex items-center justify-center text-xs font-bold"
+                                  className="w-6 h-6 rounded bg-[#151A23] border border-[#202733] text-white hover:border-brand-500 flex items-center justify-center text-xs font-bold"
                                   title="-5 kg"
                                 >
                                   -
@@ -710,14 +710,14 @@ export function TrainingLoggerModal({
                                   type="number"
                                   value={s.weight}
                                   onChange={e => handleSetDirectValue(item.id, s.id, 'weight', parseFloat(e.target.value) || 0)}
-                                  className="w-14 text-center py-1 text-xs font-bold bg-white border border-surface-200 rounded focus:ring-1 focus:ring-brand-500"
+                                  className="w-14 text-center py-1 text-xs font-bold bg-[#11151D] text-white border border-[#202733] rounded focus:outline-none focus:border-brand-500"
                                   min="0"
                                   step="0.5"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateSet(item.id, s.id, 'weight', 5)}
-                                  className="w-6 h-6 rounded bg-white border border-surface-200 text-surface-600 hover:bg-surface-100 flex items-center justify-center text-xs font-bold"
+                                  className="w-6 h-6 rounded bg-[#151A23] border border-[#202733] text-white hover:border-brand-500 flex items-center justify-center text-xs font-bold"
                                   title="+5 kg"
                                 >
                                   +
@@ -729,7 +729,7 @@ export function TrainingLoggerModal({
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateSet(item.id, s.id, 'reps', -1)}
-                                  className="w-6 h-6 rounded bg-white border border-surface-200 text-surface-600 hover:bg-surface-100 flex items-center justify-center text-xs font-bold"
+                                  className="w-6 h-6 rounded bg-[#151A23] border border-[#202733] text-white hover:border-brand-500 flex items-center justify-center text-xs font-bold"
                                   title="-1 rep"
                                 >
                                   -
@@ -738,13 +738,13 @@ export function TrainingLoggerModal({
                                   type="number"
                                   value={s.reps}
                                   onChange={e => handleSetDirectValue(item.id, s.id, 'reps', parseInt(e.target.value, 10) || 0)}
-                                  className="w-12 text-center py-1 text-xs font-bold bg-white border border-surface-200 rounded focus:ring-1 focus:ring-brand-500"
+                                  className="w-12 text-center py-1 text-xs font-bold bg-[#11151D] text-white border border-[#202733] rounded focus:outline-none focus:border-brand-500"
                                   min="0"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateSet(item.id, s.id, 'reps', 1)}
-                                  className="w-6 h-6 rounded bg-white border border-surface-200 text-surface-600 hover:bg-surface-100 flex items-center justify-center text-xs font-bold"
+                                  className="w-6 h-6 rounded bg-[#151A23] border border-[#202733] text-white hover:border-brand-500 flex items-center justify-center text-xs font-bold"
                                   title="+1 rep"
                                 >
                                   +
@@ -757,13 +757,13 @@ export function TrainingLoggerModal({
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveSet(item.id, s.id)}
-                                    className="p-1 rounded text-surface-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    className="p-1 rounded text-surface-400 hover:text-red-400 hover:bg-red-950/30 transition-colors"
                                     title="Delete set"
                                   >
                                     <Trash2 size={13} />
                                   </button>
                                 ) : (
-                                  <span className="text-[10px] text-surface-300">-</span>
+                                  <span className="text-[10px] text-surface-500">-</span>
                                 )}
                               </div>
                             </div>
@@ -774,7 +774,7 @@ export function TrainingLoggerModal({
                         <button
                           type="button"
                           onClick={() => handleAddSet(item.id)}
-                          className="w-full py-2 rounded-lg border border-dashed border-brand-300 text-brand-600 hover:bg-brand-50 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                          className="w-full py-2 rounded-lg border border-dashed border-[#202733] text-brand-400 hover:bg-[#151A23] hover:border-brand-500 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
                         >
                           <Plus size={14} />
                           <span>Add Set</span>
@@ -784,13 +784,13 @@ export function TrainingLoggerModal({
                   </div>
 
                   {/* Add Another Exercise Drawer / Search */}
-                  <div className="card p-4 bg-surface-50/70 border border-surface-200 rounded-xl space-y-3">
+                  <div className="p-4 bg-[#0D1017] border border-[#202733] rounded-xl space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-surface-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Plus size={14} className="text-brand-600" />
+                      <h4 className="text-xs font-bold text-surface-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <Plus size={14} className="text-brand-400" />
                         Add Another Exercise to Session
                       </h4>
-                      <span className="text-[11px] text-surface-400">
+                      <span className="text-[11px] text-surface-500">
                         {DEFAULT_EXERCISES.length}+ available
                       </span>
                     </div>
@@ -805,8 +805,8 @@ export function TrainingLoggerModal({
                           className={cn(
                             'px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap transition-colors',
                             selectedMuscle === mg.value
-                              ? 'bg-brand-500 text-white shadow-2xs'
-                              : 'bg-white border border-surface-200 text-surface-600 hover:bg-surface-100'
+                              ? 'bg-brand-600 text-white shadow-xs'
+                              : 'bg-[#151A23] border border-[#202733] text-surface-400 hover:text-white hover:bg-surface-800'
                           )}
                         >
                           {mg.label}
@@ -822,11 +822,11 @@ export function TrainingLoggerModal({
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         placeholder="Search exercise name (e.g. Incline Bench, Squat, Pulldown)..."
-                        className="w-full pl-9 pr-3 py-1.5 bg-white border border-surface-200 rounded-lg text-xs text-surface-900 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        className="w-full pl-9 pr-3 py-1.5 bg-[#11151D] border border-[#202733] rounded-lg text-xs text-white placeholder-surface-500 focus:outline-none focus:border-brand-500"
                       />
                     </div>
 
-                    {/* Quick Pick List (top 4 or search results) */}
+                    {/* Quick Pick List */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pt-1">
                       {filteredExercises.slice(0, 6).map(ex => {
                         const isAlreadyLogged = loggedItems.some(item => item.exercise.id === ex.id)
@@ -839,15 +839,15 @@ export function TrainingLoggerModal({
                             className={cn(
                               'p-2 rounded-lg border text-left flex items-center justify-between transition-colors',
                               isAlreadyLogged
-                                ? 'bg-surface-100 border-surface-200 opacity-50 cursor-not-allowed'
-                                : 'bg-white border-surface-200 hover:border-brand-400 hover:bg-brand-50/50'
+                                ? 'bg-[#080A0F] border-[#202733] opacity-40 cursor-not-allowed'
+                                : 'bg-[#151A23] border-[#202733] hover:border-brand-500 hover:bg-[#1A202B]'
                             )}
                           >
                             <div className="min-w-0 pr-2">
-                              <p className="text-xs font-bold text-surface-800 truncate">{ex.name}</p>
+                              <p className="text-xs font-bold text-white truncate">{ex.name}</p>
                               <p className="text-[10px] text-surface-400 capitalize">{ex.muscle_group}</p>
                             </div>
-                            <span className="text-[10px] font-bold text-brand-600 flex-shrink-0">
+                            <span className="text-[10px] font-bold text-brand-400 flex-shrink-0">
                               {isAlreadyLogged ? 'Added' : '+ Add'}
                             </span>
                           </button>
@@ -865,7 +865,7 @@ export function TrainingLoggerModal({
                   <div className="flex flex-col items-center justify-center space-y-4">
                     <div className="relative">
                       {isListening && (
-                        <div className="absolute -inset-3 rounded-full bg-brand-400 opacity-30 animate-ping pointer-events-none" />
+                        <div className="absolute -inset-3 rounded-full bg-brand-500 opacity-30 animate-ping pointer-events-none" />
                       )}
                       <button
                         type="button"
@@ -873,8 +873,8 @@ export function TrainingLoggerModal({
                         className={cn(
                           'w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all',
                           isListening
-                            ? 'bg-red-500 scale-105 ring-4 ring-red-200'
-                            : 'bg-brand-500 hover:bg-brand-600 hover:scale-105'
+                            ? 'bg-red-500 scale-105 ring-4 ring-red-900/50'
+                            : 'bg-brand-600 hover:bg-brand-500 hover:scale-105'
                         )}
                         aria-label={isListening ? 'Stop listening' : 'Start speaking'}
                       >
@@ -883,10 +883,10 @@ export function TrainingLoggerModal({
                     </div>
 
                     <div>
-                      <h3 className="text-base font-bold text-surface-900">
+                      <h3 className="text-base font-bold text-white">
                         {isListening ? 'Listening...' : 'Tap Microphone to Speak'}
                       </h3>
-                      <p className="text-xs text-surface-500 mt-1 max-w-sm mx-auto">
+                      <p className="text-xs text-surface-400 mt-1 max-w-sm mx-auto">
                         Speak naturally: &ldquo;Bench press 50 kilos for 10 reps, 3 sets&rdquo; or &ldquo;Squat 80 kg 8 reps&rdquo;
                       </p>
                     </div>
@@ -894,7 +894,7 @@ export function TrainingLoggerModal({
 
                   {/* Live Transcript / Feedback Box */}
                   {transcript && (
-                    <div className="card p-3 bg-surface-50 border border-surface-200 rounded-xl text-xs text-surface-800 text-left font-mono">
+                    <div className="p-3 bg-[#080A0F] border border-[#202733] rounded-xl text-xs text-surface-200 text-left font-mono">
                       <span className="text-[10px] font-bold text-surface-400 uppercase block mb-1">
                         Speech Transcript
                       </span>
@@ -903,18 +903,18 @@ export function TrainingLoggerModal({
                   )}
 
                   {voiceFeedback && (
-                    <div className="p-3 bg-brand-50 border border-brand-200 rounded-xl text-xs text-brand-900 text-left flex items-start gap-2">
-                      <CheckCircle2 size={16} className="text-brand-600 mt-0.5 flex-shrink-0" />
+                    <div className="p-3 bg-brand-950/40 border border-brand-800/40 rounded-xl text-xs text-brand-300 text-left flex items-start gap-2">
+                      <CheckCircle2 size={16} className="text-brand-400 mt-0.5 flex-shrink-0" />
                       <div>{voiceFeedback}</div>
                     </div>
                   )}
 
                   {/* Missing Field Interactive Prompt */}
                   {missingFieldPrompt && (
-                    <div className="card p-4 bg-amber-50/70 border border-amber-200 rounded-xl text-left space-y-3 animate-scale-in">
+                    <div className="p-4 bg-amber-950/30 border border-amber-800/40 rounded-xl text-left space-y-3 animate-scale-in">
                       <div className="flex items-center gap-2">
-                        <AlertCircle size={16} className="text-amber-600" />
-                        <h4 className="text-xs font-bold text-amber-900">
+                        <AlertCircle size={16} className="text-amber-400" />
+                        <h4 className="text-xs font-bold text-amber-200">
                           {missingFieldPrompt.missing === 'weight'
                             ? `What weight (kg) did you use for ${missingFieldPrompt.exerciseName}?`
                             : `How many reps did you complete for ${missingFieldPrompt.exerciseName}?`}
@@ -928,7 +928,7 @@ export function TrainingLoggerModal({
                               key={w}
                               type="button"
                               onClick={() => handleResolveMissingField(w)}
-                              className="px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-surface-800 hover:bg-amber-100 transition-colors"
+                              className="px-3 py-1.5 bg-[#151A23] border border-amber-600/40 rounded-lg text-xs font-bold text-white hover:bg-amber-900/40 transition-colors"
                             >
                               {w} kg
                             </button>
@@ -941,7 +941,7 @@ export function TrainingLoggerModal({
                               key={r}
                               type="button"
                               onClick={() => handleResolveMissingField(r)}
-                              className="px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-surface-800 hover:bg-amber-100 transition-colors"
+                              className="px-3 py-1.5 bg-[#151A23] border border-amber-600/40 rounded-lg text-xs font-bold text-white hover:bg-amber-900/40 transition-colors"
                             >
                               {r} reps
                             </button>
@@ -953,22 +953,22 @@ export function TrainingLoggerModal({
 
                   {/* Voice Captured Preview */}
                   {loggedItems.length > 0 && !missingFieldPrompt && (
-                    <div className="text-left card p-4 bg-white border border-surface-200 rounded-xl space-y-3">
+                    <div className="text-left p-4 bg-[#11151D] border border-[#202733] rounded-xl space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-bold text-surface-700 uppercase tracking-wider">
+                        <h4 className="text-xs font-bold text-surface-300 uppercase tracking-wider">
                           Ready for Review
                         </h4>
-                        <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                        <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
                           <Check size={13} /> Parsed Correctly
                         </span>
                       </div>
                       {loggedItems.map(item => (
-                        <div key={item.id} className="text-xs p-2.5 bg-surface-50 rounded-lg flex items-center justify-between">
+                        <div key={item.id} className="text-xs p-2.5 bg-[#080A0F] border border-[#202733] rounded-lg flex items-center justify-between">
                           <div>
-                            <span className="font-bold text-surface-900">{item.exercise.name}</span>
-                            <span className="text-surface-500 ml-2">({item.sets.length} sets)</span>
+                            <span className="font-bold text-white">{item.exercise.name}</span>
+                            <span className="text-surface-400 ml-2">({item.sets.length} sets)</span>
                           </div>
-                          <span className="font-mono text-surface-700">
+                          <span className="font-mono text-brand-300">
                             {item.sets[0]?.weight}kg × {item.sets[0]?.reps} reps
                           </span>
                         </div>
@@ -980,13 +980,13 @@ export function TrainingLoggerModal({
             </div>
 
             {/* ── FOOTER: PROCEED TO CONFIRMATION ── */}
-            <div className="p-4 sm:px-6 bg-surface-50 border-t border-surface-200 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-4 text-xs font-semibold text-surface-600">
-                <span><strong>{sessionTotals.exercisesCount}</strong> exercises</span>
+            <div className="p-4 sm:px-6 bg-[#0D1017] border-t border-[#202733] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-4 text-xs font-semibold text-surface-400">
+                <span><strong className="text-white">{sessionTotals.exercisesCount}</strong> exercises</span>
                 <span>•</span>
-                <span><strong>{sessionTotals.totalSets}</strong> sets</span>
+                <span><strong className="text-white">{sessionTotals.totalSets}</strong> sets</span>
                 <span>•</span>
-                <span><strong>{sessionTotals.totalVolume.toLocaleString()}</strong> kg volume</span>
+                <span><strong className="text-brand-400">{sessionTotals.totalVolume.toLocaleString()}</strong> kg volume</span>
               </div>
 
               <button
@@ -1008,21 +1008,21 @@ export function TrainingLoggerModal({
           <>
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
               {/* Telemetry Highlight Banner */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-brand-50 to-surface-50 border border-brand-100 flex items-center justify-between">
+              <div className="p-4 rounded-xl bg-gradient-to-r from-brand-950/40 to-[#0D1017] border border-brand-800/40 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand-500 text-white flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center">
                     <Trophy size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-surface-900 text-sm">Session Summary</h3>
-                    <p className="text-xs text-surface-500">
+                    <h3 className="font-bold text-white text-sm">Session Summary</h3>
+                    <p className="text-xs text-surface-400">
                       Will update Today&rsquo;s Activity, Weekly Snapshot, and calculated volume.
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <div className="text-xl font-black text-brand-600 tracking-tight">
+                  <div className="text-xl font-black text-brand-400 tracking-tight">
                     {sessionTotals.totalVolume.toLocaleString()} kg
                   </div>
                   <div className="text-[10px] font-semibold text-surface-400 uppercase">
@@ -1033,25 +1033,25 @@ export function TrainingLoggerModal({
 
               {/* Stat Tiles */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="card p-3 bg-white border border-surface-200 text-center rounded-xl">
-                  <p className="text-[11px] font-semibold text-surface-500 uppercase">Exercises</p>
-                  <p className="text-xl font-black text-surface-900 mt-0.5">{sessionTotals.exercisesCount}</p>
+                <div className="p-3 bg-[#11151D] border border-[#202733] text-center rounded-xl">
+                  <p className="text-[11px] font-semibold text-surface-400 uppercase">Exercises</p>
+                  <p className="text-xl font-black text-white mt-0.5">{sessionTotals.exercisesCount}</p>
                 </div>
-                <div className="card p-3 bg-white border border-surface-200 text-center rounded-xl">
-                  <p className="text-[11px] font-semibold text-surface-500 uppercase">Total Sets</p>
-                  <p className="text-xl font-black text-surface-900 mt-0.5">{sessionTotals.totalSets}</p>
+                <div className="p-3 bg-[#11151D] border border-[#202733] text-center rounded-xl">
+                  <p className="text-[11px] font-semibold text-surface-400 uppercase">Total Sets</p>
+                  <p className="text-xl font-black text-white mt-0.5">{sessionTotals.totalSets}</p>
                 </div>
-                <div className="card p-3 bg-white border border-surface-200 text-center rounded-xl">
-                  <p className="text-[11px] font-semibold text-surface-500 uppercase">Est. Duration</p>
-                  <p className="text-xl font-black text-surface-900 mt-0.5">
+                <div className="p-3 bg-[#11151D] border border-[#202733] text-center rounded-xl">
+                  <p className="text-[11px] font-semibold text-surface-400 uppercase">Est. Duration</p>
+                  <p className="text-xl font-black text-white mt-0.5">
                     {Math.round((sessionTotals.totalSets * 90) / 60)}m
                   </p>
                 </div>
               </div>
 
               {/* Full Detailed Breakdown */}
-              <div className="card bg-white border border-surface-200 rounded-xl divide-y divide-surface-100 overflow-hidden">
-                <div className="p-3 bg-surface-50/80 px-4 text-xs font-bold text-surface-700 flex items-center justify-between">
+              <div className="bg-[#11151D] border border-[#202733] rounded-xl divide-y divide-[#202733] overflow-hidden">
+                <div className="p-3 bg-[#0D1017] px-4 text-xs font-bold text-surface-300 flex items-center justify-between">
                   <span>Exercise Details</span>
                   <span>Completed Sets</span>
                 </div>
@@ -1060,12 +1060,12 @@ export function TrainingLoggerModal({
                   <div key={item.id} className="p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-brand-50 text-brand-700 font-bold text-[11px] flex items-center justify-center">
+                        <span className="w-5 h-5 rounded-full bg-brand-950/80 text-brand-400 font-bold text-[11px] flex items-center justify-center border border-brand-800/40">
                           {idx + 1}
                         </span>
-                        <h4 className="font-bold text-surface-900 text-sm">{item.exercise.name}</h4>
+                        <h4 className="font-bold text-white text-sm">{item.exercise.name}</h4>
                       </div>
-                      <span className="badge bg-surface-100 text-surface-600 text-[10px] uppercase font-bold py-0.5 px-2">
+                      <span className="badge bg-[#151A23] text-surface-300 border border-[#202733] text-[10px] uppercase font-bold py-0.5 px-2">
                         {item.exercise.muscle_group}
                       </span>
                     </div>
@@ -1074,10 +1074,10 @@ export function TrainingLoggerModal({
                       {item.sets.map(s => (
                         <div 
                           key={s.id} 
-                          className="p-2 rounded-lg bg-surface-50 border border-surface-100 text-xs flex items-center justify-between"
+                          className="p-2 rounded-lg bg-[#080A0F] border border-[#202733] text-xs flex items-center justify-between"
                         >
-                          <span className="text-surface-500 font-semibold">Set {s.set_number}</span>
-                          <span className="font-mono font-bold text-surface-900">
+                          <span className="text-surface-400 font-semibold">Set {s.set_number}</span>
+                          <span className="font-mono font-bold text-white">
                             {s.weight > 0 ? `${s.weight}kg × ${s.reps}` : `${s.reps} reps`}
                           </span>
                         </div>
@@ -1089,7 +1089,7 @@ export function TrainingLoggerModal({
             </div>
 
             {/* ── FOOTER: SAVE / CONFIRM ── */}
-            <div className="p-4 sm:px-6 bg-surface-50 border-t border-surface-200 flex items-center justify-between flex-shrink-0">
+            <div className="p-4 sm:px-6 bg-[#0D1017] border-t border-[#202733] flex items-center justify-between flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setStep('input')}

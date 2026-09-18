@@ -8,29 +8,29 @@ import { getExerciseVisual, resolveExerciseMedia } from '@/lib/exerciseMedia'
 // ─── Muscle Group Visual ────────────────────────────────────────────────────────
 
 const muscleIllustrationColors: Record<string, { bg: string; accent: string }> = {
-  chest:       { bg: 'bg-rose-50',    accent: 'text-rose-400' },
-  back:        { bg: 'bg-blue-50',    accent: 'text-blue-400' },
-  shoulders:   { bg: 'bg-violet-50',  accent: 'text-violet-400' },
-  biceps:      { bg: 'bg-sky-50',     accent: 'text-sky-400' },
-  triceps:     { bg: 'bg-indigo-50',  accent: 'text-indigo-400' },
-  quads:       { bg: 'bg-amber-50',   accent: 'text-amber-400' },
-  legs:        { bg: 'bg-amber-50',   accent: 'text-amber-400' },
-  hamstrings:  { bg: 'bg-orange-50',  accent: 'text-orange-400' },
-  glutes:      { bg: 'bg-pink-50',    accent: 'text-pink-400' },
-  calves:      { bg: 'bg-yellow-50',  accent: 'text-yellow-400' },
-  core:        { bg: 'bg-teal-50',    accent: 'text-teal-400' },
-  full_body:   { bg: 'bg-emerald-50', accent: 'text-emerald-400' },
-  forearms:    { bg: 'bg-cyan-50',    accent: 'text-cyan-400' },
-  traps:       { bg: 'bg-purple-50',  accent: 'text-purple-400' },
+  chest:       { bg: 'bg-[#151A23]', accent: 'text-rose-400' },
+  back:        { bg: 'bg-[#151A23]', accent: 'text-blue-400' },
+  shoulders:   { bg: 'bg-[#151A23]', accent: 'text-violet-400' },
+  biceps:      { bg: 'bg-[#151A23]', accent: 'text-sky-400' },
+  triceps:     { bg: 'bg-[#151A23]', accent: 'text-indigo-400' },
+  quads:       { bg: 'bg-[#151A23]', accent: 'text-amber-400' },
+  legs:        { bg: 'bg-[#151A23]', accent: 'text-amber-400' },
+  hamstrings:  { bg: 'bg-[#151A23]', accent: 'text-orange-400' },
+  glutes:      { bg: 'bg-[#151A23]', accent: 'text-pink-400' },
+  calves:      { bg: 'bg-[#151A23]', accent: 'text-yellow-400' },
+  core:        { bg: 'bg-[#151A23]', accent: 'text-teal-400' },
+  full_body:   { bg: 'bg-[#151A23]', accent: 'text-emerald-400' },
+  forearms:    { bg: 'bg-[#151A23]', accent: 'text-cyan-400' },
+  traps:       { bg: 'bg-[#151A23]', accent: 'text-purple-400' },
 }
 
 export function ExerciseIllustration({ muscleGroup, className }: { muscleGroup: string; className?: string }) {
-  const style = muscleIllustrationColors[muscleGroup] ?? { bg: 'bg-surface-50', accent: 'text-surface-400' }
+  const style = muscleIllustrationColors[muscleGroup] ?? { bg: 'bg-[#151A23]', accent: 'text-surface-400' }
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-1 rounded-lg p-2 text-center select-none', style.bg, className)}>
+    <div className={cn('flex flex-col items-center justify-center gap-1 rounded-lg p-2 text-center select-none border border-[#202733]', style.bg, className)}>
       <Dumbbell className={cn('w-6 h-6 opacity-60', style.accent)} aria-hidden="true" />
-      <span className="text-[10px] font-bold text-surface-700 capitalize">{muscleGroup.replace('_', ' ')}</span>
-      <span className="text-[9px] text-surface-400 font-medium">Demonstration unavailable</span>
+      <span className="text-[10px] font-bold text-surface-200 capitalize">{muscleGroup.replace('_', ' ')}</span>
+      <span className="text-[9px] text-surface-500 font-medium">Demonstration unavailable</span>
     </div>
   )
 }
@@ -166,7 +166,7 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
       {onToggleFavorite && (
         <button
           onClick={(e) => { e.stopPropagation(); onToggleFavorite(exercise.id, e) }}
-          className="absolute top-2 right-2 p-1.5 bg-white/85 backdrop-blur-sm rounded-full z-20 hover:scale-110 transition-transform shadow-sm"
+          className="absolute top-2 right-2 p-1.5 bg-[#151A23]/90 backdrop-blur-sm rounded-full z-20 hover:scale-110 transition-transform border border-[#202733] shadow-sm"
           aria-label={isFavorite ? `Remove ${exercise.name} from favorites` : `Add ${exercise.name} to favorites`}
           type="button"
         >
@@ -184,7 +184,7 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
       <div className="exercise-card-content">
         <div className="exercise-card-info">
           {/* Exercise Name — never clipped, wraps naturally */}
-          <h3 className="exercise-card-title group-hover:text-brand-600 transition-colors">
+          <h3 className="exercise-card-title group-hover:text-brand-400 transition-colors">
             {exercise.name}
           </h3>
 
@@ -192,7 +192,7 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             <MuscleGroupBadge group={exercise.muscle_group} />
             {exercise.equipment && exercise.equipment.length > 0 && (
-              <span className="badge bg-surface-100 text-surface-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+              <span className="badge bg-[#11151D] text-surface-300 border border-[#202733] text-[10px] font-semibold px-2 py-0.5 rounded-full">
                 {formatTagLabel(exercise.equipment[0])}
               </span>
             )}
@@ -203,7 +203,7 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
             <span className={cn('badge border text-[10px] font-semibold px-2 py-0.5 rounded-full', difficultyClass)}>
               {formatTagLabel(exercise.difficulty)}
             </span>
-            <span className="badge bg-surface-50 text-surface-600 border border-surface-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+            <span className="badge bg-[#11151D] text-surface-300 border border-[#202733] text-[10px] font-semibold px-2 py-0.5 rounded-full">
               {formatTagLabel(exercise.exercise_type)}
             </span>
           </div>
@@ -216,7 +216,7 @@ export function ExerciseCard({ exercise, isFavorite = false, onToggleFavorite, o
               type="button"
               onClick={(e) => { e.stopPropagation(); onLogExercise(exercise, e) }}
               id={`exercise-card-log-${exercise.slug}`}
-              className="w-full py-2 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] shadow-xs"
+              className="w-full py-2 px-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] shadow-xs"
               title={`Log ${exercise.name} sets now`}
               aria-label={`Log ${exercise.name} sets now`}
             >
@@ -248,7 +248,7 @@ interface FilterBarProps {
 export function FilterChips({ label, options, value, onChange, id }: FilterBarProps) {
   return (
     <div>
-      <p className="label-sm mb-2">{label}</p>
+      <p className="label-sm mb-2 text-surface-400">{label}</p>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
         <button
           id={`${id}-all`}
@@ -256,8 +256,8 @@ export function FilterChips({ label, options, value, onChange, id }: FilterBarPr
           className={cn(
             'badge cursor-pointer transition-colors',
             value === 'all'
-              ? 'bg-brand-500 text-white border border-brand-500'
-              : 'bg-white text-surface-600 border border-surface-200 hover:border-surface-300'
+              ? 'bg-brand-600 text-white border border-brand-500 shadow-xs'
+              : 'bg-[#11151D] text-surface-400 border border-[#202733] hover:border-brand-500/40 hover:text-white'
           )}
         >
           All
@@ -270,8 +270,8 @@ export function FilterChips({ label, options, value, onChange, id }: FilterBarPr
             className={cn(
               'badge cursor-pointer transition-colors',
               value === opt.value
-                ? 'bg-brand-500 text-white border border-brand-500'
-                : 'bg-white text-surface-600 border border-surface-200 hover:border-surface-300'
+                ? 'bg-brand-600 text-white border border-brand-500 shadow-xs'
+                : 'bg-[#11151D] text-surface-400 border border-[#202733] hover:border-brand-500/40 hover:text-white'
             )}
           >
             {opt.label}

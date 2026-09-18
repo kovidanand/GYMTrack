@@ -13,9 +13,9 @@ function PctChange({ pct }: { pct: number | null }) {
   const isNeutral = pct === 0
   return (
     <span className={cn(
-      'inline-flex items-center gap-0.5 text-xs font-bold px-1.5 py-0.5 rounded-md',
-      isNeutral ? 'bg-surface-100 text-surface-500' :
-      isPositive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+      'inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-lg border',
+      isNeutral ? 'bg-[#1A202B] text-surface-400 border-[#242D3C]' :
+      isPositive ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-red-500/15 text-red-300 border-red-500/30'
     )}>
       {isNeutral ? <Minus size={11} /> : isPositive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
       {isNeutral ? 'No change' : `${isPositive ? '+' : ''}${pct}%`}
@@ -29,9 +29,9 @@ export function PeriodComparison({ comparison, timeRange }: PeriodComparisonProp
 
   if (!comparison.hasPreviousData) {
     return (
-      <div className="card p-5 bg-white border border-surface-200 rounded-2xl shadow-xs">
-        <p className="text-xs font-bold uppercase tracking-wider text-surface-400 mb-3">Period Comparison</p>
-        <p className="text-sm text-surface-500 font-medium">
+      <div className="card p-5 bg-[#151A23] border border-[#202733] rounded-2xl shadow-card">
+        <p className="text-xs font-bold uppercase tracking-wider text-surface-400 mb-2">Period Comparison</p>
+        <p className="text-sm text-surface-400 font-medium">
           Not enough previous data for comparison. Keep logging workouts to unlock period-over-period insights.
         </p>
       </div>
@@ -54,24 +54,24 @@ export function PeriodComparison({ comparison, timeRange }: PeriodComparisonProp
   ]
 
   return (
-    <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
-      <p className="text-xs font-bold uppercase tracking-wider text-surface-400">Period Comparison</p>
+    <div className="card p-5 sm:p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-card space-y-4">
+      <p className="text-xs font-black uppercase tracking-wider text-surface-400">Period Comparison</p>
 
       <div className="grid sm:grid-cols-2 gap-4">
         {metrics.map(m => (
           <div
             key={m.label}
-            className="p-4 rounded-xl bg-surface-50 border border-surface-100 space-y-2"
+            className="p-4 rounded-xl bg-[#11151D] border border-[#1F2633] space-y-2"
           >
             <p className="text-[11px] font-bold uppercase tracking-wider text-surface-400">{m.label}</p>
 
             <div className="flex items-end gap-2 flex-wrap">
-              <span className="text-2xl font-black text-surface-900 tracking-tight">{m.current}</span>
+              <span className="text-2xl font-black text-white tracking-tight">{m.current}</span>
               <PctChange pct={m.pct} />
             </div>
 
             <p className="text-xs text-surface-400">
-              <span className="font-semibold text-surface-600">{prevLabel}:</span> {m.previous}
+              <span className="font-semibold text-surface-300">{prevLabel}:</span> {m.previous}
             </p>
           </div>
         ))}

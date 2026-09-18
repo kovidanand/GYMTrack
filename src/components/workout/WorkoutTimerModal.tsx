@@ -110,24 +110,24 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
   return (
     <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in" />
-        <Dialog.Content className="fixed bottom-0 sm:top-1/2 sm:bottom-auto left-1/2 -translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[94vw] max-w-sm bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl border border-surface-200 z-50 animate-slide-up sm:animate-scale-in focus:outline-none">
+        <Dialog.Overlay className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 animate-fade-in" />
+        <Dialog.Content className="fixed bottom-0 sm:top-1/2 sm:bottom-auto left-1/2 -translate-x-1/2 sm:-translate-y-1/2 w-full sm:w-[94vw] max-w-sm bg-[#151A23] rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl border border-[#202733] z-50 animate-slide-up sm:animate-scale-in focus:outline-none">
           {/* Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-surface-100">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center">
+          <div className="flex items-center justify-between pb-3 border-b border-[#202733]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-brand-950/60 text-brand-400 border border-brand-800/40 flex items-center justify-center">
                 <TimerIcon size={18} />
               </div>
               <div>
-                <Dialog.Title className="text-base font-bold text-surface-900 leading-none">
+                <Dialog.Title className="text-base font-bold text-white leading-none">
                   Training Timer
                 </Dialog.Title>
-                <p className="text-[11px] text-surface-500 mt-0.5">Stopwatch & Rest Countdown</p>
+                <p className="text-[11px] text-surface-400 mt-0.5">Stopwatch & Rest Countdown</p>
               </div>
             </div>
             <Dialog.Close asChild>
               <button
-                className="w-8 h-8 rounded-full flex items-center justify-center text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-surface-400 hover:text-white hover:bg-surface-800 transition-colors"
                 aria-label="Close timer panel"
               >
                 <X size={18} />
@@ -136,15 +136,15 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
           </div>
 
           {/* Navigation Tabs: Stopwatch & Rest Timer */}
-          <div className="flex bg-surface-100 p-1 rounded-xl mt-4 mb-5">
+          <div className="flex bg-[#0D1017] p-1 rounded-xl mt-4 mb-5 border border-[#202733]">
             <button
               onClick={() => setActiveTab('stopwatch')}
               id="timer-tab-stopwatch"
               className={cn(
                 "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5",
                 activeTab === 'stopwatch'
-                  ? "bg-white text-brand-600 shadow-sm"
-                  : "text-surface-500 hover:text-surface-800"
+                  ? "bg-brand-600 text-white shadow-xs"
+                  : "text-surface-400 hover:text-white"
               )}
             >
               <Clock size={13} />
@@ -156,8 +156,8 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
               className={cn(
                 "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5",
                 activeTab === 'rest'
-                  ? "bg-white text-brand-600 shadow-sm"
-                  : "text-surface-500 hover:text-surface-800"
+                  ? "bg-brand-600 text-white shadow-xs"
+                  : "text-surface-400 hover:text-white"
               )}
             >
               <Zap size={13} />
@@ -169,7 +169,7 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
           {activeTab === 'stopwatch' && (
             <div className="space-y-4 text-center py-1">
               <div className="py-4">
-                <div className="text-5xl font-extrabold font-mono tracking-tight text-surface-900">
+                <div className="text-5xl font-extrabold font-mono tracking-tight text-white">
                   {formatStopwatch(stopwatchMs)}
                 </div>
                 <p className="text-[11px] text-surface-400 mt-1 font-medium">Hours : Minutes : Seconds</p>
@@ -201,13 +201,13 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
           {activeTab === 'rest' && (
             <div className="space-y-4 text-center py-1">
               <div className="py-3">
-                <div className="text-5xl font-extrabold font-mono tracking-tight text-surface-900">
+                <div className="text-5xl font-extrabold font-mono tracking-tight text-white">
                   {formatTimer(timerRemainingSec)}
                 </div>
                 {timerRemainingSec === 0 ? (
-                  <p className="text-xs text-emerald-600 font-bold mt-1">Rest complete! Next set ready.</p>
+                  <p className="text-xs text-emerald-400 font-bold mt-1">✓ Rest complete! Next set ready.</p>
                 ) : isTimerRunning ? (
-                  <p className="text-xs text-brand-600 font-medium mt-1 animate-pulse">Rest interval running...</p>
+                  <p className="text-xs text-brand-400 font-medium mt-1 animate-pulse">Rest interval running...</p>
                 ) : (
                   <p className="text-[11px] text-surface-400 mt-1">Select interval or start</p>
                 )}
@@ -222,8 +222,8 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
                     className={cn(
                       "py-2 px-1 rounded-xl text-xs font-bold transition-all border",
                       timerDurationSec === sec && isTimerRunning
-                        ? "bg-brand-600 text-white border-brand-600 shadow-sm"
-                        : "bg-surface-50 hover:bg-brand-50 border-surface-200 text-surface-800"
+                        ? "bg-brand-600 text-white border-brand-500 shadow-sm"
+                        : "bg-[#11151D] hover:bg-[#1A202B] border-[#202733] text-surface-300 hover:text-white"
                     )}
                   >
                     {sec}s
@@ -234,8 +234,8 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
                   className={cn(
                     "py-2 px-1 rounded-xl text-xs font-bold transition-all border",
                     showCustomInput
-                      ? "bg-surface-200 text-surface-900 border-surface-300"
-                      : "bg-surface-50 hover:bg-surface-100 border-surface-200 text-surface-700"
+                      ? "bg-surface-800 text-white border-surface-600"
+                      : "bg-[#11151D] hover:bg-[#1A202B] border-[#202733] text-surface-400 hover:text-white"
                   )}
                 >
                   Custom
@@ -252,7 +252,7 @@ export function WorkoutTimerModal({ isOpen, onOpenChange }: WorkoutTimerModalPro
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
                     placeholder="Seconds (e.g. 45)"
-                    className="input-base text-xs py-1.5 flex-1"
+                    className="input-base text-xs py-1.5 flex-1 bg-[#080A0F] text-white border-[#202733]"
                     autoFocus
                     onKeyDown={(e) => e.key === 'Enter' && handleApplyCustom()}
                   />

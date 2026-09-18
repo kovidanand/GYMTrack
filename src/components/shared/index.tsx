@@ -10,12 +10,12 @@ export function GYMTrackLogo({ className, size = 'md' }: { className?: string; s
 
   return (
     <Link to="/" className={cn('flex items-center gap-2 select-none', className)} aria-label="GYMTrack home">
-      <div className={cn('rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0', iconSizes[size])}>
+      <div className={cn('rounded-xl bg-brand-500 flex items-center justify-center flex-shrink-0 shadow-xs', iconSizes[size])}>
         <svg viewBox="0 0 20 20" fill="none" className="w-4/5 h-4/5" aria-hidden="true">
           <path d="M3 10h2M15 10h2M5 10V7.5M5 10v2.5M15 10V7.5M15 10v2.5M5 7.5h10M5 12.5h10" stroke="white" strokeWidth="1.75" strokeLinecap="round"/>
         </svg>
       </div>
-      <span className={cn('font-bold tracking-tight text-surface-900', textSizes[size], sizes[size])}>
+      <span className={cn('font-black tracking-tight text-white', textSizes[size], sizes[size])}>
         GYMTrack
       </span>
     </Link>
@@ -32,12 +32,12 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'default', className }: BadgeProps) {
   const variants = {
-    default: 'bg-surface-100 text-surface-700',
-    brand: 'bg-brand-50 text-brand-700 border border-brand-200',
-    success: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    warning: 'bg-amber-50 text-amber-700 border border-amber-200',
-    danger: 'bg-red-50 text-red-700 border border-red-200',
-    outline: 'border border-surface-200 text-surface-600',
+    default: 'bg-[#1A202B] text-surface-300 border border-[#242D3C]',
+    brand: 'bg-brand-500/15 text-brand-300 border border-brand-500/30',
+    success: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30',
+    warning: 'bg-amber-500/15 text-amber-300 border border-amber-500/30',
+    danger: 'bg-red-500/15 text-red-300 border border-red-500/30',
+    outline: 'border border-[#2E3848] text-surface-400',
   }
   return (
     <span className={cn('badge', variants[variant], className)}>
@@ -65,11 +65,11 @@ export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <div className={cn('rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0 overflow-hidden', sizes[size], className)}>
+    <div className={cn('rounded-full bg-[#1F2633] border border-[#2E3848] flex items-center justify-center flex-shrink-0 overflow-hidden text-brand-300 font-bold', sizes[size], className)}>
       {src ? (
         <img src={src} alt={name} className="w-full h-full object-cover" />
       ) : (
-        <span className="font-semibold text-brand-700">{initials}</span>
+        <span>{initials}</span>
       )}
     </div>
   )
@@ -155,9 +155,9 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center justify-center text-center py-16 px-4', className)}>
-      {icon && <div className="text-surface-300 mb-4">{icon}</div>}
-      <h3 className="font-semibold text-surface-700 mb-1">{title}</h3>
-      {description && <p className="text-sm text-surface-500 max-w-xs mb-5">{description}</p>}
+      {icon && <div className="text-surface-500 mb-4">{icon}</div>}
+      <h3 className="font-bold text-white mb-1">{title}</h3>
+      {description && <p className="text-sm text-surface-400 max-w-xs mb-5 leading-relaxed">{description}</p>}
       {action}
     </div>
   )
@@ -177,7 +177,7 @@ export function PageHeader({ title, description, action, className }: PageHeader
     <div className={cn('flex items-start justify-between gap-4 mb-6', className)}>
       <div>
         <h1 className="page-title">{title}</h1>
-        {description && <p className="mt-1 text-surface-500 text-sm">{description}</p>}
+        {description && <p className="mt-1 text-surface-400 text-sm font-medium">{description}</p>}
       </div>
       {action && <div className="flex-shrink-0">{action}</div>}
     </div>
@@ -211,11 +211,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = 'primary', size = 'md', children, className, ...props }: ButtonProps) {
-  const base = 'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg'
+  const base = 'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl'
   const variants = {
     primary: 'bg-brand-500 text-white shadow-sm hover:bg-brand-600 hover:shadow-md',
-    secondary: 'bg-white text-surface-700 border border-surface-200 shadow-sm hover:bg-surface-50 hover:border-surface-300',
-    ghost: 'text-surface-600 hover:bg-surface-100 hover:text-surface-900',
+    secondary: 'bg-[#151A23] text-surface-200 border border-[#242D3C] shadow-sm hover:bg-[#1A202B] hover:border-[#2E3848] hover:text-white',
+    ghost: 'text-surface-400 hover:bg-[#1A202B] hover:text-white',
     danger: 'bg-red-500 text-white shadow-sm hover:bg-red-600',
   }
   const sizes = {
@@ -256,27 +256,27 @@ export function Card({ children, className, hoverable, onClick }: CardProps) {
 // ─── MuscleGroupIcon ───────────────────────────────────────────────────────────
 
 const muscleColors: Record<string, string> = {
-  chest: 'bg-rose-100 text-rose-600',
-  back: 'bg-blue-100 text-blue-600',
-  shoulders: 'bg-violet-100 text-violet-600',
-  biceps: 'bg-sky-100 text-sky-600',
-  triceps: 'bg-indigo-100 text-indigo-600',
-  legs: 'bg-amber-100 text-amber-600',
-  quads: 'bg-amber-100 text-amber-600',
-  hamstrings: 'bg-orange-100 text-orange-600',
-  glutes: 'bg-pink-100 text-pink-600',
-  calves: 'bg-yellow-100 text-yellow-600',
-  core: 'bg-teal-100 text-teal-600',
-  full_body: 'bg-emerald-100 text-emerald-600',
-  forearms: 'bg-cyan-100 text-cyan-600',
-  traps: 'bg-purple-100 text-purple-600',
+  chest: 'bg-rose-950/60 text-rose-300 border border-rose-800/40',
+  back: 'bg-blue-950/60 text-blue-300 border border-blue-800/40',
+  shoulders: 'bg-violet-950/60 text-violet-300 border border-violet-800/40',
+  biceps: 'bg-sky-950/60 text-sky-300 border border-sky-800/40',
+  triceps: 'bg-indigo-950/60 text-indigo-300 border border-indigo-800/40',
+  legs: 'bg-amber-950/60 text-amber-300 border border-amber-800/40',
+  quads: 'bg-amber-950/60 text-amber-300 border border-amber-800/40',
+  hamstrings: 'bg-orange-950/60 text-orange-300 border border-orange-800/40',
+  glutes: 'bg-pink-950/60 text-pink-300 border border-pink-800/40',
+  calves: 'bg-yellow-950/60 text-yellow-300 border border-yellow-800/40',
+  core: 'bg-teal-950/60 text-teal-300 border border-teal-800/40',
+  full_body: 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/40',
+  forearms: 'bg-cyan-950/60 text-cyan-300 border border-cyan-800/40',
+  traps: 'bg-purple-950/60 text-purple-300 border border-purple-800/40',
 }
 
 export function MuscleGroupBadge({ group, className }: { group: string; className?: string }) {
   const normKey = group ? group.toLowerCase().replace(/[-\s]+/g, '_') : ''
-  const color = muscleColors[normKey] ?? 'bg-surface-100 text-surface-600'
+  const color = muscleColors[normKey] ?? 'bg-[#1A202B] text-surface-400 border border-[#242D3C]'
   return (
-    <span className={cn('badge border-0 text-[10px] font-semibold px-2 py-0.5 rounded-full', color, className)}>
+    <span className={cn('badge text-[10px] font-semibold px-2.5 py-0.5 rounded-full', color, className)}>
       {formatTagLabel(group)}
     </span>
   )

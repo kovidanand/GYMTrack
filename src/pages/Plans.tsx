@@ -335,24 +335,24 @@ export default function Plans() {
       {/* ── SECTION A: ACTIVE PLAN OVERVIEW ── */}
       {activePlan ? (
         <section aria-label="Active Training Plan" className="space-y-6">
-          <div className="card p-5 sm:p-6 bg-gradient-to-br from-brand-900 via-surface-900 to-surface-950 text-white rounded-2xl shadow-lg border border-surface-800 space-y-5">
+          <div className="card p-5 sm:p-6 bg-[#151A23] text-white rounded-2xl shadow-xl border border-[#202733] space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider bg-brand-500/20 text-brand-300 px-2.5 py-1 rounded-full border border-brand-500/30">
+                  <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider bg-brand-950/60 text-brand-300 px-2.5 py-1 rounded-full border border-brand-500/30">
                     <CheckCircle2 size={12} className="text-brand-400" /> Active Program
                   </span>
                   {activePlan.difficulty && (
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-surface-300 bg-surface-800 px-2.5 py-1 rounded-full capitalize">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-surface-300 bg-[#11151D] border border-[#202733] px-2.5 py-1 rounded-full capitalize">
                       {activePlan.difficulty}
                     </span>
                   )}
                 </div>
 
-                <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-surface-900 tracking-tight">
                   {activePlan.name}
                 </h2>
-                <p className="text-xs sm:text-sm text-surface-300 mt-1 max-w-xl">
+                <p className="text-xs sm:text-sm text-surface-400 mt-1 max-w-xl">
                   {activePlan.description || `${activePlan.goal || 'Fitness'} program with structured weekly frequency.`}
                 </p>
               </div>
@@ -362,7 +362,7 @@ export default function Plans() {
                 <button
                   type="button"
                   onClick={() => handleToggleActive(activePlan.id, true)}
-                  className="px-3 py-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-surface-300 text-xs font-semibold flex items-center gap-1.5 border border-surface-700 transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-[#11151D] hover:bg-[#1A202B] text-surface-300 text-xs font-semibold flex items-center gap-1.5 border border-[#202733] transition-colors"
                   title="Pause this training plan"
                 >
                   <PauseCircle size={14} />
@@ -372,22 +372,22 @@ export default function Plans() {
             </div>
 
             {/* Plan Metrics Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-surface-800/80">
-              <div className="p-3 rounded-xl bg-surface-800/50 border border-surface-700/50">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-[#202733]">
+              <div className="p-3 rounded-xl bg-[#11151D] border border-[#202733]">
                 <span className="text-[10px] uppercase font-bold text-surface-400 tracking-wider">Goal</span>
-                <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate">{activePlan.goal || 'Muscle Growth'}</p>
+                <p className="text-xs sm:text-sm font-bold text-surface-200 mt-0.5 truncate">{activePlan.goal || 'Muscle Growth'}</p>
               </div>
-              <div className="p-3 rounded-xl bg-surface-800/50 border border-surface-700/50">
+              <div className="p-3 rounded-xl bg-[#11151D] border border-[#202733]">
                 <span className="text-[10px] uppercase font-bold text-surface-400 tracking-wider">Duration</span>
-                <p className="text-xs sm:text-sm font-bold text-white mt-0.5">{activePlan.duration_weeks || 12} Weeks</p>
+                <p className="text-xs sm:text-sm font-bold text-surface-200 mt-0.5">{activePlan.duration_weeks || 12} Weeks</p>
               </div>
-              <div className="p-3 rounded-xl bg-surface-800/50 border border-surface-700/50">
+              <div className="p-3 rounded-xl bg-[#11151D] border border-[#202733]">
                 <span className="text-[10px] uppercase font-bold text-surface-400 tracking-wider">Frequency</span>
-                <p className="text-xs sm:text-sm font-bold text-white mt-0.5">{activePlan.days_per_week || 4} Days / Week</p>
+                <p className="text-xs sm:text-sm font-bold text-surface-200 mt-0.5">{activePlan.days_per_week || 4} Days / Week</p>
               </div>
-              <div className="p-3 rounded-xl bg-surface-800/50 border border-surface-700/50">
+              <div className="p-3 rounded-xl bg-[#11151D] border border-[#202733]">
                 <span className="text-[10px] uppercase font-bold text-surface-400 tracking-wider">Session</span>
-                <p className="text-xs sm:text-sm font-bold text-white mt-0.5">{activePlan.session_duration || 60} mins</p>
+                <p className="text-xs sm:text-sm font-bold text-surface-200 mt-0.5">{activePlan.session_duration || 60} mins</p>
               </div>
             </div>
 
@@ -397,13 +397,13 @@ export default function Plans() {
                 <span className="text-surface-300 font-semibold">
                   Week {currentWeek} of {activePlan.duration_weeks || 12}
                 </span>
-                <span className="text-brand-300 font-bold">
+                <span className="text-brand-400 font-bold">
                   {planProgressStats.completedSessions} / {planProgressStats.totalPlannedSessions} sessions completed ({planProgressStats.percentage}%)
                 </span>
               </div>
-              <div className="w-full bg-surface-800 rounded-full h-2.5 overflow-hidden">
+              <div className="w-full bg-[#11151D] rounded-full h-2.5 overflow-hidden border border-[#202733]">
                 <div 
-                  className="bg-gradient-to-r from-brand-500 to-brand-400 h-full rounded-full transition-all duration-500"
+                  className="bg-gradient-to-r from-brand-600 to-brand-400 h-full rounded-full transition-all duration-500"
                   style={{ width: `${Math.max(4, planProgressStats.percentage)}%` }}
                 />
               </div>
@@ -411,15 +411,15 @@ export default function Plans() {
           </div>
 
           {/* ── SECTION B: TODAY'S WORKOUT IN ACTIVE PLAN ── */}
-          <div className="card p-5 sm:p-6 bg-white rounded-2xl shadow-xs border border-surface-200 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-100 pb-4">
+          <div className="card p-5 sm:p-6 bg-[#151A23] rounded-2xl shadow-xl border border-[#202733] space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#202733] pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-brand-600">
+                  <span className="text-xs font-bold uppercase tracking-wider text-brand-400">
                     Week {currentWeek} · Day {todayDayNumber}
                   </span>
-                  <span className="text-surface-300">•</span>
-                  <span className="text-xs font-semibold text-surface-500">
+                  <span className="text-surface-600">•</span>
+                  <span className="text-xs font-semibold text-surface-400">
                     {new Date().toLocaleDateString(undefined, { weekday: 'long' })}
                   </span>
                 </div>
@@ -430,7 +430,7 @@ export default function Plans() {
 
               {todayWorkout && todayWorkout.day_type === 'workout' && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-surface-700 bg-surface-100 px-3 py-1.5 rounded-full border border-surface-200">
+                  <span className="text-xs font-bold text-surface-200 bg-[#11151D] px-3 py-1.5 rounded-full border border-[#202733]">
                     {todayExerciseStats.completed} / {todayExerciseStats.total} Exercises Completed
                   </span>
                 </div>
@@ -440,7 +440,7 @@ export default function Plans() {
             {/* Workout Exercises or Recovery View */}
             {todayWorkout && todayWorkout.day_type === 'workout' && todayWorkout.workout_exercises && todayWorkout.workout_exercises.length > 0 ? (
               <div className="space-y-4">
-                <p className="text-xs text-surface-500">
+                <p className="text-xs text-surface-400">
                   Tap any exercise to view demonstration video, cues, and log your completed sets.
                 </p>
 
@@ -470,12 +470,12 @@ export default function Plans() {
                         })}
                         className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 group ${
                           isCompleted
-                            ? 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300'
-                            : 'bg-surface-50/60 border-surface-200 hover:border-brand-300 hover:bg-surface-50 shadow-2xs'
+                            ? 'bg-emerald-950/30 border-emerald-500/40 hover:border-emerald-500/60'
+                            : 'bg-[#11151D] border-[#202733] hover:border-brand-500/50 hover:bg-[#1A202B]'
                         }`}
                       >
                         {/* Video Thumbnail Box - Clean 16:9 ratio, seamless neutral surface, no black background */}
-                        <div className="w-20 sm:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 flex-shrink-0 relative border border-surface-200/80 shadow-2xs">
+                        <div className="w-20 sm:w-24 aspect-video rounded-lg overflow-hidden bg-[#080A0F] flex-shrink-0 relative border border-[#202733]">
                           <ExerciseMedia exercise={ex} variant="thumbnail" />
                         </div>
 
@@ -483,7 +483,7 @@ export default function Plans() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-extrabold text-surface-400">#{idx + 1}</span>
-                            <h4 className="text-sm font-bold text-surface-900 group-hover:text-brand-600 transition-colors truncate">
+                            <h4 className="text-sm font-bold text-surface-900 group-hover:text-brand-400 transition-colors truncate">
                               {ex.name}
                             </h4>
                           </div>
@@ -492,7 +492,7 @@ export default function Plans() {
                             {ex.muscle_group && (
                               <MuscleGroupBadge group={ex.muscle_group} />
                             )}
-                            <span className="text-[11px] font-semibold text-surface-500">
+                            <span className="text-[11px] font-semibold text-surface-400">
                               {we.sets} × {we.reps}
                             </span>
                           </div>
@@ -501,13 +501,13 @@ export default function Plans() {
                         {/* Completion Status */}
                         <div>
                           {isCompleted ? (
-                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
-                              <CheckCircle2 size={14} className="text-emerald-600" /> Done
+                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                              <CheckCircle2 size={14} className="text-emerald-400" /> Done
                             </span>
                           ) : (
                             <button
                               type="button"
-                              className="text-xs font-bold text-brand-600 group-hover:bg-brand-50 px-2.5 py-1 rounded-lg transition-colors border border-brand-200"
+                              className="text-xs font-bold text-brand-400 bg-brand-950/40 group-hover:bg-brand-900/50 px-2.5 py-1 rounded-lg transition-colors border border-brand-500/30"
                             >
                               Log
                             </button>
@@ -519,20 +519,20 @@ export default function Plans() {
                 </div>
               </div>
             ) : todayWorkout && (todayWorkout.day_type === 'recovery' || todayWorkout.day_type === 'rest') ? (
-              <div className="p-6 rounded-xl bg-surface-50 border border-surface-200 text-center space-y-2">
-                <Sparkles className="w-8 h-8 text-brand-500 mx-auto" />
+              <div className="p-6 rounded-xl bg-[#11151D] border border-[#202733] text-center space-y-2">
+                <Sparkles className="w-8 h-8 text-brand-400 mx-auto" />
                 <h4 className="text-base font-bold text-surface-900">
                   {todayWorkout.name || 'Recovery & Rest Day'}
                 </h4>
-                <p className="text-xs sm:text-sm text-surface-600 max-w-md mx-auto">
+                <p className="text-xs sm:text-sm text-surface-400 max-w-md mx-auto">
                   No heavy lifting scheduled today. Focus on restful sleep, adequate protein intake, and light mobility or walking.
                 </p>
               </div>
             ) : (
-              <div className="p-6 rounded-xl bg-surface-50 border border-surface-200 text-center space-y-2">
+              <div className="p-6 rounded-xl bg-[#11151D] border border-[#202733] text-center space-y-2">
                 <Dumbbell className="w-8 h-8 text-surface-400 mx-auto" />
                 <h4 className="text-base font-bold text-surface-900">Rest Day</h4>
-                <p className="text-xs sm:text-sm text-surface-500">
+                <p className="text-xs sm:text-sm text-surface-400">
                   No workout scheduled for today in your weekly cycle. Enjoy your recovery.
                 </p>
               </div>
@@ -540,7 +540,7 @@ export default function Plans() {
           </div>
 
           {/* ── SECTION C: WEEKLY SCHEDULE STRIP ── */}
-          <div className="card p-5 bg-white rounded-2xl shadow-xs border border-surface-200 space-y-4">
+          <div className="card p-5 bg-[#151A23] rounded-2xl shadow-xl border border-[#202733] space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">
               Weekly Routine Schedule
             </h3>
@@ -556,28 +556,28 @@ export default function Plans() {
                 return (
                   <div
                     key={dayName}
-                    className={`p-3 rounded-xl border text-center flex flex-col justify-between min-h-[90px] ${
+                    className={`p-3 rounded-xl border text-center flex flex-col justify-between min-h-[90px] transition-all ${
                       isToday
-                        ? 'bg-brand-50/70 border-brand-400 ring-2 ring-brand-500/20 shadow-xs'
-                        : 'bg-surface-50/60 border-surface-200'
+                        ? 'bg-brand-950/40 border-brand-500/60 ring-1 ring-brand-500/30'
+                        : 'bg-[#11151D] border-[#202733]'
                     }`}
                   >
                     <div>
-                      <span className={`text-[10px] font-extrabold uppercase tracking-wider ${isToday ? 'text-brand-700' : 'text-surface-400'}`}>
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider ${isToday ? 'text-brand-400' : 'text-surface-400'}`}>
                         {dayName} {isToday && '(Today)'}
                       </span>
-                      <p className="text-xs font-bold text-surface-800 mt-1 line-clamp-2">
+                      <p className="text-xs font-bold text-surface-200 mt-1 line-clamp-2">
                         {wo ? wo.name : 'Rest'}
                       </p>
                     </div>
 
                     <div className="mt-2">
                       {isRest ? (
-                        <span className="text-[10px] font-semibold text-surface-400">Rest</span>
+                        <span className="text-[10px] font-semibold text-surface-500">Rest</span>
                       ) : isRecovery ? (
-                        <span className="text-[10px] font-semibold text-amber-600">Recovery</span>
+                        <span className="text-[10px] font-semibold text-amber-400">Recovery</span>
                       ) : (
-                        <span className="text-[10px] font-bold text-brand-600">
+                        <span className="text-[10px] font-bold text-brand-400">
                           {wo?.workout_exercises?.length || 4} exercises
                         </span>
                       )}
@@ -591,8 +591,8 @@ export default function Plans() {
       ) : (
         /* ── EMPTY STATE: NO ACTIVE PLAN ── */
         <section aria-label="No Active Plan">
-          <div className="card p-8 sm:p-12 text-center bg-gradient-to-b from-white to-surface-50 border border-surface-200 rounded-3xl shadow-xs space-y-5 max-w-2xl mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center mx-auto text-brand-600 shadow-2xs">
+          <div className="card p-8 sm:p-12 text-center bg-[#151A23] border border-[#202733] rounded-3xl shadow-xl space-y-5 max-w-2xl mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-brand-950/60 border border-brand-500/30 flex items-center justify-center mx-auto text-brand-400">
               <Compass className="w-8 h-8" />
             </div>
 
@@ -600,7 +600,7 @@ export default function Plans() {
               <h2 className="text-xl sm:text-2xl font-extrabold text-surface-900 tracking-tight">
                 Build Your Training Plan
               </h2>
-              <p className="text-xs sm:text-sm text-surface-600 max-w-md mx-auto">
+              <p className="text-xs sm:text-sm text-surface-400 max-w-md mx-auto">
                 Choose a goal and we&rsquo;ll help you create a structured, day-by-day routine tailored to your schedule and experience.
               </p>
             </div>
@@ -643,11 +643,11 @@ export default function Plans() {
                 setGeneratedPreview(null)
                 setIsCreateOpen(true)
               }}
-              className="card p-4 bg-white rounded-2xl border border-surface-200 hover:border-brand-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group space-y-3"
+              className="card p-4 bg-[#151A23] rounded-2xl border border-[#202733] hover:border-brand-500/50 hover:shadow-lg transition-all cursor-pointer flex flex-col justify-between group space-y-3"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-surface-100 text-surface-600 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#11151D] text-brand-400 border border-brand-500/20 px-2.5 py-0.5 rounded-full">
                     {category.badge}
                   </span>
                   <span className="text-xs text-surface-400 font-medium">
@@ -655,15 +655,15 @@ export default function Plans() {
                   </span>
                 </div>
 
-                <h4 className="text-sm font-bold text-surface-900 group-hover:text-brand-600 transition-colors">
+                <h4 className="text-sm font-bold text-surface-900 group-hover:text-brand-400 transition-colors">
                   {category.title}
                 </h4>
-                <p className="text-xs text-surface-500 mt-1 line-clamp-2">
+                <p className="text-xs text-surface-400 mt-1 line-clamp-2">
                   {category.description}
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-surface-100 flex items-center justify-between text-xs font-bold text-brand-600">
+              <div className="pt-2 border-t border-[#202733] flex items-center justify-between text-xs font-bold text-brand-400">
                 <span>Customize &amp; Build</span>
                 <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
               </div>
@@ -683,11 +683,11 @@ export default function Plans() {
             {plans.filter(p => !p.is_active).map(plan => (
               <div
                 key={plan.id}
-                className="p-4 rounded-xl bg-white border border-surface-200 flex items-center justify-between gap-3"
+                className="p-4 rounded-xl bg-[#151A23] border border-[#202733] flex items-center justify-between gap-3"
               >
                 <div>
                   <h4 className="text-sm font-bold text-surface-900">{plan.name}</h4>
-                  <p className="text-xs text-surface-500">
+                  <p className="text-xs text-surface-400">
                     {plan.duration_weeks || 12} Weeks · {plan.days_per_week || 4} days/week · {plan.difficulty || 'Intermediate'}
                   </p>
                 </div>
@@ -696,7 +696,7 @@ export default function Plans() {
                   <button
                     type="button"
                     onClick={() => handleToggleActive(plan.id, false, false)}
-                    className="btn-secondary text-xs py-1.5 px-2.5 font-semibold hover:border-brand-300"
+                    className="btn-secondary text-xs py-1.5 px-2.5 font-semibold hover:border-brand-500/40"
                     title="Resume this plan keeping previous progress"
                     id={`resume-plan-${plan.id}`}
                   >
@@ -706,7 +706,7 @@ export default function Plans() {
                   <button
                     type="button"
                     onClick={() => handleToggleActive(plan.id, false, true)}
-                    className="text-xs py-1.5 px-2.5 font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 transition-colors"
+                    className="text-xs py-1.5 px-2.5 font-semibold text-brand-300 bg-brand-950/40 hover:bg-brand-900/50 rounded-lg border border-brand-500/30 transition-colors"
                     title="Start this plan as a fresh cycle (0 exercises completed)"
                     id={`start-fresh-plan-${plan.id}`}
                   >
@@ -716,7 +716,7 @@ export default function Plans() {
                   <button
                     type="button"
                     onClick={() => setPlanToDelete(plan)}
-                    className="text-xs py-1.5 px-2.5 font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors flex items-center gap-1"
+                    className="text-xs py-1.5 px-2.5 font-semibold text-red-400 hover:text-red-300 bg-red-950/30 hover:bg-red-900/40 rounded-lg border border-red-900/40 transition-colors flex items-center gap-1"
                     id={`delete-plan-${plan.id}`}
                   >
                     <Trash2 size={13} />
@@ -732,27 +732,27 @@ export default function Plans() {
       {/* ── PLAN CREATION & CUSTOMIZATION MODAL ── */}
       {isCreateOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-surface-900/70 backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
           role="dialog"
           aria-modal="true"
         >
           <div 
-            className="bg-white rounded-2xl w-full max-w-xl shadow-2xl border border-surface-200 overflow-hidden flex flex-col max-h-[92vh] animate-scale-up"
+            className="bg-[#151A23] rounded-2xl w-full max-w-xl shadow-2xl border border-[#202733] overflow-hidden flex flex-col max-h-[92vh] animate-scale-up"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-4 border-b border-surface-100 flex items-center justify-between bg-surface-50/70">
+            <div className="p-4 border-b border-[#202733] flex items-center justify-between bg-[#11151D]">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-surface-900">
                   {generatedPreview ? 'Review Your Training Program' : 'Customize Your Training Plan'}
                 </h3>
-                <p className="text-xs text-surface-500">
+                <p className="text-xs text-surface-400">
                   {generatedPreview ? 'Review the structure and tap Start Plan' : 'Select your goals and preferences'}
                 </p>
               </div>
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-200/60"
+                className="p-1.5 rounded-lg text-surface-400 hover:text-surface-200 hover:bg-[#1A202B]"
               >
                 <X size={18} />
               </button>
@@ -761,7 +761,7 @@ export default function Plans() {
             {/* Modal Body */}
             <div className="p-5 overflow-y-auto space-y-5 flex-1">
               {actionError && (
-                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-red-950/40 border border-red-900/50 text-red-300 text-xs flex items-center gap-2">
                   <AlertCircle size={15} className="flex-shrink-0" />
                   <span>{actionError}</span>
                 </div>
@@ -772,13 +772,13 @@ export default function Plans() {
                 <div className="space-y-4">
                   {/* Goal Selector */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-surface-500 mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-surface-400 mb-1.5">
                       Primary Goal
                     </label>
                     <select
                       value={selectedGoal}
                       onChange={e => setSelectedGoal(e.target.value)}
-                      className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-surface-200 bg-surface-50 text-surface-900"
+                      className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-[#202733] bg-[#11151D] text-surface-100"
                     >
                       {GOAL_CATEGORIES.map(g => (
                         <option key={g.id} value={g.id}>{g.title}</option>
@@ -788,7 +788,7 @@ export default function Plans() {
 
                   {/* Duration Selector */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-surface-500 mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-surface-400 mb-1.5">
                       Program Duration
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -799,12 +799,12 @@ export default function Plans() {
                           onClick={() => setSelectedDuration(opt.weeks)}
                           className={`p-2.5 rounded-xl border text-left transition-all ${
                             selectedDuration === opt.weeks
-                              ? 'bg-brand-50 border-brand-500 text-brand-900 ring-2 ring-brand-500/20'
-                              : 'bg-surface-50/60 border-surface-200 text-surface-700 hover:bg-surface-100'
+                              ? 'bg-brand-950/60 border-brand-500 text-brand-300 ring-1 ring-brand-500/30'
+                              : 'bg-[#11151D] border-[#202733] text-surface-300 hover:bg-[#1A202B]'
                           }`}
                         >
                           <span className="text-xs font-bold block">{opt.label}</span>
-                          <span className="text-[10px] text-surface-500 block truncate">{opt.description}</span>
+                          <span className="text-[10px] text-surface-400 block truncate">{opt.description}</span>
                         </button>
                       ))}
                     </div>
@@ -813,13 +813,13 @@ export default function Plans() {
                   {/* Frequency & Experience Level */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-surface-500 mb-1.5">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-surface-400 mb-1.5">
                         Frequency (Days / Week)
                       </label>
                       <select
                         value={selectedDays}
                         onChange={e => setSelectedDays(parseInt(e.target.value))}
-                        className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-surface-200 bg-surface-50 text-surface-900"
+                        className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-[#202733] bg-[#11151D] text-surface-100"
                       >
                         <option value={2}>2 Days (Full Body Split)</option>
                         <option value={3}>3 Days (Push / Pull / Legs)</option>
@@ -830,13 +830,13 @@ export default function Plans() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-surface-500 mb-1.5">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-surface-400 mb-1.5">
                         Experience Level
                       </label>
                       <select
                         value={selectedLevel}
                         onChange={e => setSelectedLevel(e.target.value as any)}
-                        className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-surface-200 bg-surface-50 text-surface-900"
+                        className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-[#202733] bg-[#11151D] text-surface-100"
                       >
                         <option value="beginner">Beginner (0-1 yr)</option>
                         <option value="intermediate">Intermediate (1-3 yrs)</option>
@@ -848,13 +848,13 @@ export default function Plans() {
                   {/* Location & Session Duration */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-surface-500 mb-1.5">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-surface-400 mb-1.5">
                         Location
                       </label>
                       <select
                         value={selectedLocation}
                         onChange={e => setSelectedLocation(e.target.value as any)}
-                        className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-surface-200 bg-surface-50 text-surface-900"
+                        className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-[#202733] bg-[#11151D] text-surface-100"
                       >
                         <option value="gym">Full Gym</option>
                         <option value="home">Home (Dumbbells/Bodyweight)</option>
@@ -862,13 +862,13 @@ export default function Plans() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-surface-500 mb-1.5">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-surface-400 mb-1.5">
                         Session Duration
                       </label>
                       <select
                         value={selectedDurationMinutes}
                         onChange={e => setSelectedDurationMinutes(parseInt(e.target.value))}
-                        className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-surface-200 bg-surface-50 text-surface-900"
+                        className="w-full text-xs sm:text-sm font-semibold p-2.5 rounded-xl border border-[#202733] bg-[#11151D] text-surface-100"
                       >
                         <option value={45}>45 minutes</option>
                         <option value={60}>60 minutes (Standard)</option>
@@ -880,28 +880,28 @@ export default function Plans() {
               ) : (
                 /* Step 2: Generated Preview */
                 <div className="space-y-4 animate-fade-in">
-                  <div className="p-4 rounded-xl bg-brand-50/70 border border-brand-200 space-y-2">
-                    <h4 className="text-base font-extrabold text-brand-950">
+                  <div className="p-4 rounded-xl bg-[#11151D] border border-brand-500/40 space-y-2">
+                    <h4 className="text-base font-extrabold text-brand-300">
                       {generatedPreview.plan_name}
                     </h4>
-                    <p className="text-xs text-brand-800">
+                    <p className="text-xs text-brand-400">
                       {generatedPreview.duration_weeks} Weeks · {generatedPreview.training_days_per_week} days/week · {generatedPreview.difficulty} · ~{generatedPreview.session_duration}m sessions
                     </p>
                   </div>
 
                   {/* Phases Preview */}
                   <div className="space-y-2">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-surface-500">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-surface-400">
                       Periodized Program Phases ({generatedPreview.phases.length})
                     </h5>
                     <div className="space-y-1.5">
                       {generatedPreview.phases.map(ph => (
-                        <div key={ph.phase_number} className="p-3 rounded-lg border border-surface-200 bg-surface-50 text-xs">
+                        <div key={ph.phase_number} className="p-3 rounded-lg border border-[#202733] bg-[#151A23] text-xs">
                           <div className="flex items-center justify-between font-bold text-surface-900">
                             <span>{ph.name}</span>
-                            <span className="text-surface-500">Weeks {ph.start_week}–{ph.end_week}</span>
+                            <span className="text-surface-400">Weeks {ph.start_week}–{ph.end_week}</span>
                           </div>
-                          <p className="text-surface-600 mt-0.5">{ph.focus}</p>
+                          <p className="text-surface-400 mt-0.5">{ph.focus}</p>
                         </div>
                       ))}
                     </div>
@@ -909,15 +909,15 @@ export default function Plans() {
 
                   {/* Weekly Routine Preview */}
                   <div className="space-y-2">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-surface-500">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-surface-400">
                       Weekly Schedule Blueprint
                     </h5>
                     <div className="space-y-1.5">
                       {generatedPreview.weekly_schedule.map(d => (
-                        <div key={d.day_number} className="p-2.5 rounded-lg border border-surface-200 bg-white flex items-center justify-between text-xs">
-                          <span className="font-bold text-surface-800 w-20">{d.day_name}</span>
-                          <span className="text-surface-600 flex-1 truncate">{d.focus}</span>
-                          <span className="font-semibold text-surface-400 capitalize">{d.day_type}</span>
+                        <div key={d.day_number} className="p-2.5 rounded-lg border border-[#202733] bg-[#151A23] flex items-center justify-between text-xs">
+                          <span className="font-bold text-surface-200 w-20">{d.day_name}</span>
+                          <span className="text-surface-400 flex-1 truncate">{d.focus}</span>
+                          <span className="font-semibold text-surface-500 capitalize">{d.day_type}</span>
                         </div>
                       ))}
                     </div>
@@ -927,7 +927,7 @@ export default function Plans() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-surface-100 bg-white flex items-center justify-between gap-3">
+            <div className="p-4 border-t border-[#202733] bg-[#11151D] flex items-center justify-between gap-3">
               {generatedPreview ? (
                 <>
                   <button

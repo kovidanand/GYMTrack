@@ -141,7 +141,7 @@ export default function Profile() {
 
       {/* ── Profile Header ── */}
       <section aria-label="Profile header">
-        <div className="card p-6">
+        <div className="p-6 bg-[#151A23] border border-[#202733] rounded-2xl shadow-xs">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
             <Avatar name={fullName} size="xl" />
             
@@ -149,19 +149,19 @@ export default function Profile() {
               <div className="flex-1 w-full space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-surface-500 mb-1">First Name</label>
-                    <input type="text" className="input-base" value={firstName} onChange={e => setFirstName(e.target.value)} />
+                    <label className="block text-xs font-medium text-surface-400 mb-1">First Name</label>
+                    <input type="text" className="input-base bg-[#11151D] border-[#202733] text-white" value={firstName} onChange={e => setFirstName(e.target.value)} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-surface-500 mb-1">Last Name</label>
-                    <input type="text" className="input-base" value={lastName} onChange={e => setLastName(e.target.value)} />
+                    <label className="block text-xs font-medium text-surface-400 mb-1">Last Name</label>
+                    <input type="text" className="input-base bg-[#11151D] border-[#202733] text-white" value={lastName} onChange={e => setLastName(e.target.value)} />
                   </div>
                 </div>
               </div>
             ) : (
               <div className="flex-1 text-center sm:text-left">
-                <h2 className="text-xl font-bold text-surface-900">{fullName}</h2>
-                <p className="text-surface-500 text-sm">{user.email}</p>
+                <h2 className="text-xl font-bold text-white tracking-tight">{fullName}</h2>
+                <p className="text-surface-400 text-sm mt-0.5">{user.email}</p>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
                   {profile.fitness_goal && <Badge variant="brand">{fitnessGoalLabel[profile.fitness_goal]}</Badge>}
                   {profile.experience_level && <Badge variant="outline">{capitalise(profile.experience_level)}</Badge>}
@@ -174,12 +174,12 @@ export default function Profile() {
               {isEditing ? (
                 <>
                   <button className="btn-secondary text-sm" onClick={() => setIsEditing(false)} disabled={saving}>Cancel</button>
-                  <button className="btn-primary text-sm" onClick={handleSave} disabled={saving}>
+                  <button className="btn-primary text-sm font-bold" onClick={handleSave} disabled={saving}>
                     {saving ? <Loader2 size={16} className="animate-spin" /> : 'Save'}
                   </button>
                 </>
               ) : (
-                <button className="btn-secondary text-sm" onClick={() => setIsEditing(true)}>Edit Profile</button>
+                <button className="btn-secondary text-sm font-semibold" onClick={() => setIsEditing(true)}>Edit Profile</button>
               )}
             </div>
           </div>
@@ -190,49 +190,49 @@ export default function Profile() {
         {/* ── Body Information ── */}
         <section aria-label="Body information">
           <SectionHeader title="Body Information" />
-          <div className="card p-5 space-y-4">
+          <div className="p-5 bg-[#151A23] border border-[#202733] rounded-2xl shadow-xs space-y-4">
             
             {/* Height */}
             <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-[#11151D] border border-[#202733] flex items-center justify-center text-surface-400 flex-shrink-0">
                 <Ruler size={16} />
               </div>
               <div className="flex-1">
-                <p className="text-xs text-surface-500">Height (cm)</p>
+                <p className="text-xs text-surface-400">Height (cm)</p>
                 {isEditing ? (
-                  <input type="number" className="input-base mt-1" value={height} onChange={e => setHeight(e.target.value)} />
+                  <input type="number" className="input-base mt-1 bg-[#11151D] border-[#202733] text-white" value={height} onChange={e => setHeight(e.target.value)} />
                 ) : (
-                  <p className="text-sm font-semibold text-surface-900">{profile.height ? `${profile.height} cm` : '—'}</p>
+                  <p className="text-sm font-semibold text-white">{profile.height ? `${profile.height} cm` : '—'}</p>
                 )}
               </div>
             </div>
 
             {/* Weight */}
             <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-[#11151D] border border-[#202733] flex items-center justify-center text-surface-400 flex-shrink-0">
                 <Weight size={16} />
               </div>
               <div className="flex-1">
-                <p className="text-xs text-surface-500">Weight (kg)</p>
+                <p className="text-xs text-surface-400">Weight (kg)</p>
                 {isEditing ? (
-                  <input type="number" className="input-base mt-1" value={weight} onChange={e => setWeight(e.target.value)} />
+                  <input type="number" className="input-base mt-1 bg-[#11151D] border-[#202733] text-white" value={weight} onChange={e => setWeight(e.target.value)} />
                 ) : (
-                  <p className="text-sm font-semibold text-surface-900">{profile.weight ? `${profile.weight} kg` : '—'}</p>
+                  <p className="text-sm font-semibold text-white">{profile.weight ? `${profile.weight} kg` : '—'}</p>
                 )}
               </div>
             </div>
 
             {/* Age */}
             <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-[#11151D] border border-[#202733] flex items-center justify-center text-surface-400 flex-shrink-0">
                 <Calendar size={16} />
               </div>
               <div className="flex-1">
-                <p className="text-xs text-surface-500">Age</p>
+                <p className="text-xs text-surface-400">Age</p>
                 {isEditing ? (
-                  <input type="number" className="input-base mt-1" value={age} onChange={e => setAge(e.target.value)} />
+                  <input type="number" className="input-base mt-1 bg-[#11151D] border-[#202733] text-white" value={age} onChange={e => setAge(e.target.value)} />
                 ) : (
-                  <p className="text-sm font-semibold text-surface-900">{profile.age ? `${profile.age} years` : '—'}</p>
+                  <p className="text-sm font-semibold text-white">{profile.age ? `${profile.age} years` : '—'}</p>
                 )}
               </div>
             </div>
@@ -243,24 +243,24 @@ export default function Profile() {
         {/* ── Fitness Information ── */}
         <section aria-label="Fitness information">
           <SectionHeader title="Fitness Information" />
-          <div className="card p-5 space-y-4">
+          <div className="p-5 bg-[#151A23] border border-[#202733] rounded-2xl shadow-xs space-y-4">
             
             {/* Goal */}
             <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-[#11151D] border border-[#202733] flex items-center justify-center text-surface-400 flex-shrink-0">
                 <Target size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-surface-500">Primary Goal</p>
+                <p className="text-xs text-surface-400">Primary Goal</p>
                 {isEditing ? (
-                  <select className="input-base mt-1" value={goal} onChange={e => setGoal(e.target.value as FitnessGoal)}>
+                  <select className="input-base mt-1 bg-[#11151D] border-[#202733] text-white" value={goal} onChange={e => setGoal(e.target.value as FitnessGoal)}>
                     <option value="">Select a goal</option>
                     {Object.entries(fitnessGoalLabel).map(([k, v]) => (
                       <option key={k} value={k}>{v}</option>
                     ))}
                   </select>
                 ) : (
-                  <p className="text-sm font-semibold text-surface-900 truncate">
+                  <p className="text-sm font-semibold text-white truncate">
                     {profile.fitness_goal ? fitnessGoalLabel[profile.fitness_goal] : '—'}
                   </p>
                 )}
@@ -269,20 +269,20 @@ export default function Profile() {
 
             {/* Experience */}
             <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-[#11151D] border border-[#202733] flex items-center justify-center text-surface-400 flex-shrink-0">
                 <User size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-surface-500">Experience Level</p>
+                <p className="text-xs text-surface-400">Experience Level</p>
                 {isEditing ? (
-                  <select className="input-base mt-1" value={experience} onChange={e => setExperience(e.target.value as ExperienceLevel)}>
+                  <select className="input-base mt-1 bg-[#11151D] border-[#202733] text-white" value={experience} onChange={e => setExperience(e.target.value as ExperienceLevel)}>
                     <option value="">Select level</option>
                     <option value="beginner">Beginner</option>
                     <option value="intermediate">Intermediate</option>
                     <option value="advanced">Advanced</option>
                   </select>
                 ) : (
-                  <p className="text-sm font-semibold text-surface-900 truncate">
+                  <p className="text-sm font-semibold text-white truncate">
                     {profile.experience_level ? capitalise(profile.experience_level) : '—'}
                   </p>
                 )}
@@ -291,34 +291,34 @@ export default function Profile() {
 
             {/* Frequency */}
             <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-[#11151D] border border-[#202733] flex items-center justify-center text-surface-400 flex-shrink-0">
                 <Calendar size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-surface-500">Training Frequency</p>
+                <p className="text-xs text-surface-400">Training Frequency</p>
                 {isEditing ? (
-                  <select className="input-base mt-1" value={frequency} onChange={e => setFrequency(e.target.value)}>
+                  <select className="input-base mt-1 bg-[#11151D] border-[#202733] text-white" value={frequency} onChange={e => setFrequency(e.target.value)}>
                     <option value="">Select days/week</option>
                     {[1, 2, 3, 4, 5, 6, 7].map(n => (
                       <option key={n} value={n}>{n} days/week</option>
                     ))}
                   </select>
                 ) : (
-                  <p className="text-sm font-semibold text-surface-900 truncate">
+                  <p className="text-sm font-semibold text-white truncate">
                     {profile.training_frequency ? `${profile.training_frequency} days per week` : '—'}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Equipment (View only for now, complex multi-select UI omitted for brevity) */}
+            {/* Equipment */}
             <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-[#11151D] border border-[#202733] flex items-center justify-center text-surface-400 flex-shrink-0">
                 <Dumbbell size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-surface-500">Preferred Equipment</p>
-                <p className="text-sm font-semibold text-surface-900 truncate">
+                <p className="text-xs text-surface-400">Preferred Equipment</p>
+                <p className="text-sm font-semibold text-white truncate">
                   {profile.preferred_equipment?.length ? profile.preferred_equipment.map(capitalise).join(', ') : '—'}
                 </p>
               </div>
@@ -331,19 +331,19 @@ export default function Profile() {
       {/* ── Training Tools ── */}
       <section aria-label="Training tools">
         <SectionHeader title="Training Tools" />
-        <div className="card p-5 bg-white border border-surface-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="p-5 bg-[#151A23] border border-[#202733] rounded-2xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-brand-950/60 border border-brand-800/40 text-brand-400 flex items-center justify-center flex-shrink-0">
               <Timer size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-surface-900 text-sm">Workout Timer & Stopwatch</h3>
-              <p className="text-xs text-surface-500 mt-0.5">Control your rest periods, HIIT intervals, or timed workout sets.</p>
+              <h3 className="font-bold text-white text-sm">Workout Timer & Stopwatch</h3>
+              <p className="text-xs text-surface-400 mt-0.5">Control your rest periods, HIIT intervals, or timed workout sets.</p>
             </div>
           </div>
           <button
             onClick={() => setIsTimerOpen(true)}
-            className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5 flex-shrink-0"
+            className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5 flex-shrink-0 font-bold"
           >
             <Timer size={14} />
             Open Timer
@@ -355,35 +355,35 @@ export default function Profile() {
       <section aria-label="Personal records">
         <SectionHeader title="Personal Records" />
         {loadingPRs ? (
-          <div className="card p-6 flex justify-center items-center">
-            <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
+          <div className="p-6 bg-[#151A23] border border-[#202733] rounded-2xl flex justify-center items-center">
+            <Loader2 className="w-5 h-5 text-brand-400 animate-spin" />
           </div>
         ) : userPRs.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {userPRs.map(pr => (
-              <div key={pr.id} className="card p-4 text-center">
+              <div key={pr.id} className="p-4 bg-[#151A23] border border-[#202733] rounded-2xl text-center shadow-xs">
                 <Trophy size={18} className="text-amber-400 mx-auto mb-2" aria-hidden="true" />
-                <p className="text-xs text-surface-500 mb-1 leading-snug">{pr.exerciseName}</p>
-                <p className="text-lg font-bold text-brand-600">{pr.value}</p>
-                <p className="text-xs text-surface-400">{pr.unit}</p>
+                <p className="text-xs text-surface-400 mb-1 leading-snug">{pr.exerciseName}</p>
+                <p className="text-lg font-bold text-white">{pr.value}</p>
+                <p className="text-xs text-surface-500">{pr.unit}</p>
               </div>
             ))}
           </div>
         ) : (
-          <div className="card p-6 text-center text-xs text-surface-500 space-y-1">
-            <p className="font-semibold text-surface-700">No personal records achieved yet</p>
+          <div className="p-6 bg-[#151A23] border border-[#202733] rounded-2xl text-center text-xs text-surface-400 space-y-1">
+            <p className="font-semibold text-white">No personal records achieved yet</p>
             <p>Log your exercises and sets in workouts to automatically track your all-time best lifts.</p>
           </div>
         )}
       </section>
 
       {/* ── Account Session & Logout ── */}
-      <section aria-label="Account session" className="pt-4 border-t border-surface-200/80">
-        <div className="card p-4 sm:p-5 bg-white border border-surface-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <section aria-label="Account session" className="pt-4 border-t border-[#202733]">
+        <div className="p-4 sm:p-5 bg-[#151A23] border border-[#202733] rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-sm font-bold text-surface-900">Account Session</h3>
-            <p className="text-xs text-surface-500 mt-0.5">
-              Signed in as <span className="font-semibold text-surface-700">{user.email || 'Authenticated User'}</span>
+            <h3 className="text-sm font-bold text-white">Account Session</h3>
+            <p className="text-xs text-surface-400 mt-0.5">
+              Signed in as <span className="font-semibold text-surface-300">{user.email || 'Authenticated User'}</span>
             </p>
           </div>
 
@@ -392,11 +392,11 @@ export default function Profile() {
             onClick={handleLogout}
             disabled={isLoggingOut}
             id="profile-logout-button"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50 active:bg-red-100 transition-colors text-xs font-semibold shadow-2xs focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:opacity-60"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-red-800/50 bg-red-950/40 text-red-300 hover:text-white hover:bg-red-900/60 active:bg-red-800/80 transition-colors text-xs font-bold shadow-xs focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:opacity-60"
           >
             {isLoggingOut ? (
               <>
-                <Loader2 size={15} className="animate-spin text-red-600" aria-hidden="true" />
+                <Loader2 size={15} className="animate-spin text-red-400" aria-hidden="true" />
                 <span>Signing out…</span>
               </>
             ) : (
