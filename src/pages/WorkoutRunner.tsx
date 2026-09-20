@@ -27,6 +27,8 @@ import { getExercises } from '@/lib/exercises'
 import { getExerciseVisual } from '@/lib/exerciseMedia'
 import { formatDuration, cn } from '@/lib/utils'
 import { WorkoutTimerModal } from '@/components/workout/WorkoutTimerModal'
+import { SmartRestTimer } from '@/components/workout/SmartRestTimer'
+import { useSmartRestTimer } from '@/hooks/useSmartRestTimer'
 import type { Exercise, WorkoutExercise } from '@/types'
 
 export default function WorkoutRunner() {
@@ -77,6 +79,10 @@ export default function WorkoutRunner() {
 
   // Previous performance for current exercise
   const [prevPerformance, setPrevPerformance] = useState<{ weight: number; reps: number } | null>(null)
+
+  // Smart Rest Timer
+  const smartTimer = useSmartRestTimer()
+  const [autoRestEnabled, setAutoRestEnabled] = useState(true)
 
   useEffect(() => {
     let active = true
@@ -249,6 +255,21 @@ export default function WorkoutRunner() {
     }
   }
 
+  const handleCompleteSet = async (exercise: WorkoutExercise, setNumber: number, weight: number | null, reps: number | null) => {
+    // 1. Existing completion logic
+    await completeSet(exercise, setNumber, weight, reps)
+    
+    // 2. Prevent the old full-screen modal
+    skipRest()
+
+    // 3. Start the Smart Rest Timer if auto rest is enabled
+    const isLastSet = setNumber === exercise.sets
+    const isLastExercise = currentExerciseIndex === (workout.workout_exercises?.length || 1) - 1
+    if (autoRestEnabled && (!isLastSet || !isLastExercise)) {
+      smartTimer.start(exercise.rest_seconds || smartTimer.selectedDuration)
+    }
+  }
+
   const exerciseCount = workout.workout_exercises?.length || 0
   const totalSetsForEx = currentExercise?.sets || 3
   const visualUrl = getExerciseVisual(currentExercise?.exercise?.slug, currentExercise?.exercise?.image_url)
@@ -277,6 +298,17 @@ export default function WorkoutRunner() {
 
         <div className="flex items-center gap-1.5">
           <button
+            onClick={() => setAutoRestEnabled(!autoRestEnabled)}
+            className={cn(
+              "p-1.5 rounded-lg transition-colors text-[10px] font-bold flex flex-col items-center leading-none",
+              autoRestEnabled ? "text-brand-600 bg-brand-50" : "text-surface-400 bg-surface-100 hover:text-surface-600"
+            )}
+            title="Auto Rest Timer On/Off"
+          >
+            <span>Auto</span>
+            <span>Rest</span>
+          </button>
+          <button
             onClick={() => setIsTimerOpen(true)}
             className="p-1.5 text-surface-500 hover:text-brand-600 hover:bg-surface-100 rounded-lg transition-colors"
             title="Open Workout Timer / Stopwatch"
@@ -296,21 +328,12 @@ export default function WorkoutRunner() {
       </header>
 
       {/* ── Rest Timer Overlay ── */}
-      {timerState === 'running' && (
-        <div className="absolute inset-0 z-50 bg-surface-950/90 backdrop-blur-md flex flex-col items-center justify-center text-white animate-fade-in">
-          <Timer size={48} className="mb-4 text-brand-400 animate-pulse" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-surface-300 mb-2">Rest Interval</h2>
-          <div className="text-7xl font-extrabold font-mono tracking-tighter mb-8">
-            {Math.floor(timeRemaining / 60).toString().padStart(2, '0')}:{(timeRemaining % 60).toString().padStart(2, '0')}
-          </div>
-          <button 
-            onClick={skipRest}
-            className="px-6 py-2.5 bg-white text-surface-900 hover:bg-brand-50 rounded-xl font-bold text-xs transition-colors flex items-center gap-2 shadow-lg"
-          >
-            <FastForward size={16} /> Skip Rest
-          </button>
-        </div>
-      )}
+      {/* 
+        The old giant modal is intentionally hidden here. We call skipRest() 
+        immediately when a set is completed and use SmartRestTimer instead. 
+        In case it ever flickers, it's commented out/removed. 
+        Note: We actually don't render it anymore to prevent the giant modal.
+      */}
 
       {/* ── Main Workout Logging Area ── */}
       <main className="flex-1 overflow-y-auto p-4 max-w-lg mx-auto w-full pb-28 space-y-4">
@@ -454,7 +477,7 @@ export default function WorkoutRunner() {
                       defaultWeight={fallbackWeight}
                       defaultReps={fallbackReps}
                       isCompleted={isCompleted}
-                      onComplete={(w, r) => completeSet(currentExercise, setNum, w, r)}
+                      onComplete={(w, r) => handleCompleteSet(currentExercise, setNum, w, r)}
                       onRemove={() => removeSet(currentExercise.id, setNum)}
                     />
                   )
@@ -546,6 +569,9 @@ export default function WorkoutRunner() {
         isOpen={isTimerOpen}
         onOpenChange={setIsTimerOpen}
       />
+
+      {/* ── Smart Rest Timer (Floating Component) ── */}
+      <SmartRestTimer timer={smartTimer} />
     </div>
   )
 }
