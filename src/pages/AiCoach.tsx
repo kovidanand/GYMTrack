@@ -96,7 +96,7 @@ export default function AiCoach() {
   const hasWorkouts = safeAnalysis.hasData && safeAnalysis.totalWorkouts > 0
 
   return (
-    <div className="space-y-6 pb-24 animate-fade-in max-w-5xl mx-auto">
+    <div className="space-y-6 pb-4 w-full animate-fade-in max-w-5xl mx-auto">
       {/* ── Page Header ── */}
       <PageHeader
         title="AI Coach"
@@ -130,7 +130,7 @@ export default function AiCoach() {
       </section>
 
       {/* ── Tab Navigation ── */}
-      <div className="flex border-b border-surface-200">
+      <div className="flex border-b border-surface-200 overflow-x-auto no-scrollbar whitespace-nowrap">
         <button
           onClick={() => setActiveTab('recommendations')}
           className={cn(

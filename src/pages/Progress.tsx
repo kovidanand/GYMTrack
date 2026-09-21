@@ -225,7 +225,7 @@ export default function Progress() {
   }
 
   return (
-    <div className="animate-fade-in space-y-8 pb-28 max-w-5xl mx-auto">
+    <div className="animate-fade-in space-y-8 pb-4 max-w-5xl mx-auto w-full">
       <PageHeader
         title="Progress & History"
         description="Historical analytics, exercise progression, training balance, and AI-grounded insights."

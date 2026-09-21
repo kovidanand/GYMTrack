@@ -120,7 +120,7 @@ export default function Profile() {
   const fullName = `${profile.first_name} ${profile.last_name}`.trim()
 
   return (
-    <div className="animate-fade-in space-y-8 pb-12">
+    <div className="animate-fade-in space-y-8 pb-4 w-full">
       <PageHeader title="Profile" description="Manage your account and fitness preferences." />
 
       {showToast && (

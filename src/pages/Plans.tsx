@@ -307,7 +307,7 @@ export default function Plans() {
   }
 
   return (
-    <div className="animate-fade-in space-y-8 pb-24 max-w-5xl mx-auto px-4 sm:px-6">
+    <div className="animate-fade-in space-y-8 pb-4 max-w-5xl mx-auto px-4 sm:px-6 w-full">
       {/* ── PAGE HEADER ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div>

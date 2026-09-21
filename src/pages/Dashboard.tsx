@@ -387,7 +387,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="animate-fade-in space-y-6 pb-24 max-w-4xl mx-auto">
+    <div className="animate-fade-in space-y-6 pb-4 max-w-4xl mx-auto w-full">
       {/* ── 1. GREETING & DATE HEADER ── */}
       <section className="space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
@@ -784,7 +784,7 @@ export default function Dashboard() {
             </span>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {weeklyDays.map((day, idx) => (
               <button
                 key={day.label}

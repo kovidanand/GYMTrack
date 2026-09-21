@@ -106,7 +106,7 @@ export default function ExerciseDetail() {
   const difficultyClass = getDifficultyColor(exercise.difficulty)
 
   return (
-    <div className="animate-fade-in pb-20 max-w-4xl mx-auto space-y-8">
+    <div className="animate-fade-in pb-4 max-w-4xl mx-auto space-y-8 w-full">
       {/* Back button */}
       <button 
         onClick={() => navigate('/exercises')}

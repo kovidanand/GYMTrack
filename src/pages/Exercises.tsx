@@ -67,7 +67,7 @@ export default function Exercises() {
   const [loggingExercise, setLoggingExercise] = useState<Exercise | null>(null)
 
   return (
-    <div className="animate-fade-in space-y-6 pb-12">
+    <div className="animate-fade-in space-y-6 pb-4 w-full">
       <PageHeader
         title="Exercise Library"
         description="Explore movements, learn proper technique, and log your sets in seconds."
