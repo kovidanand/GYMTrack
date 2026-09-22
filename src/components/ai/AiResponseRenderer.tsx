@@ -247,6 +247,7 @@ function CompactAiExerciseCard({
             src={media.videoUrl}
             poster={media.posterUrl || media.thumbnailUrl}
             muted
+            loop
             playsInline
             preload="none"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"

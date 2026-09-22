@@ -116,6 +116,7 @@ export function ExerciseVideoPlayer({
         poster={currentPosterUrl}
         autoPlay={autoPlay && !prefersReducedMotion}
         muted
+        loop
         playsInline
         preload="metadata"
         onLoadedData={() => setIsLoaded(true)}

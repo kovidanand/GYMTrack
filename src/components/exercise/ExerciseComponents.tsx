@@ -123,6 +123,7 @@ export function ExerciseMedia({ exercise, variant = 'card', className }: Exercis
           src={videoUrl}
           poster={posterUrl || undefined}
           muted
+          loop
           playsInline
           preload="none"
           onLoadedData={() => setVideoLoaded(true)}
