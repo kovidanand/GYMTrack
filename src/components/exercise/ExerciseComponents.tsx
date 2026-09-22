@@ -75,10 +75,22 @@ export function ExerciseMedia({ exercise, variant = 'card', className }: Exercis
   useEffect(() => {
     const video = videoRef.current
     if (!video || videoError) return
+    
+    let isSubscribed = true
+    
     if (isVisible || isHovered) {
-      video.play().catch(() => {/* autoplay blocked */})
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // autoplay blocked or interrupted
+        })
+      }
     } else {
       video.pause()
+    }
+    
+    return () => {
+      isSubscribed = false
     }
   }, [isVisible, isHovered, videoError])
 
@@ -111,7 +123,6 @@ export function ExerciseMedia({ exercise, variant = 'card', className }: Exercis
           src={videoUrl}
           poster={posterUrl || undefined}
           muted
-          loop
           playsInline
           preload="none"
           onLoadedData={() => setVideoLoaded(true)}

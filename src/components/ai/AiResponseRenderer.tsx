@@ -181,10 +181,20 @@ function CompactAiExerciseCard({
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
+    
+    let isSubscribed = true
+    
     if (isVisible) {
-      video.play().catch(() => {})
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {})
+      }
     } else {
       video.pause()
+    }
+    
+    return () => {
+      isSubscribed = false
     }
   }, [isVisible])
 
@@ -237,7 +247,6 @@ function CompactAiExerciseCard({
             src={media.videoUrl}
             poster={media.posterUrl || media.thumbnailUrl}
             muted
-            loop
             playsInline
             preload="none"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
