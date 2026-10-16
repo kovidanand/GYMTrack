@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   LayoutDashboard,
   BookOpen,
   LineChart,
   Settings,
-  Plus,
   Loader2,
-  UtensilsCrossed,
-  Camera,
-  Upload,
   Flame,
   Lightbulb,
   Sparkles,
+  Target,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import {
@@ -32,9 +29,11 @@ import type {
 } from '@/types/nutrition'
 
 import { DateNavigator } from '@/components/nutrition/DateNavigator'
-import { CalorieProgressCard } from '@/components/nutrition/CalorieProgressCard'
-import { MacroSummaryCards } from '@/components/nutrition/MacroSummaryCards'
-import { MealSection } from '@/components/nutrition/MealSection'
+import { TodaysProgressCard } from '@/components/nutrition/TodaysProgressCard'
+import { MacroInsightsSection } from '@/components/nutrition/MacroInsightsSection'
+import { RecentFoodLog } from '@/components/nutrition/RecentFoodLog'
+import { WeeklySummaryCard } from '@/components/nutrition/WeeklySummaryCard'
+import { DashboardActionCards } from '@/components/nutrition/DashboardActionCards'
 import { AddFoodModal } from '@/components/nutrition/AddFoodModal'
 import { EditFoodModal } from '@/components/nutrition/EditFoodModal'
 import { NutritionGoalsModal } from '@/components/nutrition/NutritionGoalsModal'
@@ -146,24 +145,6 @@ export default function Nutrition() {
     return generateNutritionInsights(dailyTotals, goals, streak)
   }, [dailyTotals, goals, streak])
 
-  // Group Entries by Meal
-  const mealEntries = useMemo(() => {
-    const grouped: Record<MealType, FoodEntry[]> = {
-      breakfast: [],
-      lunch: [],
-      dinner: [],
-      snack: [],
-    }
-    for (const e of entries) {
-      if (grouped[e.meal_type]) {
-        grouped[e.meal_type].push(e)
-      } else {
-        grouped.snack.push(e)
-      }
-    }
-    return grouped
-  }, [entries])
-
   // Handlers
   const handleOpenAdd = (mealType: MealType = 'breakfast') => {
     setActiveMealType(mealType)
@@ -218,379 +199,336 @@ export default function Nutrition() {
   }
 
   return (
-    <div className="animate-fade-in space-y-6 pb-12 max-w-5xl mx-auto w-full px-2 sm:px-4">
-      {/* ─── 1. NUTRITRACK HEADER & SUB-NAVIGATION ─── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-surface-900 tracking-tight flex items-center gap-2">
-              <span>NutriTrack</span>
-            </h1>
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
-              Nutrition System
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-surface-500 font-medium mt-0.5">
-            Track daily calories, macros, and smart meal photo estimates.
-          </p>
-        </div>
-
-        {/* Navigation Tabs, AI Assistant & Settings */}
-        <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
-          <div className="flex items-center bg-surface-100 p-1 rounded-xl border border-surface-200">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              id="nutritrack-tab-dashboard"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'dashboard'
-                  ? 'bg-white text-surface-900 shadow-xs'
-                  : 'text-surface-600 hover:text-surface-900'
-              }`}
-            >
-              <LayoutDashboard size={14} className={activeTab === 'dashboard' ? 'text-emerald-600' : ''} />
-              <span>Dashboard</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('library')}
-              id="nutritrack-tab-library"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'library'
-                  ? 'bg-white text-surface-900 shadow-xs'
-                  : 'text-surface-600 hover:text-surface-900'
-              }`}
-            >
-              <BookOpen size={14} className={activeTab === 'library' ? 'text-emerald-600' : ''} />
-              <span>Food Library</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('analytics')}
-              id="nutritrack-tab-analytics"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'analytics'
-                  ? 'bg-white text-surface-900 shadow-xs'
-                  : 'text-surface-600 hover:text-surface-900'
-              }`}
-            >
-              <LineChart size={14} className={activeTab === 'analytics' ? 'text-emerald-600' : ''} />
-              <span>History</span>
-            </button>
+    <div className="relative min-h-screen -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 bg-white [background-image:radial-gradient(#10b981_0.75px,transparent_0.75px)] [background-size:20px_20px] animate-fade-in">
+      <div className="max-w-6xl mx-auto w-full space-y-6 pb-16">
+        {/* ─── 1. HEADER & SUB-NAVIGATION ─── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-black text-surface-900 tracking-tight flex items-center gap-2">
+                <span>NutriTrack</span>
+              </h1>
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                Nutrition System
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-surface-500 font-medium mt-0.5">
+              Track calories, macronutrients, and analyze food photos with intelligent AI.
+            </p>
           </div>
 
-          {/* AI Assistant Button */}
-          <button
-            onClick={() => setIsAssistantOpen(true)}
-            id="open-nutrition-assistant-btn"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs"
-            title="Ask Nutrition AI Assistant"
-          >
-            <Sparkles size={14} className="text-emerald-600" />
-            <span className="hidden sm:inline">AI Helper</span>
-          </button>
+          {/* Navigation Tabs, AI Assistant & Settings */}
+          <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+            <div className="flex items-center bg-white p-1 rounded-xl border border-surface-200/90 shadow-2xs">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                id="nutritrack-tab-dashboard"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'dashboard'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-surface-600 hover:text-surface-900'
+                }`}
+              >
+                <LayoutDashboard size={14} />
+                <span>Dashboard</span>
+              </button>
 
-          {/* Goals Settings Button */}
-          <button
-            onClick={() => setIsGoalsModalOpen(true)}
-            id="open-goals-modal-btn"
-            className="p-2 rounded-xl text-surface-600 hover:text-surface-900 bg-white border border-surface-200 hover:bg-surface-50 transition-colors shadow-2xs"
-            title="Configure Nutrition Goals"
-            aria-label="Configure Nutrition Goals"
-          >
-            <Settings size={18} />
-          </button>
-        </div>
-      </div>
+              <button
+                onClick={() => setActiveTab('library')}
+                id="nutritrack-tab-library"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'library'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-surface-600 hover:text-surface-900'
+                }`}
+              >
+                <BookOpen size={14} />
+                <span>Food Library</span>
+              </button>
 
-      {/* ─── 2. TAB: DASHBOARD ─── */}
-      {activeTab === 'dashboard' && (
-        <div className="space-y-6">
-          {/* Top Bar: Streak Card + Date Navigator */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            {/* Nutrition Streak Badge */}
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 shadow-2xs">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
-                <Flame size={16} />
-              </div>
-              <div>
-                <div className="text-xs font-black text-emerald-950 leading-none">
-                  {streak > 0 ? `${streak}-Day Nutrition Streak` : '0-Day Logging Streak'}
-                </div>
-                <div className="text-[10.5px] text-emerald-700 font-medium mt-0.5 leading-none">
-                  {streak > 0
-                    ? 'Consistency fuels athletic transformation!'
-                    : 'Log today to ignite your streak!'}
-                </div>
-              </div>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                id="nutritrack-tab-analytics"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'analytics'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-surface-600 hover:text-surface-900'
+                }`}
+              >
+                <LineChart size={14} />
+                <span>History</span>
+              </button>
             </div>
 
-            {/* Date Navigator */}
-            <DateNavigator
-              selectedDate={selectedDate}
-              onSelectDate={d => setSelectedDate(d)}
-            />
+            {/* AI Assistant Button */}
+            <button
+              onClick={() => setIsAssistantOpen(true)}
+              id="open-nutrition-assistant-btn"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs"
+              title="Ask Nutrition AI Assistant"
+            >
+              <Sparkles size={14} className="text-emerald-600" />
+              <span className="hidden sm:inline">AI Helper</span>
+            </button>
+
+            {/* Goals Settings Button */}
+            <button
+              onClick={() => setIsGoalsModalOpen(true)}
+              id="open-goals-modal-btn"
+              className="p-2 rounded-xl text-surface-600 hover:text-surface-900 bg-white border border-surface-200 hover:bg-surface-50 transition-colors shadow-2xs"
+              title="Configure Nutrition Goals"
+              aria-label="Configure Nutrition Goals"
+            >
+              <Settings size={18} />
+            </button>
           </div>
+        </div>
 
-          {loading ? (
-            <div className="py-20 text-center text-surface-400 flex flex-col items-center justify-center gap-2">
-              <Loader2 size={28} className="animate-spin text-emerald-600" />
-              <p className="text-xs font-semibold">Loading daily nutrition entries...</p>
+        {/* ─── 2. TAB: DASHBOARD ─── */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            {/* Top Bar: Streak Badge + Date Navigator */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Nutrition Streak Badge */}
+              <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-white border border-emerald-200/90 shadow-2xs">
+                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center flex-shrink-0">
+                  <Flame size={16} />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-surface-900 leading-none">
+                    {streak > 0 ? `${streak}-Day Nutrition Streak` : '0-Day Logging Streak'}
+                  </div>
+                  <div className="text-[11px] text-emerald-700 font-semibold mt-0.5 leading-none">
+                    {streak > 0
+                      ? 'Consistency fuels athletic transformation!'
+                      : 'Log your meals today to ignite your streak!'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Date Navigator */}
+              <DateNavigator
+                selectedDate={selectedDate}
+                onSelectDate={d => setSelectedDate(d)}
+              />
             </div>
-          ) : (
-            <>
-              {/* Today's Progress Card (Calorie Ring) */}
-              <CalorieProgressCard
-                consumed={dailyTotals.calories}
-                target={goals.calorie_target}
-                onEditGoals={() => setIsGoalsModalOpen(true)}
-              />
 
-              {/* Macronutrient Summary Cards (Protein, Carbs, Fat, Fiber) */}
-              <MacroSummaryCards
-                protein={dailyTotals.protein}
-                proteinTarget={goals.protein_target}
-                carbs={dailyTotals.carbs}
-                carbsTarget={goals.carb_target}
-                fat={dailyTotals.fat}
-                fatTarget={goals.fat_target}
-                fiber={dailyTotals.fiber}
-                fiberTarget={goals.fiber_target}
-              />
+            {loading ? (
+              <div className="py-20 text-center text-surface-400 flex flex-col items-center justify-center gap-2">
+                <Loader2 size={28} className="animate-spin text-emerald-600" />
+                <p className="text-xs font-semibold">Loading daily nutrition entries...</p>
+              </div>
+            ) : (
+              /* ─── TWO-COLUMN DESKTOP LAYOUT (Matches Reference Dashboard) ─── */
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* ─── MAIN COLUMN (Left, 8 Cols) ─── */}
+                <div className="lg:col-span-8 space-y-6">
+                  {/* Section 1: Today's Progress Card (Calorie Ring + Macro Bars) */}
+                  <TodaysProgressCard
+                    consumed={dailyTotals.calories}
+                    target={goals.calorie_target}
+                    protein={dailyTotals.protein}
+                    proteinTarget={goals.protein_target}
+                    carbs={dailyTotals.carbs}
+                    carbsTarget={goals.carb_target}
+                    fat={dailyTotals.fat}
+                    fatTarget={goals.fat_target}
+                    fiber={dailyTotals.fiber}
+                    fiberTarget={goals.fiber_target}
+                    onEditGoals={() => setIsGoalsModalOpen(true)}
+                  />
 
-              {/* Nutrition Insights Strip */}
-              {insights.length > 0 && (
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-50/80 to-teal-50/60 border border-emerald-200/80 shadow-2xs">
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Lightbulb size={15} />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-emerald-800">
-                        NutriTrack Daily Insights
-                      </h4>
-                      <ul className="mt-1 space-y-1">
+                  {/* Section 2: Macro Insights Section (Circular Gauges) */}
+                  <MacroInsightsSection
+                    protein={dailyTotals.protein}
+                    proteinTarget={goals.protein_target}
+                    carbs={dailyTotals.carbs}
+                    carbsTarget={goals.carb_target}
+                    fat={dailyTotals.fat}
+                    fatTarget={goals.fat_target}
+                    fiber={dailyTotals.fiber}
+                    fiberTarget={goals.fiber_target}
+                  />
+
+                  {/* Section 3: Today's Logged Meals (Recent Food Log) */}
+                  <RecentFoodLog
+                    entries={entries}
+                    onOpenAddModal={handleOpenAdd}
+                    onOpenEditModal={handleOpenEdit}
+                    onDeleteEntry={handleDeleteFoodEntry}
+                  />
+
+                  {/* Section 4: 7-Day Nutrition Summary */}
+                  <WeeklySummaryCard
+                    userId={userId}
+                    calorieTarget={goals.calorie_target}
+                    proteinTarget={goals.protein_target}
+                  />
+                </div>
+
+                {/* ─── SECONDARY COLUMN (Right, 4 Cols) ─── */}
+                <div className="lg:col-span-4 space-y-5">
+                  {/* Action Cards: Log a Meal + Snap Your Meal */}
+                  <DashboardActionCards
+                    onOpenAddModal={handleOpenAdd}
+                    onOpenCameraModal={handleOpenCamera}
+                  />
+
+                  {/* Personalized Daily Nutrition Insights */}
+                  {insights.length > 0 && (
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white border border-emerald-200/90 shadow-2xs space-y-2.5">
+                      <div className="flex items-center gap-2 text-emerald-800">
+                        <Lightbulb size={16} className="text-emerald-600" />
+                        <h4 className="text-xs font-black uppercase tracking-wider">
+                          Personalized Insights
+                        </h4>
+                      </div>
+
+                      <ul className="space-y-2 pt-1">
                         {insights.map((item, idx) => (
                           <li
                             key={idx}
-                            className="text-xs text-surface-700 flex items-center gap-1.5 font-medium"
+                            className="text-xs text-surface-700 flex items-start gap-2 font-medium leading-relaxed"
                           >
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
                             <span>{item}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              {/* ─── QUICK ACTION CARDS (Log Meal & Photo Camera) ─── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {/* Card 1: Log Meal */}
-                <div className="p-4 rounded-2xl bg-white border border-surface-200/80 shadow-2xs hover:border-emerald-300 transition-all flex flex-col justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center flex-shrink-0">
-                      <UtensilsCrossed size={20} />
+                  {/* Daily Goals Summary Card */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Target size={16} className="text-emerald-600" />
+                        <h4 className="text-xs font-black uppercase tracking-wider text-surface-900">
+                          Your Configured Targets
+                        </h4>
+                      </div>
+                      <button
+                        onClick={() => setIsGoalsModalOpen(true)}
+                        className="text-[11px] font-bold text-emerald-700 hover:underline"
+                      >
+                        Edit
+                      </button>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-surface-900">Log Food</h3>
-                      <p className="text-xs text-surface-500 mt-0.5">
-                        Search verified items, customize portions, or enter quick calories.
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={() => handleOpenAdd('breakfast')}
-                      id="card-quick-log-btn"
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-colors"
-                    >
-                      <Plus size={14} />
-                      <span>Quick Log</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('library')}
-                      id="card-browse-library-btn"
-                      className="inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-surface-700 bg-surface-100 hover:bg-surface-200 transition-colors"
-                    >
-                      <BookOpen size={14} />
-                      <span>Library</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Card 2: Meal Photo Scanner (AI Food Analysis) */}
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/50 via-white to-surface-50 border border-emerald-200/80 shadow-2xs hover:border-emerald-400 transition-all flex flex-col justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                      <Camera size={20} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="text-sm font-bold text-surface-900">Meal Photo AI</h3>
-                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-md">
-                          Vision
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2.5 rounded-xl bg-surface-50 border border-surface-100">
+                        <span className="text-[10px] text-surface-400 font-bold block uppercase">
+                          Calories
+                        </span>
+                        <span className="text-sm font-black text-surface-900">
+                          {goals.calorie_target} kcal
                         </span>
                       </div>
-                      <p className="text-xs text-surface-500 mt-0.5">
-                        Snap or upload a meal image to identify items and estimate macros with AI.
-                      </p>
+                      <div className="p-2.5 rounded-xl bg-surface-50 border border-surface-100">
+                        <span className="text-[10px] text-emerald-700 font-bold block uppercase">
+                          Protein
+                        </span>
+                        <span className="text-sm font-black text-surface-900">
+                          {goals.protein_target}g
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-surface-50 border border-surface-100">
+                        <span className="text-[10px] text-amber-800 font-bold block uppercase">
+                          Carbs
+                        </span>
+                        <span className="text-sm font-black text-surface-900">
+                          {goals.carb_target}g
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-surface-50 border border-surface-100">
+                        <span className="text-[10px] text-rose-700 font-bold block uppercase">
+                          Fat
+                        </span>
+                        <span className="text-sm font-black text-surface-900">
+                          {goals.fat_target}g
+                        </span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={() => handleOpenCamera('camera')}
-                      id="card-take-photo-btn"
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 transition-colors"
-                    >
-                      <Camera size={14} />
-                      <span>Take Photo</span>
-                    </button>
-                    <button
-                      onClick={() => handleOpenCamera('upload')}
-                      id="card-upload-photo-btn"
-                      className="inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-surface-700 bg-surface-100 hover:bg-surface-200 transition-colors"
-                    >
-                      <Upload size={14} />
-                      <span>Upload</span>
-                    </button>
-                  </div>
                 </div>
               </div>
+            )}
+          </div>
+        )}
 
-              {/* Daily Meal Diary Section */}
-              <div className="space-y-4 pt-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-black text-surface-900 tracking-tight">
-                      Daily Meal Diary
-                    </h2>
-                    <p className="text-xs text-surface-500 font-medium">
-                      Review foods logged for {selectedDate}.
-                    </p>
-                  </div>
+        {/* ─── 3. TAB: FOOD LIBRARY ─── */}
+        {activeTab === 'library' && (
+          <div className="space-y-4">
+            <FoodLibraryView
+              userId={userId}
+              selectedDate={selectedDate}
+              onLogFood={handleAddFoodEntry}
+              onOpenCreateCustomFood={() => {
+                setActiveMealType('breakfast')
+                setIsAddModalOpen(true)
+              }}
+            />
+          </div>
+        )}
 
-                  <button
-                    onClick={() => handleOpenAdd('breakfast')}
-                    id="quick-log-food-btn"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors"
-                  >
-                    <Plus size={14} />
-                    <span>Log Food</span>
-                  </button>
-                </div>
+        {/* ─── 4. TAB: HISTORY & TRENDS ─── */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-4">
+            <NutritionAnalyticsView userId={userId} goals={goals} />
+          </div>
+        )}
 
-                <MealSection
-                  mealType="breakfast"
-                  entries={mealEntries.breakfast}
-                  onOpenAddModal={handleOpenAdd}
-                  onOpenEditModal={handleOpenEdit}
-                  onDeleteEntry={handleDeleteFoodEntry}
-                />
+        {/* ─── 5. MODALS ─── */}
+        {/* Add Food Modal (Search, Quick Calories, Custom Food) */}
+        <AddFoodModal
+          open={isAddModalOpen}
+          onOpenChange={setIsAddModalOpen}
+          userId={userId}
+          dateStr={selectedDate}
+          initialMealType={activeMealType}
+          onAddEntry={handleAddFoodEntry}
+        />
 
-                <MealSection
-                  mealType="lunch"
-                  entries={mealEntries.lunch}
-                  onOpenAddModal={handleOpenAdd}
-                  onOpenEditModal={handleOpenEdit}
-                  onDeleteEntry={handleDeleteFoodEntry}
-                />
+        {/* Edit Food Modal */}
+        <EditFoodModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          entry={editingEntry}
+          onUpdateEntry={handleUpdateFoodEntry}
+          onDeleteEntry={handleDeleteFoodEntry}
+        />
 
-                <MealSection
-                  mealType="dinner"
-                  entries={mealEntries.dinner}
-                  onOpenAddModal={handleOpenAdd}
-                  onOpenEditModal={handleOpenEdit}
-                  onDeleteEntry={handleDeleteFoodEntry}
-                />
+        {/* Nutrition Goals Modal */}
+        <NutritionGoalsModal
+          open={isGoalsModalOpen}
+          onOpenChange={setIsGoalsModalOpen}
+          currentGoals={goals}
+          onSaveGoals={handleSaveGoals}
+        />
 
-                <MealSection
-                  mealType="snack"
-                  entries={mealEntries.snack}
-                  onOpenAddModal={handleOpenAdd}
-                  onOpenEditModal={handleOpenEdit}
-                  onDeleteEntry={handleDeleteFoodEntry}
-                />
-              </div>
-            </>
-          )}
-        </div>
-      )}
+        {/* AI Food Camera & Photo Scanner Modal */}
+        <FoodCameraModal
+          open={isCameraModalOpen}
+          onOpenChange={setIsCameraModalOpen}
+          userId={userId}
+          selectedDate={selectedDate}
+          defaultMode={cameraMode}
+          onLogMealItems={handleBatchLogItems}
+          onSwitchToLibrary={() => setActiveTab('library')}
+        />
 
-      {/* ─── 3. TAB: FOOD LIBRARY ─── */}
-      {activeTab === 'library' && (
-        <div className="space-y-4">
-          <FoodLibraryView
-            userId={userId}
-            selectedDate={selectedDate}
-            onLogFood={handleAddFoodEntry}
-            onOpenCreateCustomFood={() => {
-              setActiveMealType('breakfast')
-              setIsAddModalOpen(true)
-            }}
-          />
-        </div>
-      )}
-
-      {/* ─── 4. TAB: HISTORY & TRENDS ─── */}
-      {activeTab === 'analytics' && (
-        <div className="space-y-4">
-          <NutritionAnalyticsView userId={userId} goals={goals} />
-        </div>
-      )}
-
-      {/* ─── 5. MODALS ─── */}
-      {/* Add Food Modal (Search, Quick Calories, Custom Food) */}
-      <AddFoodModal
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        userId={userId}
-        dateStr={selectedDate}
-        initialMealType={activeMealType}
-        onAddEntry={handleAddFoodEntry}
-      />
-
-      {/* Edit Food Modal */}
-      <EditFoodModal
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        entry={editingEntry}
-        onUpdateEntry={handleUpdateFoodEntry}
-        onDeleteEntry={handleDeleteFoodEntry}
-      />
-
-      {/* Nutrition Goals Modal */}
-      <NutritionGoalsModal
-        open={isGoalsModalOpen}
-        onOpenChange={setIsGoalsModalOpen}
-        currentGoals={goals}
-        onSaveGoals={handleSaveGoals}
-      />
-
-      {/* AI Food Camera & Photo Scanner Modal */}
-      <FoodCameraModal
-        open={isCameraModalOpen}
-        onOpenChange={setIsCameraModalOpen}
-        userId={userId}
-        selectedDate={selectedDate}
-        defaultMode={cameraMode}
-        onLogMealItems={handleBatchLogItems}
-        onSwitchToLibrary={() => setActiveTab('library')}
-      />
-
-      {/* Context-Aware Nutrition AI Assistant Modal */}
-      <NutritionAssistantModal
-        open={isAssistantOpen}
-        onOpenChange={setIsAssistantOpen}
-        userId={userId}
-        selectedDate={selectedDate}
-        todayTotals={dailyTotals}
-        goals={goals}
-        entries={entries}
-        onLogRecommendedFood={handleAddFoodEntry}
-      />
+        {/* Context-Aware Nutrition AI Assistant Modal */}
+        <NutritionAssistantModal
+          open={isAssistantOpen}
+          onOpenChange={setIsAssistantOpen}
+          userId={userId}
+          selectedDate={selectedDate}
+          todayTotals={dailyTotals}
+          goals={goals}
+          entries={entries}
+          onLogRecommendedFood={handleAddFoodEntry}
+        />
+      </div>
     </div>
   )
 }

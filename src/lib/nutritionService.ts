@@ -1461,7 +1461,20 @@ export async function analyzeMealPhoto(
     }
 
     if (error) {
-      remoteError = error.message || 'Error communicating with AI Edge Function'
+      let detail = ''
+      try {
+        if ('context' in error && error.context) {
+          const ctx = error.context as Response
+          const cloned = ctx.clone ? ctx.clone() : ctx
+          const json = await cloned.json().catch(() => null)
+          if (json && typeof json === 'object') {
+            detail = json.error || json.message || ''
+          }
+        }
+      } catch {
+        // ignore
+      }
+      remoteError = detail || error.message || 'Error communicating with AI Edge Function'
     }
   } catch (err: unknown) {
     remoteError = err instanceof Error ? err.message : 'Network error communicating with AI service'
