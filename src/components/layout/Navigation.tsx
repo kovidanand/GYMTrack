@@ -11,7 +11,7 @@ interface TopNavigationProps {
 const primaryNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
-  { to: '/nutrition', label: 'Nutrition', icon: UtensilsCrossed },
+  { to: '/nutrition', label: 'NutriTrack', icon: UtensilsCrossed },
   { to: '/exercises', label: 'Library', icon: BookOpen },
   { to: '/plans', label: 'Plans', icon: CalendarDays },
 ]
@@ -126,7 +126,7 @@ export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
 const mobileNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
-  { to: '/nutrition', label: 'Nutrition', icon: UtensilsCrossed },
+  { to: '/nutrition', label: 'NutriTrack', icon: UtensilsCrossed },
   { to: '/exercises', label: 'Library', icon: BookOpen },
   { to: '/plans', label: 'Plans', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },

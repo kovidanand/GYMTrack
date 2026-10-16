@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase'
+import { FOOD_CATALOG } from '@/data/foodCatalog'
+export type { FoodCategory } from '@/data/foodCatalog'
 import type {
   NutritionGoals,
   FoodEntry,
@@ -864,7 +866,31 @@ export async function searchFoods(
     console.warn('[NutritionService] Custom food search error:', err)
   }
 
-  // 2. Search fitness staples
+  // 2. Search built-in Food Catalog (Indian staples, fruits, veggies, proteins, grains, snacks)
+  for (const item of FOOD_CATALOG) {
+    const matchesName = item.name.toLowerCase().includes(trimmed)
+    const matchesAlias = item.aliases.some(a => a.toLowerCase().includes(trimmed))
+    const matchesCategory = item.category.toLowerCase().includes(trimmed)
+
+    if ((matchesName || matchesAlias || matchesCategory) && !seenNames.has(item.name.toLowerCase())) {
+      results.push({
+        id: `catalog_${item.id}`,
+        name: item.name,
+        brand: undefined,
+        serving_size: item.serving_size,
+        serving_unit: item.serving_unit,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+        fiber: item.fiber,
+        rawSource: 'quick',
+      })
+      seenNames.add(item.name.toLowerCase())
+    }
+  }
+
+  // 3. Search fitness staples
   for (const staple of FITNESS_STAPLES) {
     if (staple.name.toLowerCase().includes(trimmed) && !seenNames.has(staple.name.toLowerCase())) {
       results.push(staple)
@@ -872,7 +898,7 @@ export async function searchFoods(
     }
   }
 
-  // 3. Search Open Food Facts public API (CORS enabled, free, live)
+  // 4. Search Open Food Facts public API (CORS enabled, free, live)
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 4000)
@@ -1121,4 +1147,213 @@ export function calculateEstimatedGoalsFromProfile(
     fiber_target: fiberGrams,
     water_target: Math.max(2000, waterTarget),
   }
+}
+
+// ─── Food Library Catalog Provider ───────────────────────────────────────────
+
+export async function getFoodCatalog(
+  categoryFilter: string,
+  searchQuery: string,
+  userId: string
+): Promise<FoodSearchResult[]> {
+  const query = searchQuery.trim().toLowerCase()
+  const results: FoodSearchResult[] = []
+
+  // Custom foods if category is 'all' or 'custom'
+  if (categoryFilter === 'all' || categoryFilter === 'custom') {
+    try {
+      const custom = await getCustomFoods(userId)
+      for (const cf of custom) {
+        const matchesQuery =
+          !query ||
+          cf.name.toLowerCase().includes(query) ||
+          (cf.brand && cf.brand.toLowerCase().includes(query))
+
+        if (matchesQuery) {
+          results.push({
+            id: `custom_${cf.id}`,
+            name: cf.name,
+            brand: cf.brand || 'Custom Food',
+            serving_size: cf.serving_size,
+            serving_unit: cf.serving_unit,
+            calories: cf.calories,
+            protein: cf.protein,
+            carbs: cf.carbs,
+            fat: cf.fat,
+            fiber: cf.fiber,
+            isCustom: true,
+            rawSource: 'custom',
+          })
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Built-in catalog items
+  if (categoryFilter !== 'custom') {
+    for (const item of FOOD_CATALOG) {
+      const matchesCategory =
+        categoryFilter === 'all' || item.category === categoryFilter
+      const matchesQuery =
+        !query ||
+        item.name.toLowerCase().includes(query) ||
+        item.aliases.some(a => a.toLowerCase().includes(query)) ||
+        item.category.toLowerCase().includes(query)
+
+      if (matchesCategory && matchesQuery) {
+        results.push({
+          id: `catalog_${item.id}`,
+          name: item.name,
+          brand: item.category.replace('_', ' ').toUpperCase(),
+          serving_size: item.serving_size,
+          serving_unit: item.serving_unit,
+          calories: item.calories,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+          fiber: item.fiber,
+          rawSource: 'quick',
+        })
+      }
+    }
+  }
+
+  return results
+}
+
+// ─── Nutrition Streak Calculation ─────────────────────────────────────────────
+
+export async function calculateNutritionStreak(userId: string): Promise<number> {
+  const loggedDates = new Set<string>()
+
+  // Check remote records for the past 60 days
+  try {
+    const d = new Date()
+    d.setDate(d.getDate() - 60)
+    const minDateStr = d.toISOString().split('T')[0]
+
+    const { data } = await supabase
+      .from('food_entries')
+      .select('date')
+      .eq('user_id', userId)
+      .gte('date', minDateStr)
+
+    if (data) {
+      for (const row of data as { date: string }[]) {
+        if (row.date) loggedDates.add(row.date)
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // Also inspect local storage cache
+  for (let i = 0; i < 60; i++) {
+    const cur = new Date()
+    cur.setDate(cur.getDate() - i)
+    const dateStr = cur.toISOString().split('T')[0]
+    if (!loggedDates.has(dateStr)) {
+      const key = `${ENTRIES_KEY_PREFIX}${userId}_${dateStr}`
+      const cached = localStorage.getItem(key)
+      if (cached) {
+        try {
+          const list = JSON.parse(cached)
+          if (Array.isArray(list) && list.length > 0) {
+            loggedDates.add(dateStr)
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+  // Streak continues if logged today or yesterday
+  if (!loggedDates.has(todayStr) && !loggedDates.has(yesterdayStr)) {
+    return 0
+  }
+
+  let streak = 0
+  const startDay = loggedDates.has(todayStr) ? 0 : 1
+
+  for (let i = startDay; i < 60; i++) {
+    const checkDate = new Date()
+    checkDate.setDate(checkDate.getDate() - i)
+    const dateStr = checkDate.toISOString().split('T')[0]
+    if (loggedDates.has(dateStr)) {
+      streak++
+    } else {
+      break
+    }
+  }
+
+  return streak
+}
+
+// ─── Personalized Nutrition Insights ──────────────────────────────────────────
+
+export function generateNutritionInsights(
+  dailyTotals: {
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+    fiber: number
+  },
+  goals: NutritionGoals,
+  streak: number
+): string[] {
+  const insights: string[] = []
+
+  // Check if no meals logged
+  if (dailyTotals.calories === 0) {
+    insights.push('Log your first meal to track today’s energy and macro targets.')
+    if (streak > 0) {
+      insights.push(`Keep your ${streak}-day logging streak alive by recording today’s meals.`)
+    }
+    return insights
+  }
+
+  // Protein status
+  const proteinDiff = goals.protein_target - dailyTotals.protein
+  if (proteinDiff > 10) {
+    insights.push(
+      `You're ${Math.round(proteinDiff)}g below your daily protein target (${goals.protein_target}g). Consider high-protein staples like eggs, paneer, or chicken.`
+    )
+  } else if (dailyTotals.protein >= goals.protein_target) {
+    insights.push('Excellent! Daily protein target achieved to support muscle recovery.')
+  }
+
+  // Calorie status
+  const calDiff = goals.calorie_target - dailyTotals.calories
+  if (calDiff > 100) {
+    insights.push(
+      `You have ${Math.round(calDiff).toLocaleString()} kcal remaining in today’s energy budget.`
+    )
+  } else if (calDiff < -50) {
+    insights.push(
+      `You've exceeded your daily calorie goal by ${Math.abs(Math.round(calDiff)).toLocaleString()} kcal.`
+    )
+  }
+
+  // Fiber status
+  if (goals.fiber_target > 0 && dailyTotals.fiber > 0 && dailyTotals.fiber < goals.fiber_target * 0.7) {
+    insights.push(
+      `Add ${(goals.fiber_target - dailyTotals.fiber).toFixed(0)}g more fiber with oats, lentils, or vegetables to support digestion.`
+    )
+  }
+
+  // Streak insight
+  if (streak >= 3) {
+    insights.push(`🔥 ${streak}-day logging streak! Consistency is the foundation of body transformation.`)
+  }
+
+  return insights.slice(0, 3)
 }

@@ -920,13 +920,13 @@ export default function Dashboard() {
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
-                  Nutrition & Fuel
+                  NutriTrack Fuel
                 </span>
                 <h3 className="font-black text-surface-900 text-sm sm:text-base leading-tight">
                   Track Daily Meals & Hydration
                 </h3>
                 <p className="text-xs text-surface-500 mt-0.5">
-                  Log foods, monitor macros, and reach your target energy balance.
+                  Log foods, scan meals with AI, track macros, and fuel your workouts.
                 </p>
               </div>
             </div>
@@ -936,7 +936,7 @@ export default function Dashboard() {
               id="dashboard-open-nutrition-btn"
               className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors whitespace-nowrap self-center"
             >
-              <span>Open Diary</span>
+              <span>Open NutriTrack</span>
               <ChevronRight size={14} />
             </button>
           </div>
