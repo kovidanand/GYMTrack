@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-const GEMINI_MODEL = "gemini-1.5-flash"; // Fast, reasoning-capable, and available on free tier
+const GEMINI_MODEL = "gemini-1.5-flash"; // Multimodal vision + fast reasoning
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,16 +20,17 @@ serve(async (req) => {
       throw new Error("Missing GEMINI_API_KEY secret");
     }
 
-    const { messages, context } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const {
+      task,
+      messages,
+      context,
+      image_base64,
+      mime_type = "image/jpeg",
+      nutrition_context,
+    } = body;
 
-    if (!messages || !Array.isArray(messages)) {
-      return new Response(JSON.stringify({ error: "Invalid messages format" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Authenticate the user from the authorization header
+    // Authenticate the user from the authorization header if provided
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing authorization header" }), {
@@ -52,6 +53,170 @@ serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // BRANCH 1: AI Food Vision Analysis (Multi-item meal detection)
+    // ──────────────────────────────────────────────────────────────────────────
+    if (task === "food_multi_item_vision" || task === "food_image_analysis") {
+      if (!image_base64 || typeof image_base64 !== "string") {
+        return new Response(JSON.stringify({ error: "No image data received for analysis" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const visionPrompt = `You are an expert clinical nutrition AI specialized in visual dietary assessment.
+Carefully examine the meal photograph provided.
+
+TASKS:
+1. Determine if this image actually contains food or beverage. If NOT food or completely unrecognizable, set "is_food": false and provide an explanation in "message".
+2. If it is a meal or food, detect all distinct food items visible.
+   - For mixed plates (such as Indian thalis, bowls, combo plates), break down distinct components separately (e.g., Cooked Rice, Dal, Paneer Gravy, Roti, Salad).
+   - Estimate realistic portion sizes based on visible clues (standard dinner plate ~26cm, katori/bowl ~150ml, glass ~250ml, hands/utensils).
+   - Estimate realistic nutritional values (calories, protein, carbs, fat, fiber).
+   - Accurately categorize Indian meals (e.g. Yellow Dal Tadka, Paneer Butter Masala, Roti, Chole, Rajma, Idli, Dosa, Poha) as well as international foods (Chicken Breast, Salmon, Pasta, Oats, Salad, Eggs).
+3. Be transparent about estimation uncertainty:
+   - Provide "confidence": "high" | "medium" | "low".
+   - Include brief visual notes (e.g., "Portion estimated from standard bowl; oil content appears moderate").
+
+OUTPUT FORMAT:
+Return PURE JSON adhering to this exact schema:
+{
+  "is_food": true,
+  "items": [
+    {
+      "name": "Food item name",
+      "portion": "e.g. 1 medium katori (150g) or 2 rotis (80g)",
+      "servingSize": 150,
+      "servingUnit": "g",
+      "quantity": 1,
+      "calories": 180,
+      "protein": 4.5,
+      "carbs": 35.0,
+      "fat": 2.0,
+      "fiber": 1.5,
+      "confidence": "medium",
+      "notes": "Visual portion estimation"
+    }
+  ],
+  "overall_notes": "All nutritional values are visual estimates. Please review and adjust portions before confirming."
+}`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: mime_type || "image/jpeg",
+                      data: image_base64,
+                    },
+                  },
+                  {
+                    text: visionPrompt,
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.2, // Low temperature for factual precision
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini Vision API error:", errorText);
+        throw new Error(`Gemini Vision API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(rawText);
+      } catch (e) {
+        console.error("Failed to parse Gemini vision JSON output:", rawText, e);
+        throw new Error("Invalid structured JSON returned from vision model");
+      }
+
+      return new Response(JSON.stringify(parsedResult), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // BRANCH 2: Nutrition Assistant Queries
+    // ──────────────────────────────────────────────────────────────────────────
+    if (task === "nutrition_assistant") {
+      const userMessage = messages?.[messages.length - 1]?.content || "Nutrition query";
+      const nutritionSystemPrompt = `You are "NutriTrack AI Assistant", an evidence-based sports nutritionist.
+You assist athletes using their authentic logged food diary and configured nutritional targets.
+
+USER NUTRITION CONTEXT:
+${JSON.stringify(nutrition_context || {}, null, 2)}
+
+GUIDELINES:
+1. Strictly base responses on the user's authentic logged intake for today and historical averages provided.
+2. If the user asks about remaining calories or protein, calculate accurately:
+   Remaining = Target - Consumed.
+3. If the user asks for food suggestions to hit remaining protein or calorie targets:
+   - Suggest verified high-protein whole foods (e.g. Eggs, Paneer, Chicken breast, Soya chunks, Lentils/Dal, Greek yogurt, Whey).
+   - Give estimated portion and protein content.
+4. Keep advice concise, motivating, and actionable. Do not use decorative symbols or excessive markdown.`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: nutritionSystemPrompt }],
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: userMessage }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.5,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      return new Response(JSON.stringify({ content: answer }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // BRANCH 3: Standard GYMTrack Workout AI Coach (100% PRESERVED)
+    // ──────────────────────────────────────────────────────────────────────────
+    if (!messages || !Array.isArray(messages)) {
+      return new Response(JSON.stringify({ error: "Invalid messages format" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -153,7 +318,6 @@ ${JSON.stringify(context, null, 2)}`;
             replyContent += part.text;
           } else if (part.functionCall && part.functionCall.name === "propose_workout") {
             try {
-              // Gemini returns arguments as an object directly, not a string
               structuredData = part.functionCall.args;
               if (!replyContent) {
                 replyContent = `Here is a proposed workout for you: **${structuredData.name}**. You can review the details below.`;
@@ -172,15 +336,14 @@ ${JSON.stringify(context, null, 2)}`;
   } catch (error: any) {
     console.error("Edge function error:", error);
     
-    // Check if it's the missing key error specifically
     if (error.message === "Missing GEMINI_API_KEY secret") {
-       return new Response(JSON.stringify({ error: "AI Coach is not configured yet. Please contact the administrator." }), {
+       return new Response(JSON.stringify({ error: "AI service requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ error: "AI Coach is temporarily unavailable. Please try again." }), {
+    return new Response(JSON.stringify({ error: error.message || "AI Coach is temporarily unavailable. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

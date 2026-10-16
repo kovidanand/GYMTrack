@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import {
   Camera,
@@ -11,23 +11,15 @@ import {
   Trash2,
   AlertCircle,
   RotateCcw,
+  Edit2,
+  Search,
 } from 'lucide-react'
 import type { FoodEntry, MealType } from '@/types/nutrition'
-import { supabase } from '@/lib/supabase'
-
-interface DetectedFoodItem {
-  id: string
-  name: string
-  portion: string
-  servingSize: number
-  servingUnit: string
-  quantity: number
-  calories: number
-  protein: number
-  carbs: number
-  fat: number
-  fiber: number
-}
+import {
+  analyzeMealPhoto,
+  processFoodImage,
+  type DetectedFoodAnalysisItem,
+} from '@/lib/nutritionService'
 
 interface FoodCameraModalProps {
   open: boolean
@@ -36,6 +28,7 @@ interface FoodCameraModalProps {
   selectedDate: string
   defaultMode?: 'camera' | 'upload'
   onLogMealItems: (items: Omit<FoodEntry, 'id' | 'created_at' | 'updated_at'>[]) => Promise<void>
+  onSwitchToLibrary?: () => void
 }
 
 export function FoodCameraModal({
@@ -45,11 +38,18 @@ export function FoodCameraModal({
   selectedDate,
   defaultMode = 'camera',
   onLogMealItems,
+  onSwitchToLibrary,
 }: FoodCameraModalProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageBase64, setImageBase64] = useState<string | null>(null)
+  const [imageMime, setImageMime] = useState<string>('image/jpeg')
+  const [imageMeta, setImageMeta] = useState<{ width: number; height: number; sizeKb: number } | null>(null)
+
+  const [isProcessingImage, setIsProcessingImage] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
-  const [detectedItems, setDetectedItems] = useState<DetectedFoodItem[]>([])
+  const [overallNotes, setOverallNotes] = useState<string>('')
+  const [detectedItems, setDetectedItems] = useState<DetectedFoodAnalysisItem[]>([])
   const [hasAnalyzed, setHasAnalyzed] = useState(false)
   const [selectedMeal, setSelectedMeal] = useState<MealType>('lunch')
   const [isSaving, setIsSaving] = useState(false)
@@ -59,8 +59,12 @@ export function FoodCameraModal({
 
   const resetState = () => {
     setImagePreview(null)
+    setImageBase64(null)
+    setImageMeta(null)
+    setIsProcessingImage(false)
     setIsAnalyzing(false)
     setAnalysisError(null)
+    setOverallNotes('')
     setDetectedItems([])
     setHasAnalyzed(false)
     setIsSaving(false)
@@ -80,205 +84,161 @@ export function FoodCameraModal({
     }
   }, [open, defaultMode, imagePreview, hasAnalyzed])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle selected file with safe client-side resizing
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      setAnalysisError('Please choose a valid image file (JPEG, PNG, WebP).')
-      return
-    }
-
-    if (file.size > 15 * 1024 * 1024) {
-      setAnalysisError('Image file is too large (maximum 15MB).')
-      return
-    }
-
+    setIsProcessingImage(true)
     setAnalysisError(null)
-    const reader = new FileReader()
-    reader.onload = () => {
-      setImagePreview(reader.result as string)
+
+    try {
+      const processed = await processFoodImage(file, 1280, 0.85)
+      setImagePreview(processed.dataUrl)
+      setImageBase64(processed.base64)
+      setImageMime(processed.mimeType)
+      setImageMeta({
+        width: processed.width,
+        height: processed.height,
+        sizeKb: Math.round(processed.compressedSize / 1024),
+      })
       setHasAnalyzed(false)
       setDetectedItems([])
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : 'Failed to process image.')
+    } finally {
+      setIsProcessingImage(false)
+      // reset file input value so selecting the same file triggers change
+      e.target.value = ''
     }
-    reader.readAsDataURL(file)
   }
 
+  // Real AI Vision analysis using Gemini 1.5 Flash via Edge Function
   const runAnalysis = async () => {
-    if (!imagePreview || isAnalyzing) return
+    if (!imageBase64 || isAnalyzing) return
     setIsAnalyzing(true)
     setAnalysisError(null)
 
     try {
-      const base64Data = imagePreview.split(',')[1]
+      const result = await analyzeMealPhoto(imageBase64, imageMime)
 
-      // Call AI Vision endpoint in Supabase Edge Functions
-      const { data, error } = await supabase.functions.invoke('ai-coach', {
-        body: {
-          task: 'food_multi_item_vision',
-          image_base64: base64Data,
-          messages: [
-            {
-              role: 'user',
-              content:
-                'Analyze this food photo. Return a JSON array of detected meal items: [{"name": "...", "portion": "1 cup", "calories": 180, "protein": 4, "carbs": 38, "fat": 0.5, "fiber": 1}]. Keep nutritional estimates realistic.',
-            },
-          ],
-        },
-      })
-
-      if (!error && Array.isArray(data?.items) && data.items.length > 0) {
-        const rawItems = data.items as Array<Record<string, unknown>>
-        const parsed: DetectedFoodItem[] = rawItems.map((it, idx) => ({
-          id: `item_${Date.now()}_${idx}`,
-          name: typeof it.name === 'string' ? it.name : 'Meal Item',
-          portion: typeof it.portion === 'string' ? it.portion : '1 serving',
-          servingSize: Number(it.servingSize) || 100,
-          servingUnit: typeof it.servingUnit === 'string' ? it.servingUnit : 'g',
-          quantity: 1,
-          calories: Math.round(Number(it.calories) || 150),
-          protein: Math.round((Number(it.protein) || 5) * 10) / 10,
-          carbs: Math.round((Number(it.carbs) || 20) * 10) / 10,
-          fat: Math.round((Number(it.fat) || 5) * 10) / 10,
-          fiber: Math.round((Number(it.fiber) || 2) * 10) / 10,
-        }))
-        setDetectedItems(parsed)
-        setHasAnalyzed(true)
-      } else {
-        // High quality multi-item fallback for visual breakdown
-        setDetectedItems([
-          {
-            id: `item_${Date.now()}_1`,
-            name: 'Steamed Rice',
-            portion: '1 katori (150g)',
-            servingSize: 150,
-            servingUnit: 'g',
-            quantity: 1,
-            calories: 195,
-            protein: 4.1,
-            carbs: 42.3,
-            fat: 0.5,
-            fiber: 0.6,
-          },
-          {
-            id: `item_${Date.now()}_2`,
-            name: 'Dal Tadka',
-            portion: '1 bowl (150g)',
-            servingSize: 150,
-            servingUnit: 'g',
-            quantity: 1,
-            calories: 154,
-            protein: 9.2,
-            carbs: 22.4,
-            fat: 3.6,
-            fiber: 6.1,
-          },
-          {
-            id: `item_${Date.now()}_3`,
-            name: 'Paneer Curry / Mixed Veg',
-            portion: '1 serving (150g)',
-            servingSize: 150,
-            servingUnit: 'g',
-            quantity: 1,
-            calories: 210,
-            protein: 11.5,
-            carbs: 8.5,
-            fat: 14.2,
-            fiber: 3.0,
-          },
-        ])
-        setHasAnalyzed(true)
+      if (!result.isFood || result.items.length === 0) {
+        setAnalysisError(
+          result.overallNotes ||
+            'No recognizable food items were found in this image. Please take a clearer photo of your meal.'
+        )
+        setDetectedItems([])
+        setHasAnalyzed(false)
+        return
       }
-    } catch {
-      setAnalysisError('AI service is currently busy. Initialized common meal items for your review.')
-      setDetectedItems([
-        {
-          id: `item_${Date.now()}_1`,
-          name: 'Home Meal Plate',
-          portion: '1 plate',
-          servingSize: 1,
-          servingUnit: 'plate',
-          quantity: 1,
-          calories: 450,
-          protein: 24,
-          carbs: 55,
-          fat: 14,
-          fiber: 5,
-        },
-      ])
+
+      setDetectedItems(result.items)
+      setOverallNotes(result.overallNotes)
       setHasAnalyzed(true)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'AI Vision analysis failed.'
+      setAnalysisError(message)
+      setDetectedItems([])
+      setHasAnalyzed(false)
     } finally {
       setIsAnalyzing(false)
     }
   }
 
-  const handleUpdateItem = (id: string, updates: Partial<DetectedFoodItem>) => {
+  // Edit item properties
+  const handleUpdateItem = (id: string, updates: Partial<DetectedFoodAnalysisItem>) => {
     setDetectedItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, ...updates } : item))
+      prev.map(it => {
+        if (it.id !== id) return it
+        const updated = { ...it, ...updates }
+        // If quantity changed, scale nutrients proportionally
+        if (updates.quantity !== undefined && it.quantity > 0) {
+          const ratio = updates.quantity / it.quantity
+          updated.calories = Math.max(0, Math.round(it.calories * ratio))
+          updated.protein = Math.max(0, Math.round(it.protein * ratio * 10) / 10)
+          updated.carbs = Math.max(0, Math.round(it.carbs * ratio * 10) / 10)
+          updated.fat = Math.max(0, Math.round(it.fat * ratio * 10) / 10)
+          updated.fiber = Math.max(0, Math.round(it.fiber * ratio * 10) / 10)
+        }
+        return updated
+      })
     )
   }
 
-  const handleRemoveItem = (id: string) => {
-    setDetectedItems(prev => prev.filter(item => item.id !== id))
+  const handleDeleteItem = (id: string) => {
+    setDetectedItems(prev => prev.filter(it => it.id !== id))
   }
 
-  const handleAddItem = () => {
-    setDetectedItems(prev => [
-      ...prev,
-      {
-        id: `item_${Date.now()}`,
-        name: 'Additional Item',
-        portion: '1 serving',
-        servingSize: 100,
-        servingUnit: 'g',
-        quantity: 1,
-        calories: 100,
-        protein: 5,
-        carbs: 15,
-        fat: 2,
-        fiber: 1,
-      },
-    ])
+  const handleAddMissingItem = () => {
+    const newItem: DetectedFoodAnalysisItem = {
+      id: `manual_item_${Date.now()}`,
+      name: 'Additional Food',
+      portion: '1 serving (100g)',
+      servingSize: 100,
+      servingUnit: 'g',
+      quantity: 1,
+      calories: 120,
+      protein: 5,
+      carbs: 15,
+      fat: 3,
+      fiber: 1,
+      confidence: 'medium',
+      notes: 'Added manually to detected meal plate.',
+    }
+    setDetectedItems(prev => [...prev, newItem])
   }
 
-  // Combined totals of all detected items
-  const mealTotals = detectedItems.reduce(
-    (acc, it) => ({
-      calories: acc.calories + it.calories * it.quantity,
-      protein: acc.protein + it.protein * it.quantity,
-      carbs: acc.carbs + it.carbs * it.quantity,
-      fat: acc.fat + it.fat * it.quantity,
-      fiber: acc.fiber + it.fiber * it.quantity,
-    }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
-  )
+  // Combined totals across all detected items
+  const mealTotals = useMemo(() => {
+    let calories = 0
+    let protein = 0
+    let carbs = 0
+    let fat = 0
+    let fiber = 0
 
+    for (const it of detectedItems) {
+      calories += it.calories || 0
+      protein += it.protein || 0
+      carbs += it.carbs || 0
+      fat += it.fat || 0
+      fiber += it.fiber || 0
+    }
+
+    return {
+      calories: Math.round(calories),
+      protein: Math.round(protein * 10) / 10,
+      carbs: Math.round(carbs * 10) / 10,
+      fat: Math.round(fat * 10) / 10,
+      fiber: Math.round(fiber * 10) / 10,
+    }
+  }, [detectedItems])
+
+  // Confirm and log all items to Supabase
   const handleConfirmAndLog = async () => {
     if (detectedItems.length === 0 || isSaving) return
     setIsSaving(true)
 
     try {
       const now = new Date().toISOString()
-      const entriesToLog = detectedItems.map(item => ({
+      const entriesToLog: Omit<FoodEntry, 'id' | 'created_at' | 'updated_at'>[] = detectedItems.map(it => ({
         user_id: userId,
         date: selectedDate,
         meal_type: selectedMeal,
-        food_name: item.name,
-        brand: 'AI Meal Scan',
-        serving_size: item.servingSize,
-        serving_unit: item.portion,
-        servings_logged: item.quantity,
-        calories: Math.round(item.calories * item.quantity),
-        protein: Math.round(item.protein * item.quantity * 10) / 10,
-        carbs: Math.round(item.carbs * item.quantity * 10) / 10,
-        fat: Math.round(item.fat * item.quantity * 10) / 10,
-        fiber: Math.round(item.fiber * item.quantity * 10) / 10,
+        food_name: it.name,
+        serving_size: it.servingSize,
+        serving_unit: it.portion || it.servingUnit,
+        servings_logged: it.quantity,
+        calories: it.calories,
+        protein: it.protein,
+        carbs: it.carbs,
+        fat: it.fat,
+        fiber: it.fiber,
         logged_at: now,
       }))
 
       await onLogMealItems(entriesToLog)
-      resetState()
       onOpenChange(false)
+      resetState()
     } finally {
       setIsSaving(false)
     }
@@ -287,312 +247,434 @@ export function FoodCameraModal({
   return (
     <RadixDialog.Root
       open={open}
-      onOpenChange={o => {
-        if (!o) resetState()
-        onOpenChange(o)
+      onOpenChange={newOpen => {
+        if (!newOpen) resetState()
+        onOpenChange(newOpen)
       }}
     >
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-xs animate-fade-in" />
+        <RadixDialog.Overlay className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs animate-fade-in" />
         <RadixDialog.Content
-          className="fixed z-[101] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[94vw] max-w-xl max-h-[92vh] bg-white rounded-2xl shadow-2xl flex flex-col p-0 overflow-hidden animate-scale-in focus:outline-none"
+          className="fixed z-[101] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-xl max-h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col animate-scale-in focus:outline-none overflow-hidden"
           aria-describedby="camera-modal-desc"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-surface-200">
-            <div>
-              <div className="flex items-center gap-2">
-                <RadixDialog.Title className="text-lg font-black text-surface-900 tracking-tight">
-                  AI Meal Photo Scanner
-                </RadixDialog.Title>
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  Multimodal
-                </span>
+          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-surface-200 bg-gradient-to-r from-emerald-50/70 to-teal-50/50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-xs">
+                <Camera size={18} />
               </div>
-              <p id="camera-modal-desc" className="text-xs text-surface-500 font-medium mt-0.5">
-                Snap or upload your plate. Review and adjust AI estimates before logging.
-              </p>
+              <div>
+                <RadixDialog.Title className="text-base font-black text-surface-900 tracking-tight flex items-center gap-2">
+                  <span>AI Meal Photo Scanner</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                    Vision 1.5
+                  </span>
+                </RadixDialog.Title>
+                <p id="camera-modal-desc" className="text-xs text-surface-500 font-medium">
+                  Snap or upload a photo to identify meal items and estimate macros with AI.
+                </p>
+              </div>
             </div>
+
             <RadixDialog.Close asChild>
-              <button className="p-1 text-surface-400 hover:text-surface-700 rounded-lg">
+              <button className="p-1 rounded-xl text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors">
                 <X size={18} />
               </button>
             </RadixDialog.Close>
           </div>
 
-          {/* Hidden File Inputs for native camera and regular file upload */}
+          {/* Hidden Inputs */}
           <input
             ref={cameraInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             capture="environment"
+            className="hidden"
             onChange={handleFileChange}
-            className="sr-only"
           />
           <input
             ref={uploadInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
             onChange={handleFileChange}
-            className="sr-only"
           />
 
-          {/* Scrollable Body */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            {analysisError && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
-                <AlertCircle size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                <span>{analysisError}</span>
-              </div>
-            )}
-
-            {!imagePreview ? (
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2">
-                  <Sparkles size={16} className="text-emerald-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Intelligent Meal Estimation:</strong> Capture a photo of your food. The
-                    AI identifies separate dishes, portion sizes, calories, and macros. All values
-                    are displayed for your review and correction.
-                  </div>
+          {/* Body Content */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            {/* Step 1: No Image Selected State */}
+            {!imagePreview && (
+              <div className="space-y-4 py-6 text-center">
+                <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-50 border-2 border-dashed border-emerald-300 flex items-center justify-center text-emerald-600">
+                  <Camera size={28} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-surface-900">Choose a Food Photo</h4>
+                  <p className="text-xs text-surface-500 max-w-sm mx-auto mt-1">
+                    Take a live picture of your plate or upload an existing meal photo from your device.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div className="flex items-center justify-center gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
-                    id="trigger-camera-capture"
-                    className="p-6 rounded-2xl border-2 border-dashed border-emerald-200 hover:border-emerald-500 bg-emerald-50/30 hover:bg-emerald-50 flex flex-col items-center justify-center gap-2 transition-all group"
+                    id="scanner-open-camera-btn"
+                    className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-xs transition-all"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Camera size={24} />
-                    </div>
-                    <span className="text-sm font-bold text-surface-900">Take Meal Photo</span>
-                    <span className="text-[11px] text-surface-400">Use your device camera</span>
+                    <Camera size={16} />
+                    <span>Take Meal Photo</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => uploadInputRef.current?.click()}
-                    id="trigger-photo-upload"
-                    className="p-6 rounded-2xl border-2 border-dashed border-surface-200 hover:border-emerald-500 bg-surface-50/50 hover:bg-surface-50 flex flex-col items-center justify-center gap-2 transition-all group"
+                    id="scanner-open-upload-btn"
+                    className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-surface-700 bg-surface-100 hover:bg-surface-200 active:scale-95 transition-all"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-surface-100 text-surface-600 group-hover:text-emerald-700 group-hover:bg-emerald-50 flex items-center justify-center group-hover:scale-105 transition-all">
-                      <Upload size={24} />
-                    </div>
-                    <span className="text-sm font-bold text-surface-900">Upload Existing Photo</span>
-                    <span className="text-[11px] text-surface-400">Choose from gallery</span>
+                    <Upload size={16} />
+                    <span>Upload Image</span>
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Photo Preview Strip */}
-                <div className="relative rounded-2xl overflow-hidden border border-surface-200 max-h-48 bg-black/5 flex items-center justify-center">
-                  <img
-                    src={imagePreview}
-                    alt="Captured meal"
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute top-2 right-2 flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setImagePreview(null)
-                        setDetectedItems([])
-                        setHasAnalyzed(false)
-                      }}
-                      className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors"
-                      title="Retake or choose another photo"
-                    >
-                      <RotateCcw size={14} />
-                    </button>
+            )}
+
+            {/* Processing image loader */}
+            {isProcessingImage && (
+              <div className="py-10 text-center text-surface-500 flex flex-col items-center justify-center gap-2">
+                <Loader2 size={24} className="animate-spin text-emerald-600" />
+                <p className="text-xs font-semibold">Optimizing meal photo resolution...</p>
+              </div>
+            )}
+
+            {/* Error Banner */}
+            {analysisError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={16} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 font-medium leading-relaxed">
+                    <span className="font-bold block text-rose-900">Analysis Notice</span>
+                    {analysisError}
                   </div>
                 </div>
 
-                {!hasAnalyzed ? (
+                <div className="flex items-center gap-2 pt-1 pl-6">
+                  {imagePreview && (
+                    <button
+                      type="button"
+                      onClick={runAnalysis}
+                      disabled={isAnalyzing}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-rose-800 border border-rose-300 hover:bg-rose-100 shadow-2xs"
+                    >
+                      <RotateCcw size={12} />
+                      <span>Retry Analysis</span>
+                    </button>
+                  )}
+
+                  {onSwitchToLibrary && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenChange(false)
+                        onSwitchToLibrary()
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-surface-700 border border-surface-200 hover:bg-surface-50 shadow-2xs"
+                    >
+                      <Search size={12} />
+                      <span>Search Food Library</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Image Preview & Pre-Analysis */}
+            {imagePreview && !hasAnalyzed && !isProcessingImage && (
+              <div className="space-y-4">
+                <div className="relative rounded-2xl overflow-hidden border border-surface-200 bg-black aspect-video max-h-60 flex items-center justify-center">
+                  <img
+                    src={imagePreview}
+                    alt="Meal preview"
+                    className="w-full h-full object-contain"
+                  />
+
+                  {/* Actions overlay */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="p-1.5 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
+                      title="Retake photo"
+                    >
+                      <Camera size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => uploadInputRef.current?.click()}
+                      className="p-1.5 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
+                      title="Choose another image"
+                    >
+                      <Upload size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetState}
+                      className="p-1.5 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {imageMeta && (
+                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] text-white/90 font-mono">
+                      {imageMeta.width}×{imageMeta.height} • {imageMeta.sizeKb} KB
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={runAnalysis}
                     disabled={isAnalyzing}
-                    id="analyze-meal-photo-btn"
-                    className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xs"
+                    id="run-ai-vision-analysis-btn"
+                    className="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
                   >
                     {isAnalyzing ? (
                       <>
-                        <Loader2 size={18} className="animate-spin" />
-                        <span>Analyzing plate components with AI...</span>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Identifying Food Items with AI...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles size={18} />
-                        <span>Run AI Food Identification</span>
+                        <Sparkles size={16} />
+                        <span>Analyze Meal with AI</span>
                       </>
                     )}
                   </button>
-                ) : (
-                  /* ─── Structured Multi-Item Review ─── */
-                  <div className="space-y-4 animate-scale-in">
-                    {/* Meal Assignment */}
-                    <div className="p-3 bg-surface-50 border border-surface-200 rounded-xl flex items-center justify-between flex-wrap gap-2">
-                      <span className="text-xs font-bold text-surface-700">Assign to Meal:</span>
-                      <div className="flex items-center gap-1">
-                        {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(m => (
-                          <button
-                            key={m}
-                            type="button"
-                            onClick={() => setSelectedMeal(m)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition-all ${
-                              selectedMeal === m
-                                ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-100'
-                            }`}
-                          >
-                            {m}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                </div>
+              </div>
+            )}
 
-                    {/* Detected Items List */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-surface-900">
-                          Detected Meal Components ({detectedItems.length})
-                        </span>
+            {/* Step 3: Analysis Review Screen */}
+            {hasAnalyzed && detectedItems.length > 0 && (
+              <div className="space-y-4 animate-fade-in">
+                {/* Photo thumbnail & quick retake bar */}
+                <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-surface-50 border border-surface-200">
+                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-surface-200 flex-shrink-0 border border-surface-200">
+                    <img
+                      src={imagePreview || ''}
+                      alt="Scanned thumbnail"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                      Identified {detectedItems.length} Food {detectedItems.length === 1 ? 'Item' : 'Items'}
+                    </span>
+                    <p className="text-xs text-surface-600 truncate mt-0.5">
+                      {overallNotes || 'Review and adjust portions before confirming.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasAnalyzed(false)
+                      setDetectedItems([])
+                    }}
+                    className="p-1.5 text-surface-500 hover:text-surface-800 rounded-lg hover:bg-surface-200 transition-colors"
+                    title="Retake or replace image"
+                  >
+                    <RotateCcw size={15} />
+                  </button>
+                </div>
+
+                {/* Target Meal Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-surface-700 mb-1">
+                    Log To Meal
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setSelectedMeal(m)}
+                        className={`py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                          selectedMeal === m
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Detected Items List */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-wider text-surface-700">
+                      Detected Food Items
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAddMissingItem}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800"
+                    >
+                      <Plus size={12} />
+                      <span>Add Item</span>
+                    </button>
+                  </div>
+
+                  {detectedItems.map(item => (
+                    <div
+                      key={item.id}
+                      className="p-3.5 rounded-2xl bg-white border border-surface-200 shadow-2xs space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          {/* Editable Food Name */}
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={e => handleUpdateItem(item.id, { name: e.target.value })}
+                              className="font-bold text-xs sm:text-sm text-surface-900 bg-transparent border-b border-transparent hover:border-surface-300 focus:border-emerald-500 focus:bg-emerald-50/30 px-1 py-0.5 rounded transition-all w-full"
+                              title="Click to rename food"
+                            />
+                            <Edit2 size={12} className="text-surface-400 flex-shrink-0" />
+                          </div>
+
+                          <div className="flex items-center gap-2 mt-0.5 px-1">
+                            <span className="text-[10px] text-surface-500">
+                              Estimated: {item.portion}
+                            </span>
+                            {item.confidence && (
+                              <span
+                                className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded ${
+                                  item.confidence === 'high'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : item.confidence === 'low'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}
+                              >
+                                {item.confidence} confidence
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
                         <button
                           type="button"
-                          onClick={handleAddItem}
-                          className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="p-1.5 text-surface-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                          title="Remove item"
                         >
-                          <Plus size={13} />
-                          <span>Add Item</span>
+                          <Trash2 size={14} />
                         </button>
                       </div>
 
-                      <div className="space-y-2">
-                        {detectedItems.map(item => (
-                          <div
-                            key={item.id}
-                            className="p-3 rounded-xl border border-surface-200 bg-white shadow-2xs space-y-2"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <input
-                                type="text"
-                                value={item.name}
-                                onChange={e => handleUpdateItem(item.id, { name: e.target.value })}
-                                className="font-bold text-sm text-surface-900 bg-transparent border-b border-dashed border-surface-300 focus:border-emerald-500 focus:outline-none flex-1"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="text-surface-400 hover:text-red-500 p-1"
-                                title="Remove item"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-
-                            <div className="grid grid-cols-4 gap-2 pt-1 text-center">
-                              <div>
-                                <span className="text-[10px] font-bold text-surface-400">Calories</span>
-                                <input
-                                  type="number"
-                                  value={item.calories}
-                                  onChange={e =>
-                                    handleUpdateItem(item.id, {
-                                      calories: Math.max(0, parseInt(e.target.value) || 0),
-                                    })
-                                  }
-                                  className="input-base text-xs font-bold text-center py-1 px-1 mt-0.5"
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[10px] font-bold text-blue-600">Protein</span>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={item.protein}
-                                  onChange={e =>
-                                    handleUpdateItem(item.id, {
-                                      protein: Math.max(0, parseFloat(e.target.value) || 0),
-                                    })
-                                  }
-                                  className="input-base text-xs font-bold text-center py-1 px-1 mt-0.5"
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[10px] font-bold text-amber-700">Carbs</span>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={item.carbs}
-                                  onChange={e =>
-                                    handleUpdateItem(item.id, {
-                                      carbs: Math.max(0, parseFloat(e.target.value) || 0),
-                                    })
-                                  }
-                                  className="input-base text-xs font-bold text-center py-1 px-1 mt-0.5"
-                                />
-                              </div>
-                              <div>
-                                <span className="text-[10px] font-bold text-rose-600">Fat</span>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={item.fat}
-                                  onChange={e =>
-                                    handleUpdateItem(item.id, {
-                                      fat: Math.max(0, parseFloat(e.target.value) || 0),
-                                    })
-                                  }
-                                  className="input-base text-xs font-bold text-center py-1 px-1 mt-0.5"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Meal Aggregate Summary Card */}
-                    <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                      <div className="flex items-center justify-between text-xs font-bold text-emerald-900 mb-2">
-                        <span>Combined Meal Total:</span>
-                        <span className="text-base font-black text-emerald-800">
-                          {Math.round(mealTotals.calories)} kcal
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold text-emerald-800">
-                        <div className="bg-white/60 p-1 rounded-lg">
-                          <span>{mealTotals.protein.toFixed(1)}g Protein</span>
+                      {/* Portion Multipliers */}
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-surface-100">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-surface-400 mr-1">Portion:</span>
+                          {[0.5, 1, 1.5, 2].map(preset => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => handleUpdateItem(item.id, { quantity: preset })}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all ${
+                                item.quantity === preset
+                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                                  : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
+                              }`}
+                            >
+                              {preset}x
+                            </button>
+                          ))}
                         </div>
-                        <div className="bg-white/60 p-1 rounded-lg">
-                          <span>{mealTotals.carbs.toFixed(1)}g Carbs</span>
-                        </div>
-                        <div className="bg-white/60 p-1 rounded-lg">
-                          <span>{mealTotals.fat.toFixed(1)}g Fat</span>
+
+                        {/* Nutrient Mini Strip */}
+                        <div className="flex items-center gap-2 text-[11px] font-semibold text-surface-700">
+                          <span className="font-bold text-surface-900">{item.calories} kcal</span>
+                          <span className="text-blue-600 font-bold">{item.protein}g P</span>
+                          <span className="text-amber-700">{item.carbs}g C</span>
+                          <span className="text-rose-600">{item.fat}g F</span>
                         </div>
                       </div>
                     </div>
+                  ))}
+                </div>
 
-                    {/* Confirm and Log Action */}
-                    <button
-                      type="button"
-                      onClick={handleConfirmAndLog}
-                      disabled={isSaving || detectedItems.length === 0}
-                      id="confirm-log-analyzed-meal-btn"
-                      className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
-                    >
-                      {isSaving ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Check size={16} />
-                      )}
-                      <span>Confirm and Log to {selectedMeal.toUpperCase()}</span>
-                    </button>
+                {/* Combined Meal Total Card */}
+                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/90 shadow-2xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-900">
+                      Total Estimated Meal
+                    </span>
+                    <span className="text-[10px] font-medium text-emerald-700">
+                      Visual approximation
+                    </span>
                   </div>
-                )}
+
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div className="bg-white/80 p-2 rounded-xl">
+                      <span className="text-[10px] font-bold uppercase text-surface-400 block">
+                        Calories
+                      </span>
+                      <span className="text-base font-black text-surface-900">
+                        {mealTotals.calories}
+                      </span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded-xl">
+                      <span className="text-[10px] font-bold uppercase text-blue-600 block">
+                        Protein
+                      </span>
+                      <span className="text-base font-black text-surface-900">
+                        {mealTotals.protein}g
+                      </span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded-xl">
+                      <span className="text-[10px] font-bold uppercase text-amber-700 block">
+                        Carbs
+                      </span>
+                      <span className="text-base font-black text-surface-900">
+                        {mealTotals.carbs}g
+                      </span>
+                    </div>
+                    <div className="bg-white/80 p-2 rounded-xl">
+                      <span className="text-[10px] font-bold uppercase text-rose-600 block">
+                        Fat
+                      </span>
+                      <span className="text-base font-black text-surface-900">
+                        {mealTotals.fat}g
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Confirm and Log Meal Button */}
+                <button
+                  type="button"
+                  onClick={handleConfirmAndLog}
+                  disabled={isSaving || detectedItems.length === 0}
+                  id="confirm-and-log-meal-btn"
+                  className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  <span>
+                    Confirm and Log Meal ({detectedItems.length} {detectedItems.length === 1 ? 'item' : 'items'} to {selectedMeal.toUpperCase()})
+                  </span>
+                </button>
               </div>
             )}
           </div>

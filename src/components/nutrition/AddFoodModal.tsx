@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import {
   X,
@@ -11,9 +11,17 @@ import {
   BookmarkPlus,
   ChevronRight,
   Info,
+  AlertTriangle,
 } from 'lucide-react'
 import type { FoodEntry, MealType, FoodSearchResult } from '@/types/nutrition'
-import { searchFoods, addCustomFood } from '@/lib/nutritionService'
+import {
+  searchFoods,
+  addCustomFood,
+  getFoodServingUnits,
+  calculateScaledNutrients,
+  processFoodImage,
+  analyzeMealPhoto,
+} from '@/lib/nutritionService'
 import { supabase } from '@/lib/supabase'
 
 interface AddFoodModalProps {
@@ -53,8 +61,8 @@ export function AddFoodModal({
   const [searchResults, setSearchResults] = useState<FoodSearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null)
+  const [selectedUnit, setSelectedUnit] = useState<string>('')
   const [servingQuantity, setServingQuantity] = useState<number>(1)
-  const [servingSizeInput, setServingSizeInput] = useState<number>(100)
   const [isAdding, setIsAdding] = useState(false)
 
   // Debounced search
@@ -78,21 +86,45 @@ export function AddFoodModal({
     }
   }, [searchQuery, userId])
 
+  const servingUnits = useMemo(
+    () => (selectedFood ? getFoodServingUnits(selectedFood) : []),
+    [selectedFood]
+  )
+
+  const activeUnitOption = useMemo(() => {
+    if (servingUnits.length === 0) {
+      return { unit: 'serving', label: '1 Serving', multiplier: 1, isDefault: true }
+    }
+    return servingUnits.find(u => u.unit === selectedUnit) || servingUnits[0]
+  }, [servingUnits, selectedUnit])
+
   const handleSelectFood = (food: FoodSearchResult) => {
     setSelectedFood(food)
-    setServingQuantity(1)
-    setServingSizeInput(food.serving_size)
+    const units = getFoodServingUnits(food)
+    const def = units.find(u => u.isDefault) || units[0]
+    setSelectedUnit(def?.unit || 'serving')
+    if (def?.unit === 'g' || def?.unit === 'ml') {
+      setServingQuantity(100)
+    } else {
+      setServingQuantity(1)
+    }
   }
 
-  // Recalculated values based on quantity & serving size
-  const factor = selectedFood
-    ? (servingQuantity * servingSizeInput) / (selectedFood.serving_size || 1)
-    : 1
-  const calcCalories = selectedFood ? Math.round(selectedFood.calories * factor) : 0
-  const calcProtein = selectedFood ? Math.round(selectedFood.protein * factor * 10) / 10 : 0
-  const calcCarbs = selectedFood ? Math.round(selectedFood.carbs * factor * 10) / 10 : 0
-  const calcFat = selectedFood ? Math.round(selectedFood.fat * factor * 10) / 10 : 0
-  const calcFiber = selectedFood ? Math.round(selectedFood.fiber * factor * 10) / 10 : 0
+  const scaledSearchNutrients = useMemo(() => {
+    if (!selectedFood) {
+      return {
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        fiber: 0,
+        quantity: 1,
+        unitLabel: 'serving',
+        portionSummary: '',
+      }
+    }
+    return calculateScaledNutrients(selectedFood, activeUnitOption, servingQuantity)
+  }, [selectedFood, activeUnitOption, servingQuantity])
 
   const handleConfirmSearchAdd = async () => {
     if (!selectedFood || isAdding) return
@@ -104,14 +136,14 @@ export function AddFoodModal({
         meal_type: selectedMeal,
         food_name: selectedFood.name,
         brand: selectedFood.brand,
-        serving_size: servingSizeInput,
-        serving_unit: selectedFood.serving_unit,
-        servings_logged: servingQuantity,
-        calories: calcCalories,
-        protein: calcProtein,
-        carbs: calcCarbs,
-        fat: calcFat,
-        fiber: calcFiber,
+        serving_size: scaledSearchNutrients.quantity,
+        serving_unit: scaledSearchNutrients.unitLabel,
+        servings_logged: scaledSearchNutrients.quantity,
+        calories: scaledSearchNutrients.calories,
+        protein: scaledSearchNutrients.protein,
+        carbs: scaledSearchNutrients.carbs,
+        fat: scaledSearchNutrients.fat,
+        fiber: scaledSearchNutrients.fiber,
         logged_at: new Date().toISOString(),
       })
       onOpenChange(false)
@@ -224,11 +256,14 @@ export function AddFoodModal({
   }
 
   // ─── Tab 4: AI Food Scanner State ──────────────────────────────────────────
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
+  const [scanError, setScanError] = useState<string | null>(null)
   const [scanResult, setScanResult] = useState<{
     name: string
     portion: string
+    quantity: number
     calories: number
     protein: number
     carbs: number
@@ -242,77 +277,50 @@ export function AddFoodModal({
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setImageFile(file)
+    setScanError(null)
+    setScanResult(null)
 
     const reader = new FileReader()
     reader.onload = () => {
       setImagePreview(reader.result as string)
-      setScanResult(null)
     }
     reader.readAsDataURL(file)
   }
 
   const handleRunAiScan = async () => {
-    if (!imagePreview || isScanning) return
+    if (!imageFile || isScanning) return
     setIsScanning(true)
+    setScanError(null)
 
     try {
-      // Extract base64 payload
-      const base64Data = imagePreview.split(',')[1]
+      const { base64, mimeType } = await processFoodImage(imageFile)
+      const res = await analyzeMealPhoto(base64, mimeType)
 
-      // Call AI Coach / Vision backend function if configured
-      const { data, error } = await supabase.functions.invoke('ai-coach', {
-        body: {
-          task: 'food_image_analysis',
-          image_base64: base64Data,
-          messages: [
-            {
-              role: 'user',
-              content:
-                'Analyze this food photo. Estimate the meal name, portion, calories, protein, carbs, fat, and fiber in grams. Return JSON only: {"foodName": "...", "portion": "...", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "confidence": "high|medium|low", "notes": "..."}',
-            },
-          ],
-        },
-      })
-
-      if (!error && data?.foodName) {
-        setScanResult({
-          name: data.foodName,
-          portion: data.portion || '1 serving',
-          calories: Number(data.calories) || 0,
-          protein: Number(data.protein) || 0,
-          carbs: Number(data.carbs) || 0,
-          fat: Number(data.fat) || 0,
-          fiber: Number(data.fiber) || 0,
-          confidence: data.confidence || 'medium',
-          notes: data.notes || 'Nutritional estimates generated from image analysis.',
-        })
-      } else {
-        // Fallback transparent notice for unconfigured/network edge cases
-        setScanResult({
-          name: 'Balanced Meal Plate',
-          portion: '1 serving (~350g)',
-          calories: 450,
-          protein: 30,
-          carbs: 45,
-          fat: 15,
-          fiber: 5,
-          confidence: 'medium',
-          notes:
-            'AI Vision analysis completed. Please review and adjust the nutritional values below before logging.',
-        })
+      if (!res.isFood || !res.items || res.items.length === 0) {
+        setScanError(
+          res.overallNotes ||
+            'No recognizable food was detected in this photo. Please upload a clear photo of your meal.'
+        )
+        return
       }
-    } catch {
+
+      const primary = res.items[0]
       setScanResult({
-        name: 'Logged Meal',
-        portion: '1 plate',
-        calories: 400,
-        protein: 25,
-        carbs: 40,
-        fat: 12,
-        fiber: 4,
-        confidence: 'low',
-        notes: 'AI service unavailable. Values initialized for your manual review.',
+        name: primary.name,
+        portion: `${primary.servingSize} ${primary.servingUnit}`,
+        quantity: primary.quantity || 1,
+        calories: primary.calories,
+        protein: primary.protein,
+        carbs: primary.carbs,
+        fat: primary.fat,
+        fiber: primary.fiber,
+        confidence: primary.confidence,
+        notes: primary.notes || res.overallNotes || 'Portion estimated from visual analysis.',
       })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Food photo analysis failed'
+      setScanError(msg)
     } finally {
       setIsScanning(false)
     }
@@ -327,10 +335,10 @@ export function AddFoodModal({
         date: dateStr,
         meal_type: selectedMeal,
         food_name: scanResult.name,
-        brand: 'AI Scanner Estimate',
+        brand: 'AI Vision Estimate',
         serving_size: 1,
         serving_unit: scanResult.portion,
-        servings_logged: 1,
+        servings_logged: scanResult.quantity,
         calories: scanResult.calories,
         protein: scanResult.protein,
         carbs: scanResult.carbs,
@@ -338,6 +346,7 @@ export function AddFoodModal({
         fiber: scanResult.fiber,
         logged_at: new Date().toISOString(),
       })
+      setImageFile(null)
       setImagePreview(null)
       setScanResult(null)
       onOpenChange(false)
@@ -473,30 +482,36 @@ export function AddFoodModal({
                       </div>
 
                       {/* Portion & Quantity Controls */}
-                      <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-surface-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-surface-200">
                         <div>
                           <label className="block text-xs font-bold text-surface-700 mb-1">
-                            Number of Servings
+                            Unit / Portion
                           </label>
-                          <input
-                            type="number"
-                            min="0.1"
-                            step="0.1"
-                            value={servingQuantity}
-                            onChange={e => setServingQuantity(Math.max(0.1, parseFloat(e.target.value) || 1))}
-                            className="input-base text-sm py-1.5 px-3"
-                          />
+                          <select
+                            value={selectedUnit}
+                            onChange={e => setSelectedUnit(e.target.value)}
+                            className="input-base text-sm py-1.5 px-3 bg-white"
+                          >
+                            {servingUnits.map(u => (
+                              <option key={u.unit} value={u.unit}>
+                                {u.label}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div>
                           <label className="block text-xs font-bold text-surface-700 mb-1">
-                            Serving Size ({selectedFood.serving_unit})
+                            Quantity
                           </label>
                           <input
                             type="number"
-                            min="1"
-                            value={servingSizeInput}
-                            onChange={e => setServingSizeInput(Math.max(1, parseFloat(e.target.value) || 100))}
+                            min="0.1"
+                            step={activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? '10' : '0.5'}
+                            value={servingQuantity}
+                            onChange={e =>
+                              setServingQuantity(Math.max(0.1, parseFloat(e.target.value) || 1))
+                            }
                             className="input-base text-sm py-1.5 px-3"
                           />
                         </div>
@@ -506,19 +521,19 @@ export function AddFoodModal({
                       <div className="grid grid-cols-4 gap-2 mt-4 p-3 rounded-xl bg-white border border-surface-200 text-center">
                         <div>
                           <span className="text-[10px] uppercase font-bold text-surface-400">Calories</span>
-                          <p className="text-base font-black text-surface-900">{calcCalories}</p>
+                          <p className="text-base font-black text-surface-900">{scaledSearchNutrients.calories}</p>
                         </div>
                         <div>
                           <span className="text-[10px] uppercase font-bold text-blue-600">Protein</span>
-                          <p className="text-base font-black text-surface-900">{calcProtein}g</p>
+                          <p className="text-base font-black text-surface-900">{scaledSearchNutrients.protein}g</p>
                         </div>
                         <div>
                           <span className="text-[10px] uppercase font-bold text-amber-700">Carbs</span>
-                          <p className="text-base font-black text-surface-900">{calcCarbs}g</p>
+                          <p className="text-base font-black text-surface-900">{scaledSearchNutrients.carbs}g</p>
                         </div>
                         <div>
                           <span className="text-[10px] uppercase font-bold text-rose-600">Fat</span>
-                          <p className="text-base font-black text-surface-900">{calcFat}g</p>
+                          <p className="text-base font-black text-surface-900">{scaledSearchNutrients.fat}g</p>
                         </div>
                       </div>
                     </div>
@@ -932,6 +947,24 @@ export function AddFoodModal({
                       </button>
                     </div>
 
+                    {/* Error Banner if analysis failed */}
+                    {scanError && (
+                      <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2.5 animate-fade-in">
+                        <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-bold text-red-900">Analysis Failed</p>
+                          <p className="mt-0.5 text-red-700 leading-relaxed">{scanError}</p>
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="mt-2 text-xs font-bold text-red-800 underline hover:text-red-950"
+                          >
+                            Upload a different photo
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {!scanResult ? (
                       <button
                         onClick={handleRunAiScan}
@@ -947,7 +980,7 @@ export function AddFoodModal({
                         ) : (
                           <>
                             <Sparkles size={16} />
-                            <span>Analyze Food Photo</span>
+                            <span>{scanError ? 'Retry AI Analysis' : 'Analyze Food Photo'}</span>
                           </>
                         )}
                       </button>

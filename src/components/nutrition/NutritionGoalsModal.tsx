@@ -24,7 +24,6 @@ export function NutritionGoalsModal({
   const [carbTarget, setCarbTarget] = useState<number>(currentGoals.carb_target)
   const [fatTarget, setFatTarget] = useState<number>(currentGoals.fat_target)
   const [fiberTarget, setFiberTarget] = useState<number>(currentGoals.fiber_target)
-  const [waterTarget, setWaterTarget] = useState<number>(currentGoals.water_target)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
@@ -35,7 +34,6 @@ export function NutritionGoalsModal({
       setCarbTarget(currentGoals.carb_target)
       setFatTarget(currentGoals.fat_target)
       setFiberTarget(currentGoals.fiber_target)
-      setWaterTarget(currentGoals.water_target)
       setInfoMessage(null)
     }
   }, [open, currentGoals])
@@ -48,7 +46,6 @@ export function NutritionGoalsModal({
     setCarbTarget(calculated.carb_target)
     setFatTarget(calculated.fat_target)
     setFiberTarget(calculated.fiber_target)
-    setWaterTarget(calculated.water_target)
     setInfoMessage(
       `Calculated from your profile (${profile.fitness_goal?.replace('_', ' ') || 'maintenance'}, ${profile.weight || 75}kg). You can customize any value below.`
     )
@@ -65,7 +62,7 @@ export function NutritionGoalsModal({
         carb_target: Math.max(20, carbTarget),
         fat_target: Math.max(10, fatTarget),
         fiber_target: Math.max(5, fiberTarget),
-        water_target: Math.max(500, waterTarget),
+        water_target: currentGoals.water_target,
       })
       onOpenChange(false)
     } finally {
@@ -87,7 +84,7 @@ export function NutritionGoalsModal({
                 Daily Nutrition Targets
               </RadixDialog.Title>
               <p id="goals-modal-description" className="text-xs text-surface-400">
-                Personalize daily calories, macronutrient ratios, and water goal.
+                Personalize daily calories and macronutrient targets.
               </p>
             </div>
             <RadixDialog.Close asChild>
@@ -123,38 +120,20 @@ export function NutritionGoalsModal({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-surface-700 mb-1">
-                  Daily Calorie Target (kcal)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="800"
-                  max="6000"
-                  step="50"
-                  value={calorieTarget}
-                  onChange={e => setCalorieTarget(parseInt(e.target.value) || 2000)}
-                  className="input-base text-sm font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-cyan-700 mb-1">
-                  Daily Water Goal (ml)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="500"
-                  max="8000"
-                  step="250"
-                  value={waterTarget}
-                  onChange={e => setWaterTarget(parseInt(e.target.value) || 2500)}
-                  className="input-base text-sm font-bold"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">
+                Daily Calorie Target (kcal)
+              </label>
+              <input
+                type="number"
+                required
+                min="800"
+                max="6000"
+                step="50"
+                value={calorieTarget}
+                onChange={e => setCalorieTarget(parseInt(e.target.value) || 2000)}
+                className="input-base text-sm font-bold"
+              />
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">

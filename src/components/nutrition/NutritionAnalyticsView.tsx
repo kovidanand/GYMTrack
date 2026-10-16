@@ -8,10 +8,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
-  AreaChart,
-  Area,
 } from 'recharts'
-import { TrendingUp, Flame, Droplet, Award, Loader2 } from 'lucide-react'
+import { TrendingUp, Flame, Award, Loader2 } from 'lucide-react'
 import { getNutritionHistory, type HistoryDayAggregate } from '@/lib/nutritionService'
 import type { NutritionGoals } from '@/types/nutrition'
 
@@ -46,7 +44,6 @@ export function NutritionAnalyticsView({ userId, goals }: NutritionAnalyticsView
   const activeDays = historyData.filter(d => d.calories > 0)
   const totalCaloriesAllDays = activeDays.reduce((acc, curr) => acc + curr.calories, 0)
   const totalProteinAllDays = activeDays.reduce((acc, curr) => acc + curr.protein, 0)
-  const totalWaterAllDays = historyData.reduce((acc, curr) => acc + curr.water_ml, 0)
 
   const avgCalories = activeDays.length > 0 ? Math.round(totalCaloriesAllDays / activeDays.length) : 0
   const avgProtein = activeDays.length > 0 ? Math.round(totalProteinAllDays / activeDays.length) : 0
@@ -63,7 +60,6 @@ export function NutritionAnalyticsView({ userId, goals }: NutritionAnalyticsView
       protein: Math.round(d.protein),
       carbs: Math.round(d.carbs),
       fat: Math.round(d.fat),
-      waterL: Math.round((d.water_ml / 1000) * 10) / 10,
     }
   })
 
@@ -104,15 +100,15 @@ export function NutritionAnalyticsView({ userId, goals }: NutritionAnalyticsView
         </div>
       </div>
 
-      {/* Aggregate Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Aggregate Metric Cards (Water removed) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="card p-4 bg-white border border-surface-200 rounded-2xl shadow-xs">
           <div className="flex items-center justify-between text-surface-400 mb-1">
             <span className="text-xs font-bold uppercase tracking-wider">Avg Calories</span>
-            <Flame size={16} className="text-orange-500" />
+            <Flame size={16} className="text-amber-500" />
           </div>
           <p className="text-2xl font-black text-surface-900 leading-tight">
-            {avgCalories.toLocaleString()}
+            {avgCalories}
           </p>
           <span className="text-[10px] text-surface-400 font-semibold">kcal / active day</span>
         </div>
@@ -138,22 +134,11 @@ export function NutritionAnalyticsView({ userId, goals }: NutritionAnalyticsView
           </p>
           <span className="text-[10px] text-surface-400 font-semibold">days within target</span>
         </div>
-
-        <div className="card p-4 bg-white border border-surface-200 rounded-2xl shadow-xs">
-          <div className="flex items-center justify-between text-surface-400 mb-1">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Water</span>
-            <Droplet size={16} className="text-cyan-500" />
-          </div>
-          <p className="text-2xl font-black text-surface-900 leading-tight">
-            {(totalWaterAllDays / 1000).toFixed(1)} L
-          </p>
-          <span className="text-[10px] text-surface-400 font-semibold">hydrated in period</span>
-        </div>
       </div>
 
       {isLoading ? (
         <div className="py-20 text-center text-surface-400 flex flex-col items-center justify-center gap-2">
-          <Loader2 size={24} className="animate-spin text-brand-600" />
+          <Loader2 size={24} className="animate-spin text-emerald-600" />
           <span className="text-xs font-medium">Loading nutrition trends...</span>
         </div>
       ) : (
@@ -196,7 +181,7 @@ export function NutritionAnalyticsView({ userId, goals }: NutritionAnalyticsView
                       position: 'top',
                     }}
                   />
-                  <Bar dataKey="calories" fill="#2563eb" radius={[6, 6, 0, 0]} name="Calories" />
+                  <Bar dataKey="calories" fill="#10b981" radius={[6, 6, 0, 0]} name="Calories" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -232,44 +217,6 @@ export function NutritionAnalyticsView({ userId, goals }: NutritionAnalyticsView
                   <Bar dataKey="carbs" fill="#f59e0b" name="Carbs (g)" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="fat" fill="#f43f5e" name="Fat (g)" radius={[4, 4, 0, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Chart 3: Hydration Trends */}
-          <div className="card p-5 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-3">
-            <div>
-              <h3 className="text-sm font-black text-surface-900">
-                Water Hydration History (Liters)
-              </h3>
-              <p className="text-xs text-surface-400">
-                Daily fluid consumption
-              </p>
-            </div>
-
-            <div className="h-56 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="waterL"
-                    stroke="#06b6d4"
-                    fill="#cffafe"
-                    strokeWidth={2}
-                    name="Water (L)"
-                  />
-                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>

@@ -11,6 +11,7 @@ import {
   Upload,
   Flame,
   Lightbulb,
+  Sparkles,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import {
@@ -20,16 +21,12 @@ import {
   addFoodEntry,
   updateFoodEntry,
   deleteFoodEntry,
-  getWaterEntriesForDate,
-  addWaterEntry,
-  deleteWaterEntry,
   calculateNutritionStreak,
   generateNutritionInsights,
   DEFAULT_NUTRITION_GOALS,
 } from '@/lib/nutritionService'
 import type {
   FoodEntry,
-  WaterEntry,
   MealType,
   NutritionGoals,
 } from '@/types/nutrition'
@@ -37,7 +34,6 @@ import type {
 import { DateNavigator } from '@/components/nutrition/DateNavigator'
 import { CalorieProgressCard } from '@/components/nutrition/CalorieProgressCard'
 import { MacroSummaryCards } from '@/components/nutrition/MacroSummaryCards'
-import { WaterTrackerCard } from '@/components/nutrition/WaterTrackerCard'
 import { MealSection } from '@/components/nutrition/MealSection'
 import { AddFoodModal } from '@/components/nutrition/AddFoodModal'
 import { EditFoodModal } from '@/components/nutrition/EditFoodModal'
@@ -45,6 +41,7 @@ import { NutritionGoalsModal } from '@/components/nutrition/NutritionGoalsModal'
 import { NutritionAnalyticsView } from '@/components/nutrition/NutritionAnalyticsView'
 import { FoodLibraryView } from '@/components/nutrition/FoodLibraryView'
 import { FoodCameraModal } from '@/components/nutrition/FoodCameraModal'
+import { NutritionAssistantModal } from '@/components/nutrition/NutritionAssistantModal'
 
 export default function Nutrition() {
   const { user } = useAuth()
@@ -59,7 +56,6 @@ export default function Nutrition() {
   // Data States
   const [goals, setGoals] = useState<NutritionGoals>(DEFAULT_NUTRITION_GOALS)
   const [entries, setEntries] = useState<FoodEntry[]>([])
-  const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([])
   const [streak, setStreak] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
@@ -69,6 +65,7 @@ export default function Nutrition() {
   const [editingEntry, setEditingEntry] = useState<FoodEntry | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isGoalsModalOpen, setIsGoalsModalOpen] = useState(false)
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
 
   // Camera / AI Photo Modal
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false)
@@ -101,12 +98,8 @@ export default function Nutrition() {
     if (!userId) return
     setLoading(true)
     try {
-      const [fEntries, wEntries] = await Promise.all([
-        getFoodEntriesForDate(userId, selectedDate),
-        getWaterEntriesForDate(userId, selectedDate),
-      ])
+      const fEntries = await getFoodEntriesForDate(userId, selectedDate)
       setEntries(fEntries)
-      setWaterEntries(wEntries)
     } catch (err) {
       console.error('Failed to load date entries:', err)
     } finally {
@@ -219,16 +212,6 @@ export default function Nutrition() {
     loadStreak()
   }
 
-  const handleAddWater = async (amountMl: number) => {
-    const created = await addWaterEntry(userId, selectedDate, amountMl)
-    setWaterEntries(prev => [...prev, created])
-  }
-
-  const handleDeleteWater = async (id: string) => {
-    await deleteWaterEntry(userId, id, selectedDate)
-    setWaterEntries(prev => prev.filter(w => w.id !== id))
-  }
-
   const handleSaveGoals = async (updated: Partial<NutritionGoals>) => {
     const saved = await saveNutritionGoals(userId, updated)
     setGoals(saved)
@@ -248,11 +231,11 @@ export default function Nutrition() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-surface-500 font-medium mt-0.5">
-            Track daily calories, macros, hydration, and smart meal photo estimates.
+            Track daily calories, macros, and smart meal photo estimates.
           </p>
         </div>
 
-        {/* Navigation Tabs & Settings */}
+        {/* Navigation Tabs, AI Assistant & Settings */}
         <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
           <div className="flex items-center bg-surface-100 p-1 rounded-xl border border-surface-200">
             <button
@@ -295,6 +278,18 @@ export default function Nutrition() {
             </button>
           </div>
 
+          {/* AI Assistant Button */}
+          <button
+            onClick={() => setIsAssistantOpen(true)}
+            id="open-nutrition-assistant-btn"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs"
+            title="Ask Nutrition AI Assistant"
+          >
+            <Sparkles size={14} className="text-emerald-600" />
+            <span className="hidden sm:inline">AI Helper</span>
+          </button>
+
+          {/* Goals Settings Button */}
           <button
             onClick={() => setIsGoalsModalOpen(true)}
             id="open-goals-modal-btn"
@@ -465,14 +460,6 @@ export default function Nutrition() {
                 </div>
               </div>
 
-              {/* Water Tracker Card */}
-              <WaterTrackerCard
-                entries={waterEntries}
-                targetMl={goals.water_target}
-                onAddWater={handleAddWater}
-                onDeleteWater={handleDeleteWater}
-              />
-
               {/* Daily Meal Diary Section */}
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between">
@@ -590,6 +577,19 @@ export default function Nutrition() {
         selectedDate={selectedDate}
         defaultMode={cameraMode}
         onLogMealItems={handleBatchLogItems}
+        onSwitchToLibrary={() => setActiveTab('library')}
+      />
+
+      {/* Context-Aware Nutrition AI Assistant Modal */}
+      <NutritionAssistantModal
+        open={isAssistantOpen}
+        onOpenChange={setIsAssistantOpen}
+        userId={userId}
+        selectedDate={selectedDate}
+        todayTotals={dailyTotals}
+        goals={goals}
+        entries={entries}
+        onLogRecommendedFood={handleAddFoodEntry}
       />
     </div>
   )

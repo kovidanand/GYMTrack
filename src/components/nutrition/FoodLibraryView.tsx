@@ -4,13 +4,17 @@ import {
   Search,
   X,
   Plus,
-  Check,
   Loader2,
   BookmarkPlus,
   UtensilsCrossed,
 } from 'lucide-react'
 import type { FoodSearchResult, MealType, FoodEntry } from '@/types/nutrition'
-import { getFoodCatalog } from '@/lib/nutritionService'
+import {
+  getFoodCatalog,
+  getFoodServingUnits,
+  calculateScaledNutrients,
+  type ServingUnitOption,
+} from '@/lib/nutritionService'
 
 interface FoodLibraryViewProps {
   userId: string
@@ -45,8 +49,8 @@ export function FoodLibraryView({
 
   // Selected food for portion & logging modal
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null)
+  const [selectedUnit, setSelectedUnit] = useState<string>('')
   const [quantity, setQuantity] = useState<number>(1)
-  const [customServingSize, setCustomServingSize] = useState<number>(100)
   const [targetMeal, setTargetMeal] = useState<MealType>('breakfast')
   const [isLogging, setIsLogging] = useState(false)
   const [successToast, setSuccessToast] = useState<string | null>(null)
@@ -70,27 +74,55 @@ export function FoodLibraryView({
     }
   }, [activeCategory, searchQuery, userId])
 
+  // Get available serving units for the selected food
+  const servingUnits: ServingUnitOption[] = useMemo(() => {
+    if (!selectedFood) return []
+    return getFoodServingUnits(selectedFood)
+  }, [selectedFood])
+
+  // Current active unit option
+  const activeUnitOption: ServingUnitOption = useMemo(() => {
+    if (servingUnits.length === 0) {
+      return { unit: 'serving', label: '1 Serving', multiplier: 1.0, isDefault: true }
+    }
+    return servingUnits.find(u => u.unit === selectedUnit) || servingUnits[0]
+  }, [servingUnits, selectedUnit])
+
+  // Open modal handler with clean default unit & quantity initialization
   const handleOpenFoodModal = (food: FoodSearchResult) => {
     setSelectedFood(food)
-    setQuantity(1)
-    setCustomServingSize(food.serving_size || 100)
+    const units = getFoodServingUnits(food)
+    const def = units.find(u => u.isDefault) || units[0]
+    setSelectedUnit(def?.unit || 'serving')
+
+    // If default unit is grams/ml, set sensible default quantity (e.g. 100)
+    if (def?.unit === 'g' || def?.unit === 'ml') {
+      setQuantity(100)
+    } else {
+      setQuantity(1)
+    }
   }
 
-  // Recalculated values based on quantity and serving size
+  // Live centralized scaled calculation
   const calculatedNutrition = useMemo(() => {
-    if (!selectedFood) return { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
-    const baseServing = selectedFood.serving_size || 1
-    const factor = (quantity * customServingSize) / baseServing
-
-    return {
-      calories: Math.round(selectedFood.calories * factor),
-      protein: Math.round(selectedFood.protein * factor * 10) / 10,
-      carbs: Math.round(selectedFood.carbs * factor * 10) / 10,
-      fat: Math.round(selectedFood.fat * factor * 10) / 10,
-      fiber: Math.round(selectedFood.fiber * factor * 10) / 10,
+    if (!selectedFood) {
+      return {
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        fiber: 0,
+        quantity: 1,
+        unit: 'serving',
+        unitLabel: '1 Serving',
+        portionSummary: '1 serving',
+        totalMultiplier: 1,
+      }
     }
-  }, [selectedFood, quantity, customServingSize])
+    return calculateScaledNutrients(selectedFood, activeUnitOption, quantity)
+  }, [selectedFood, activeUnitOption, quantity])
 
+  // Confirm and log to Supabase
   const handleConfirmLog = async () => {
     if (!selectedFood || isLogging) return
     setIsLogging(true)
@@ -102,9 +134,9 @@ export function FoodLibraryView({
         meal_type: targetMeal,
         food_name: selectedFood.name,
         brand: selectedFood.brand,
-        serving_size: customServingSize,
-        serving_unit: selectedFood.serving_unit,
-        servings_logged: quantity,
+        serving_size: calculatedNutrition.quantity,
+        serving_unit: calculatedNutrition.unitLabel,
+        servings_logged: calculatedNutrition.quantity,
         calories: calculatedNutrition.calories,
         protein: calculatedNutrition.protein,
         carbs: calculatedNutrition.carbs,
@@ -138,113 +170,110 @@ export function FoodLibraryView({
           <button
             onClick={onOpenCreateCustomFood}
             id="create-custom-food-btn"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs self-start sm:self-auto"
           >
             <BookmarkPlus size={15} />
-            <span>+ Custom Food</span>
+            <span>Create Custom Food</span>
           </button>
         )}
       </div>
 
-      {/* Toast Notification */}
-      {successToast && (
-        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-slide-up shadow-2xs">
-          <Check size={16} className="text-emerald-600 flex-shrink-0" />
-          <span>{successToast}</span>
-        </div>
-      )}
-
-      {/* Search Input */}
+      {/* Search Input Bar */}
       <div className="relative">
         <Search
-          size={18}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none"
+          size={16}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400"
         />
         <input
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search foods, dishes, or regional staples (e.g. Roti, Dal, Paneer, Apple, Oats)..."
-          className="input-base pl-10 pr-10 py-2.5 text-sm rounded-xl"
+          placeholder="Search by food name, Hindi alias, or category (e.g. apple, dal, paneer, oats)..."
+          id="food-library-search-input"
+          className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-white border border-surface-200 text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs transition-all"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-surface-400 hover:text-surface-700 rounded-md"
-            aria-label="Clear search"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 p-0.5"
+            title="Clear search"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         )}
       </div>
 
       {/* Horizontal Category Filters */}
-      <div className="overflow-x-auto pb-1 scrollbar-none">
-        <div className="flex items-center gap-1.5 min-w-max">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
-                activeCategory === cat.id
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-50'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            id={`filter-category-${cat.id}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none ${
+              activeCategory === cat.id
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-white border border-surface-200 text-surface-600 hover:bg-surface-50 hover:text-surface-900'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
 
-      {/* Result Count */}
-      <div className="flex items-center justify-between text-xs text-surface-500 font-semibold px-1">
-        <span>Showing {foods.length} {foods.length === 1 ? 'food' : 'foods'}</span>
-        <span className="text-[11px] text-surface-400">Click any card to select portion & log</span>
+      {/* Results Count & Success Toast */}
+      <div className="flex items-center justify-between text-xs text-surface-500 font-medium px-1">
+        <span>
+          Showing {foods.length} {foods.length === 1 ? 'food' : 'foods'}
+        </span>
+        {successToast && (
+          <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 animate-fade-in">
+            {successToast}
+          </span>
+        )}
       </div>
 
-      {/* Food Cards Grid */}
+      {/* Loading Skeleton */}
       {loading ? (
         <div className="py-20 text-center text-surface-400 flex flex-col items-center justify-center gap-2">
-          <Loader2 size={24} className="animate-spin text-emerald-600" />
-          <p className="text-xs font-medium">Loading food library...</p>
+          <Loader2 size={28} className="animate-spin text-emerald-600" />
+          <p className="text-xs font-semibold">Loading verified food catalog...</p>
         </div>
       ) : foods.length === 0 ? (
-        <div className="card p-12 text-center bg-white border border-surface-200 rounded-2xl space-y-2">
-          <UtensilsCrossed size={32} className="mx-auto text-surface-300" />
-          <h4 className="text-sm font-bold text-surface-800">No foods found</h4>
-          <p className="text-xs text-surface-500 max-w-sm mx-auto">
-            We couldn't find any items matching "{searchQuery}" in this category. You can create a custom food item anytime.
+        /* Empty State */
+        <div className="py-16 text-center text-surface-400 card p-6 bg-white border border-surface-200 rounded-2xl">
+          <UtensilsCrossed size={36} className="mx-auto mb-2 text-surface-300" />
+          <p className="text-sm font-bold text-surface-700">No matching foods found</p>
+          <p className="text-xs text-surface-400 mt-0.5">
+            Try adjusting your search query or create a custom food entry.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        /* Responsive 3-Column Grid */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {foods.map(food => (
             <div
               key={food.id}
               onClick={() => handleOpenFoodModal(food)}
-              className="card p-4 bg-white border border-surface-200 rounded-2xl hover:border-emerald-300 hover:shadow-card cursor-pointer transition-all flex flex-col justify-between group"
+              className="group p-4 rounded-2xl bg-white border border-surface-200 hover:border-emerald-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between gap-3 text-left"
             >
               <div>
-                <div className="flex items-start justify-between gap-2 mb-1.5">
-                  <h4 className="text-sm font-bold text-surface-900 leading-snug group-hover:text-emerald-700 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-bold text-sm text-surface-900 group-hover:text-emerald-700 transition-colors leading-snug">
                     {food.name}
-                  </h4>
-                  <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex-shrink-0">
+                  </h3>
+                  <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 whitespace-nowrap">
                     {food.calories} kcal
                   </span>
                 </div>
 
-                <p className="text-[11px] text-surface-500 font-medium">
-                  {food.serving_size} {food.serving_unit}
-                  {food.brand && (
-                    <span className="text-surface-400 ml-1.5">· {food.brand}</span>
-                  )}
+                <p className="text-[11px] text-surface-400 mt-0.5">
+                  Standard: {food.serving_size} {food.serving_unit}
                 </p>
               </div>
 
-              {/* Macro Chips */}
-              <div className="grid grid-cols-3 gap-1 pt-3 mt-3 border-t border-surface-100 text-center text-[10px] font-bold">
+              {/* Macro Indicators */}
+              <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold">
                 <div className="p-1 rounded-lg bg-blue-50 text-blue-700">
                   <span>{food.protein}g P</span>
                 </div>
@@ -260,13 +289,16 @@ export function FoodLibraryView({
         </div>
       )}
 
-      {/* Serving Selection and Logging Modal */}
+      {/* ─── Serving Selection and Logging Modal ─── */}
       {selectedFood && (
-        <RadixDialog.Root open={!!selectedFood} onOpenChange={open => !open && setSelectedFood(null)}>
+        <RadixDialog.Root
+          open={!!selectedFood}
+          onOpenChange={open => !open && setSelectedFood(null)}
+        >
           <RadixDialog.Portal>
             <RadixDialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-xs animate-fade-in" />
             <RadixDialog.Content
-              className="fixed z-[101] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md bg-white rounded-2xl shadow-2xl p-5 animate-scale-in focus:outline-none"
+              className="fixed z-[101] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md bg-white rounded-2xl shadow-2xl p-5 sm:p-6 animate-scale-in focus:outline-none"
               aria-describedby="serving-modal-desc"
             >
               <div className="flex items-center justify-between pb-3 border-b border-surface-200">
@@ -274,8 +306,8 @@ export function FoodLibraryView({
                   <RadixDialog.Title className="text-base font-black text-surface-900 tracking-tight">
                     {selectedFood.name}
                   </RadixDialog.Title>
-                  <p id="serving-modal-desc" className="text-xs text-surface-400">
-                    Standard: {selectedFood.serving_size} {selectedFood.serving_unit}
+                  <p id="serving-modal-desc" className="text-xs text-surface-500 font-medium">
+                    Adjust quantity and unit below. Values update live.
                   </p>
                 </div>
                 <RadixDialog.Close asChild>
@@ -286,7 +318,7 @@ export function FoodLibraryView({
               </div>
 
               <div className="space-y-4 pt-4">
-                {/* Meal Category Selector */}
+                {/* 1. Meal Category Selector */}
                 <div>
                   <label className="block text-xs font-bold text-surface-700 mb-1">
                     Log To Meal
@@ -309,77 +341,141 @@ export function FoodLibraryView({
                   </div>
                 </div>
 
-                {/* Quick Quantity Presets */}
+                {/* 2. Serving Unit Selector Dropdown */}
                 <div>
                   <label className="block text-xs font-bold text-surface-700 mb-1">
-                    Number of Servings
+                    Serving Unit
                   </label>
-                  <div className="grid grid-cols-4 gap-1.5 mb-2">
-                    {[0.5, 1, 1.5, 2].map(preset => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => setQuantity(preset)}
-                        className={`py-1 rounded-lg text-xs font-bold border transition-all ${
-                          quantity === preset
-                            ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                            : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
-                        }`}
-                      >
-                        {preset}x
-                      </button>
+                  <select
+                    value={activeUnitOption.unit}
+                    onChange={e => {
+                      setSelectedUnit(e.target.value)
+                      if (e.target.value === 'g' || e.target.value === 'ml') {
+                        setQuantity(100)
+                      } else {
+                        setQuantity(1)
+                      }
+                    }}
+                    className="w-full input-base text-xs py-2 bg-white cursor-pointer font-bold"
+                  >
+                    {servingUnits.map(opt => (
+                      <option key={opt.unit} value={opt.unit}>
+                        {opt.label}
+                      </option>
                     ))}
+                  </select>
+                </div>
+
+                {/* 3. Quantity Controls */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-surface-700">
+                      Quantity
+                    </label>
+                    <span className="text-[11px] font-semibold text-emerald-800">
+                      {calculatedNutrition.portionSummary}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-[10px] font-bold text-surface-500">Custom Multiplier</span>
-                      <input
-                        type="number"
-                        min="0.1"
-                        step="0.1"
-                        value={quantity}
-                        onChange={e => setQuantity(Math.max(0.1, parseFloat(e.target.value) || 1))}
-                        className="input-base text-sm py-1.5"
-                      />
+
+                  {/* Preset Multipliers */}
+                  {activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? (
+                    <div className="grid grid-cols-4 gap-1.5 mb-2">
+                      {[50, 100, 150, 200].map(preset => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setQuantity(preset)}
+                          className={`py-1 rounded-lg text-xs font-bold border transition-all ${
+                            quantity === preset
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
+                          }`}
+                        >
+                          {preset} {activeUnitOption.unit}
+                        </button>
+                      ))}
                     </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-surface-500">
-                        Serving Size ({selectedFood.serving_unit})
-                      </span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={customServingSize}
-                        onChange={e => setCustomServingSize(Math.max(1, parseFloat(e.target.value) || 100))}
-                        className="input-base text-sm py-1.5"
-                      />
+                  ) : (
+                    <div className="grid grid-cols-4 gap-1.5 mb-2">
+                      {[0.5, 1, 1.5, 2].map(preset => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setQuantity(preset)}
+                          className={`py-1 rounded-lg text-xs font-bold border transition-all ${
+                            quantity === preset
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
+                          }`}
+                        >
+                          {preset}x
+                        </button>
+                      ))}
                     </div>
+                  )}
+
+                  {/* Direct Number Input */}
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0.1"
+                      step={activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? '1' : '0.1'}
+                      value={quantity}
+                      onChange={e => {
+                        const val = parseFloat(e.target.value)
+                        setQuantity(isNaN(val) ? 1 : Math.max(0.1, val))
+                      }}
+                      className="input-base text-sm py-2 font-bold"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-surface-400">
+                      {activeUnitOption.unit === 'g'
+                        ? 'grams'
+                        : activeUnitOption.unit === 'ml'
+                        ? 'ml'
+                        : 'servings'}
+                    </span>
                   </div>
                 </div>
 
-                {/* Recalculated Nutritional Breakdown */}
-                <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-200 text-center">
+                {/* 4. Live Recalculated Nutritional Breakdown */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50/60 to-teal-50/40 border border-emerald-200/80 text-center">
                   <div className="grid grid-cols-4 gap-2">
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-surface-400">Calories</span>
-                      <p className="text-base font-black text-surface-900">{calculatedNutrition.calories}</p>
+                      <span className="text-[10px] font-bold uppercase text-surface-500 block">
+                        Calories
+                      </span>
+                      <p className="text-base font-black text-surface-900">
+                        {calculatedNutrition.calories}
+                      </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-blue-600">Protein</span>
-                      <p className="text-base font-black text-surface-900">{calculatedNutrition.protein}g</p>
+                      <span className="text-[10px] font-bold uppercase text-blue-600 block">
+                        Protein
+                      </span>
+                      <p className="text-base font-black text-surface-900">
+                        {calculatedNutrition.protein}g
+                      </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-amber-700">Carbs</span>
-                      <p className="text-base font-black text-surface-900">{calculatedNutrition.carbs}g</p>
+                      <span className="text-[10px] font-bold uppercase text-amber-700 block">
+                        Carbs
+                      </span>
+                      <p className="text-base font-black text-surface-900">
+                        {calculatedNutrition.carbs}g
+                      </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-rose-600">Fat</span>
-                      <p className="text-base font-black text-surface-900">{calculatedNutrition.fat}g</p>
+                      <span className="text-[10px] font-bold uppercase text-rose-600 block">
+                        Fat
+                      </span>
+                      <p className="text-base font-black text-surface-900">
+                        {calculatedNutrition.fat}g
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Primary Action Button */}
+                {/* 5. Primary Action Button */}
                 <button
                   type="button"
                   onClick={handleConfirmLog}
