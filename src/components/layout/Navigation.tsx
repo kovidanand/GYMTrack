@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, BookOpen, TrendingUp, User, LogOut, Timer, CalendarDays } from 'lucide-react'
+import { LayoutDashboard, BookOpen, TrendingUp, User, LogOut, Timer, CalendarDays, UtensilsCrossed } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { GYMTrackLogo, Avatar } from '@/components/shared'
@@ -11,6 +11,7 @@ interface TopNavigationProps {
 const primaryNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
+  { to: '/nutrition', label: 'Nutrition', icon: UtensilsCrossed },
   { to: '/exercises', label: 'Library', icon: BookOpen },
   { to: '/plans', label: 'Plans', icon: CalendarDays },
 ]
@@ -125,6 +126,7 @@ export function TopNavigation({ onOpenTimer }: TopNavigationProps) {
 const mobileNavItems = [
   { to: '/dashboard', label: 'Home', icon: LayoutDashboard },
   { to: '/progress', label: 'Progress', icon: TrendingUp },
+  { to: '/nutrition', label: 'Nutrition', icon: UtensilsCrossed },
   { to: '/exercises', label: 'Library', icon: BookOpen },
   { to: '/plans', label: 'Plans', icon: CalendarDays },
   { to: '/profile', label: 'Profile', icon: User },
@@ -154,10 +156,10 @@ export function MobileNav() {
             >
               {({ isActive }) => (
                 <>
-                  <div className={cn('relative flex items-center justify-center p-1 rounded-full transition-colors', isActive && 'bg-brand-50')}>
-                    <item.icon size={20} aria-hidden="true" className={isActive ? 'text-brand-600 stroke-[2.5]' : 'text-surface-500'} />
+                  <div className={cn('relative flex items-center justify-center p-0.5 rounded-full transition-colors', isActive && 'bg-brand-50')}>
+                    <item.icon size={18} aria-hidden="true" className={isActive ? 'text-brand-600 stroke-[2.5]' : 'text-surface-500'} />
                   </div>
-                  <span className={cn('text-[10px] tracking-tight leading-none', isActive ? 'font-bold text-brand-700' : 'text-surface-500')}>{item.label}</span>
+                  <span className={cn('text-[9.5px] sm:text-[10px] tracking-tight leading-none text-center truncate max-w-full', isActive ? 'font-bold text-brand-700' : 'text-surface-500')}>{item.label}</span>
                 </>
               )}
             </NavLink>

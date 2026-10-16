@@ -555,3 +555,5 @@ export interface StructuredWorkoutRecommendation {
   coachInsight: string
 }
 
+export * from './nutrition'
+

@@ -22,6 +22,7 @@ import Profile from '@/pages/Profile'
 import History from '@/pages/History'
 import SessionDetail from '@/pages/SessionDetail'
 import AiCoach from '@/pages/AiCoach'
+import Nutrition from '@/pages/Nutrition'
 
 export default function App() {
   return (
@@ -55,6 +56,7 @@ export default function App() {
               <Route path="/plans/new" element={<PlanBuilder />} />
               <Route path="/exercises" element={<Exercises />} />
               <Route path="/exercises/:slug" element={<ExerciseDetail />} />
+              <Route path="/nutrition" element={<Nutrition />} />
               <Route path="/history" element={<Navigate to="/progress" replace />} />
               <Route path="/history/:id" element={<SessionDetail />} />
               <Route path="/progress"  element={<Progress />} />

@@ -15,7 +15,8 @@ import {
   CalendarDays,
   Target,
   Sparkles,
-  X
+  X,
+  UtensilsCrossed
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useProgress } from '@/hooks/useProgress'
@@ -903,6 +904,39 @@ export default function Dashboard() {
               className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1"
             >
               <span>View All</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 8. DAILY NUTRITION SNAPSHOT & SHORTCUT ── */}
+      <section aria-label="Daily nutrition shortcut">
+        <div className="card p-4 sm:p-5 bg-gradient-to-br from-emerald-50/40 via-white to-surface-50 border border-emerald-200/70 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs flex-shrink-0">
+                <UtensilsCrossed size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
+                  Nutrition & Fuel
+                </span>
+                <h3 className="font-black text-surface-900 text-sm sm:text-base leading-tight">
+                  Track Daily Meals & Hydration
+                </h3>
+                <p className="text-xs text-surface-500 mt-0.5">
+                  Log foods, monitor macros, and reach your target energy balance.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/nutrition')}
+              id="dashboard-open-nutrition-btn"
+              className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors whitespace-nowrap self-center"
+            >
+              <span>Open Diary</span>
               <ChevronRight size={14} />
             </button>
           </div>
