@@ -43,7 +43,7 @@ export function DashboardActionCards({
 
             <div>
               <h3 className="text-base font-black text-surface-900 tracking-tight leading-tight">
-                Log a meal
+                Log Food
               </h3>
               <p className="text-xs text-surface-500 font-medium mt-1 leading-relaxed">
                 Add food items to your diary to track calories and macros with precision.
@@ -58,7 +58,7 @@ export function DashboardActionCards({
             className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-all flex items-center justify-center gap-2"
           >
             <Plus size={16} />
-            <span>Log new food</span>
+            <span>Log Food</span>
           </button>
 
           {/* Quick-Select Meal Type Chips */}
@@ -100,8 +100,8 @@ export function DashboardActionCards({
         </div>
       </div>
 
-      {/* ─── CARD 2: SNAP YOUR MEAL (AI FOOD VISION) ─── */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-emerald-50/40 via-white to-teal-50/20 border border-emerald-200/90 shadow-2xs hover:border-emerald-300 transition-all">
+      {/* ─── CARD 2: ANALYZE MEAL PHOTO (AI FOOD VISION) ─── */}
+      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-surface-200/90 shadow-2xs hover:border-emerald-200/80 transition-all">
         <div className="space-y-3">
           <div className="flex items-start gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
@@ -111,7 +111,7 @@ export function DashboardActionCards({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-black text-surface-900 tracking-tight leading-tight">
-                  Snap your meal
+                  Analyze Meal Photo
                 </h3>
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.2 rounded-full border border-emerald-200">
                   AI Vision

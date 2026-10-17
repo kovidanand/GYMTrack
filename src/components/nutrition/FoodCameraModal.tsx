@@ -132,7 +132,17 @@ export function FoodCameraModal({
         return
       }
 
-      setDetectedItems(result.items)
+      // Attach base values to prevent rounding drift
+      const validated = result.items.map(item => ({
+        ...item,
+        baseCalories: item.calories / (item.quantity || 1),
+        baseProtein: item.protein / (item.quantity || 1),
+        baseCarbs: item.carbs / (item.quantity || 1),
+        baseFat: item.fat / (item.quantity || 1),
+        baseFiber: item.fiber / (item.quantity || 1),
+      }))
+
+      setDetectedItems(validated)
       setOverallNotes(result.overallNotes)
       setHasAnalyzed(true)
     } catch (err) {
@@ -145,20 +155,36 @@ export function FoodCameraModal({
     }
   }
 
-  // Edit item properties
-  const handleUpdateItem = (id: string, updates: Partial<DetectedFoodAnalysisItem>) => {
+  // Edit item properties with precise base nutrient scaling
+  const handleUpdateItem = (
+    id: string,
+    updates: Partial<DetectedFoodAnalysisItem & { baseCalories?: number; baseProtein?: number; baseCarbs?: number; baseFat?: number; baseFiber?: number }>
+  ) => {
     setDetectedItems(prev =>
       prev.map(it => {
         if (it.id !== id) return it
+        const currentItem = it as any
         const updated = { ...it, ...updates }
-        // If quantity changed, scale nutrients proportionally
-        if (updates.quantity !== undefined && it.quantity > 0) {
-          const ratio = updates.quantity / it.quantity
-          updated.calories = Math.max(0, Math.round(it.calories * ratio))
-          updated.protein = Math.max(0, Math.round(it.protein * ratio * 10) / 10)
-          updated.carbs = Math.max(0, Math.round(it.carbs * ratio * 10) / 10)
-          updated.fat = Math.max(0, Math.round(it.fat * ratio * 10) / 10)
-          updated.fiber = Math.max(0, Math.round(it.fiber * ratio * 10) / 10)
+
+        if (updates.quantity !== undefined) {
+          const q = Math.max(0.1, Number(updates.quantity) || 1)
+          const baseCal = currentItem.baseCalories ?? (it.calories / (it.quantity || 1))
+          const baseP = currentItem.baseProtein ?? (it.protein / (it.quantity || 1))
+          const baseC = currentItem.baseCarbs ?? (it.carbs / (it.quantity || 1))
+          const baseF = currentItem.baseFat ?? (it.fat / (it.quantity || 1))
+          const baseFib = currentItem.baseFiber ?? (it.fiber / (it.quantity || 1))
+
+          updated.quantity = q
+          updated.calories = Math.max(0, Math.round(baseCal * q))
+          updated.protein = Math.max(0, Math.round(baseP * q * 10) / 10)
+          updated.carbs = Math.max(0, Math.round(baseC * q * 10) / 10)
+          updated.fat = Math.max(0, Math.round(baseF * q * 10) / 10)
+          updated.fiber = Math.max(0, Math.round(baseFib * q * 10) / 10)
+          ;(updated as any).baseCalories = baseCal
+          ;(updated as any).baseProtein = baseP
+          ;(updated as any).baseCarbs = baseC
+          ;(updated as any).baseFat = baseF
+          ;(updated as any).baseFiber = baseFib
         }
         return updated
       })
@@ -170,7 +196,7 @@ export function FoodCameraModal({
   }
 
   const handleAddMissingItem = () => {
-    const newItem: DetectedFoodAnalysisItem = {
+    const newItem: DetectedFoodAnalysisItem & { baseCalories?: number; baseProtein?: number; baseCarbs?: number; baseFat?: number; baseFiber?: number } = {
       id: `manual_item_${Date.now()}`,
       name: 'Additional Food',
       portion: '1 serving (100g)',
@@ -184,6 +210,11 @@ export function FoodCameraModal({
       fiber: 1,
       confidence: 'medium',
       notes: 'Added manually to detected meal plate.',
+      baseCalories: 120,
+      baseProtein: 5,
+      baseCarbs: 15,
+      baseFat: 3,
+      baseFiber: 1,
     }
     setDetectedItems(prev => [...prev, newItem])
   }
@@ -600,11 +631,14 @@ export function FoodCameraModal({
                         </div>
 
                         {/* Nutrient Mini Strip */}
-                        <div className="flex items-center gap-2 text-[11px] font-semibold text-surface-700">
+                        <div className="flex items-center gap-2 text-[11px] font-semibold text-surface-700 flex-wrap">
                           <span className="font-bold text-surface-900">{item.calories} kcal</span>
-                          <span className="text-blue-600 font-bold">{item.protein}g P</span>
+                          <span className="text-emerald-700 font-bold">{item.protein}g P</span>
                           <span className="text-amber-700">{item.carbs}g C</span>
                           <span className="text-rose-600">{item.fat}g F</span>
+                          {item.fiber !== undefined && item.fiber > 0 && (
+                            <span className="text-teal-600">{item.fiber}g Fib</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -618,11 +652,11 @@ export function FoodCameraModal({
                       Total Estimated Meal
                     </span>
                     <span className="text-[10px] font-medium text-emerald-700">
-                      Visual approximation
+                      Visual estimate • Not lab-tested
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className={`grid ${mealTotals.fiber > 0 ? 'grid-cols-5' : 'grid-cols-4'} gap-2 text-center`}>
                     <div className="bg-white/80 p-2 rounded-xl">
                       <span className="text-[10px] font-bold uppercase text-surface-400 block">
                         Calories
@@ -632,7 +666,7 @@ export function FoodCameraModal({
                       </span>
                     </div>
                     <div className="bg-white/80 p-2 rounded-xl">
-                      <span className="text-[10px] font-bold uppercase text-blue-600 block">
+                      <span className="text-[10px] font-bold uppercase text-emerald-700 block">
                         Protein
                       </span>
                       <span className="text-base font-black text-surface-900">
@@ -655,6 +689,16 @@ export function FoodCameraModal({
                         {mealTotals.fat}g
                       </span>
                     </div>
+                    {mealTotals.fiber > 0 && (
+                      <div className="bg-white/80 p-2 rounded-xl">
+                        <span className="text-[10px] font-bold uppercase text-teal-600 block">
+                          Fiber
+                        </span>
+                        <span className="text-base font-black text-surface-900">
+                          {mealTotals.fiber}g
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

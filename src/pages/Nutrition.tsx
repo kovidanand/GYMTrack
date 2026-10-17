@@ -7,7 +7,6 @@ import {
   Loader2,
   Flame,
   Lightbulb,
-  Sparkles,
   Target,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -30,7 +29,6 @@ import type {
 
 import { DateNavigator } from '@/components/nutrition/DateNavigator'
 import { TodaysProgressCard } from '@/components/nutrition/TodaysProgressCard'
-import { MacroInsightsSection } from '@/components/nutrition/MacroInsightsSection'
 import { RecentFoodLog } from '@/components/nutrition/RecentFoodLog'
 import { WeeklySummaryCard } from '@/components/nutrition/WeeklySummaryCard'
 import { DashboardActionCards } from '@/components/nutrition/DashboardActionCards'
@@ -40,7 +38,6 @@ import { NutritionGoalsModal } from '@/components/nutrition/NutritionGoalsModal'
 import { NutritionAnalyticsView } from '@/components/nutrition/NutritionAnalyticsView'
 import { FoodLibraryView } from '@/components/nutrition/FoodLibraryView'
 import { FoodCameraModal } from '@/components/nutrition/FoodCameraModal'
-import { NutritionAssistantModal } from '@/components/nutrition/NutritionAssistantModal'
 
 export default function Nutrition() {
   const { user } = useAuth()
@@ -64,7 +61,6 @@ export default function Nutrition() {
   const [editingEntry, setEditingEntry] = useState<FoodEntry | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isGoalsModalOpen, setIsGoalsModalOpen] = useState(false)
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
 
   // Camera / AI Photo Modal
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false)
@@ -260,17 +256,6 @@ export default function Nutrition() {
               </button>
             </div>
 
-            {/* AI Assistant Button */}
-            <button
-              onClick={() => setIsAssistantOpen(true)}
-              id="open-nutrition-assistant-btn"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs"
-              title="Ask Nutrition AI Assistant"
-            >
-              <Sparkles size={14} className="text-emerald-600" />
-              <span className="hidden sm:inline">AI Helper</span>
-            </button>
-
             {/* Goals Settings Button */}
             <button
               onClick={() => setIsGoalsModalOpen(true)}
@@ -323,7 +308,7 @@ export default function Nutrition() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* ─── MAIN COLUMN (Left, 8 Cols) ─── */}
                 <div className="lg:col-span-8 space-y-6">
-                  {/* Section 1: Today's Progress Card (Calorie Ring + Macro Bars) */}
+                  {/* Section 1: Today's Nutrition Card (Calorie Ring + Macro Bars) */}
                   <TodaysProgressCard
                     consumed={dailyTotals.calories}
                     target={goals.calorie_target}
@@ -338,19 +323,7 @@ export default function Nutrition() {
                     onEditGoals={() => setIsGoalsModalOpen(true)}
                   />
 
-                  {/* Section 2: Macro Insights Section (Circular Gauges) */}
-                  <MacroInsightsSection
-                    protein={dailyTotals.protein}
-                    proteinTarget={goals.protein_target}
-                    carbs={dailyTotals.carbs}
-                    carbsTarget={goals.carb_target}
-                    fat={dailyTotals.fat}
-                    fatTarget={goals.fat_target}
-                    fiber={dailyTotals.fiber}
-                    fiberTarget={goals.fiber_target}
-                  />
-
-                  {/* Section 3: Today's Logged Meals (Recent Food Log) */}
+                  {/* Section 2: Today's Logged Meals (Recent Food Log) */}
                   <RecentFoodLog
                     entries={entries}
                     onOpenAddModal={handleOpenAdd}
@@ -358,7 +331,7 @@ export default function Nutrition() {
                     onDeleteEntry={handleDeleteFoodEntry}
                   />
 
-                  {/* Section 4: 7-Day Nutrition Summary */}
+                  {/* Section 3: 7-Day Nutrition Summary */}
                   <WeeklySummaryCard
                     userId={userId}
                     calorieTarget={goals.calorie_target}
@@ -374,29 +347,19 @@ export default function Nutrition() {
                     onOpenCameraModal={handleOpenCamera}
                   />
 
-                  {/* Personalized Daily Nutrition Insights */}
-                  {insights.length > 0 && (
-                    <div className="p-4 sm:p-5 rounded-2xl bg-white border border-emerald-200/90 shadow-2xs space-y-2.5">
-                      <div className="flex items-center gap-2 text-emerald-800">
-                        <Lightbulb size={16} className="text-emerald-600" />
-                        <h4 className="text-xs font-black uppercase tracking-wider">
-                          Personalized Insights
-                        </h4>
-                      </div>
-
-                      <ul className="space-y-2 pt-1">
-                        {insights.map((item, idx) => (
-                          <li
-                            key={idx}
-                            className="text-xs text-surface-700 flex items-start gap-2 font-medium leading-relaxed"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
+                  {/* Data-Backed Daily Insight */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-2">
+                    <div className="flex items-center gap-2 text-emerald-800">
+                      <Lightbulb size={16} className="text-emerald-600" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-surface-900">
+                        Daily Insight
+                      </h4>
                     </div>
-                  )}
+
+                    <p className="text-xs text-surface-700 font-medium leading-relaxed">
+                      {insights[0] || 'Log your meals to reveal data-backed insights comparing your intake to configured targets.'}
+                    </p>
+                  </div>
 
                   {/* Daily Goals Summary Card */}
                   <div className="p-4 sm:p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-3">
@@ -515,18 +478,6 @@ export default function Nutrition() {
           defaultMode={cameraMode}
           onLogMealItems={handleBatchLogItems}
           onSwitchToLibrary={() => setActiveTab('library')}
-        />
-
-        {/* Context-Aware Nutrition AI Assistant Modal */}
-        <NutritionAssistantModal
-          open={isAssistantOpen}
-          onOpenChange={setIsAssistantOpen}
-          userId={userId}
-          selectedDate={selectedDate}
-          todayTotals={dailyTotals}
-          goals={goals}
-          entries={entries}
-          onLogRecommendedFood={handleAddFoodEntry}
         />
       </div>
     </div>

@@ -1395,13 +1395,24 @@ export async function analyzeMealPhoto(
 ): Promise<MealPhotoAnalysisResult> {
   let remoteError: string | null = null
 
-  // 1. Primary path: Supabase Edge Function
+  // Ensure pure base64 without data URI prefix
+  let cleanBase64 = base64Data.trim()
+  let cleanMime = mimeType
+  if (cleanBase64.startsWith('data:')) {
+    const match = cleanBase64.match(/^data:([^;]+);base64,/i)
+    if (match) cleanMime = match[1]
+    cleanBase64 = cleanBase64.replace(/^data:[^;]+;base64,/i, '').trim()
+  }
+
+  // 1. Primary path: Supabase Edge Function (Server-side Gemini 1.5 Flash Vision)
   try {
+    const anonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || ''
     const { data, error } = await supabase.functions.invoke('ai-coach', {
+      headers: anonKey ? { apikey: anonKey } : undefined,
       body: {
         task: 'food_multi_item_vision',
-        image_base64: base64Data,
-        mime_type: mimeType,
+        image_base64: cleanBase64,
+        mime_type: cleanMime,
       },
     })
 
@@ -1480,87 +1491,10 @@ export async function analyzeMealPhoto(
     remoteError = err instanceof Error ? err.message : 'Network error communicating with AI service'
   }
 
-  // 2. Client-side fallback if VITE_GEMINI_API_KEY is configured in local environment
-  const localGeminiKey = (import.meta as unknown as { env: Record<string, string> }).env
-    ?.VITE_GEMINI_API_KEY
-  if (localGeminiKey) {
-    try {
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${localGeminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  {
-                    inlineData: {
-                      mimeType,
-                      data: base64Data,
-                    },
-                  },
-                  {
-                    text:
-                      'Analyze this meal image. Identify all distinct food items. Return pure JSON only: {"is_food": true, "items": [{"name": "...", "portion": "...", "servingSize": 150, "servingUnit": "g", "quantity": 1, "calories": 200, "protein": 5, "carbs": 40, "fat": 2, "fiber": 1.5, "confidence": "high|medium|low", "notes": "..."}], "overall_notes": "..."}',
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.2,
-            },
-          }),
-        }
-      )
-
-      if (resp.ok) {
-        const rawJson = await resp.json()
-        const text = rawJson.candidates?.[0]?.content?.parts?.[0]?.text
-        if (text) {
-          const parsed = JSON.parse(text)
-          if (parsed.is_food === false) {
-            return {
-              isFood: false,
-              items: [],
-              overallNotes: parsed.message || 'No food detected in image.',
-            }
-          }
-          if (Array.isArray(parsed.items) && parsed.items.length > 0) {
-            return {
-              isFood: true,
-              items: parsed.items.map((it: Record<string, unknown>, idx: number) => ({
-                id: `detected_local_${Date.now()}_${idx}`,
-                name: String(it.name || 'Food Item'),
-                portion: String(it.portion || '1 serving'),
-                servingSize: Number(it.servingSize) || 100,
-                servingUnit: String(it.servingUnit || 'g'),
-                quantity: Number(it.quantity) || 1,
-                calories: Math.max(0, Math.round(Number(it.calories) || 0)),
-                protein: Math.max(0, Math.round((Number(it.protein) || 0) * 10) / 10),
-                carbs: Math.max(0, Math.round((Number(it.carbs) || 0) * 10) / 10),
-                fat: Math.max(0, Math.round((Number(it.fat) || 0) * 10) / 10),
-                fiber: Math.max(0, Math.round((Number(it.fiber) || 0) * 10) / 10),
-                confidence:
-                  it.confidence === 'high' || it.confidence === 'low' ? it.confidence : 'medium',
-                notes: typeof it.notes === 'string' ? it.notes : undefined,
-              })),
-              overallNotes: parsed.overall_notes || 'Estimated using vision analysis.',
-            }
-          }
-        }
-      }
-    } catch {
-      /* ignore client-side fallback error */
-    }
-  }
-
   // Reject with clear failure reason; never fabricate fake items
   throw new Error(
     remoteError?.includes('GEMINI_API_KEY')
-      ? 'AI Vision service is not configured. Please ensure GEMINI_API_KEY is configured in your Supabase Edge Function secrets.'
+      ? 'AI Vision service requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets.'
       : remoteError ||
         'Unable to analyze image. Please ensure your device is online, or search the verified Food Library.'
   )

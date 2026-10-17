@@ -13,25 +13,36 @@ const corsHeaders = {
 };
 
 /**
- * Resilient Gemini caller that iterates through candidate vision/reasoning models
- * to prevent 404s when specific model tags are updated or deprecated by Google.
+ * Resilient Gemini caller prioritizing Google Gemini 1.5 Flash Vision.
+ * Handles timeouts, rate limits, and fallback models seamlessly.
  */
 async function callGemini(
   contents: any[],
   options: { tools?: any[]; systemInstruction?: any; generationConfig?: any } = {}
 ) {
-  const models = [
-    Deno.env.get("GEMINI_MODEL") || "gemini-3-flash-preview",
-    "gemini-3.5-flash",
-    "gemini-2.5-flash-lite",
+  const configuredModel = Deno.env.get("GEMINI_MODEL")?.trim();
+  const candidateModels = [
+    ...(configuredModel ? [configuredModel] : []),
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
     "gemini-flash-latest",
   ];
 
+  // Deduplicate candidate models
+  const uniqueModels = Array.from(new Set(candidateModels));
+
   let lastErr = "";
   let lastStatus = 500;
+  let isRateLimited = false;
+  let isTimeout = false;
 
-  for (const model of models) {
+  for (const model of uniqueModels) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 28000);
+
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
         {
@@ -41,8 +52,10 @@ async function callGemini(
             contents,
             ...options,
           }),
+          signal: controller.signal,
         }
       );
+      clearTimeout(timeoutId);
 
       if (resp.ok) {
         return await resp.json();
@@ -52,17 +65,31 @@ async function callGemini(
       lastErr = await resp.text();
       console.warn(`Gemini model [${model}] failed (${resp.status}): ${lastErr}`);
 
-      // If model not found (404), overloaded (503), or rate limited (429), try next candidate
-      if (resp.status === 404 || resp.status === 503 || resp.status === 429) {
+      if (resp.status === 429) {
+        isRateLimited = true;
+      }
+
+      // If model not found (404), overloaded (503), rate limited (429), or unsupported param (400), try next candidate
+      if (resp.status === 404 || resp.status === 503 || resp.status === 429 || resp.status === 400) {
         continue;
       }
       break;
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        isTimeout = true;
+        lastStatus = 504;
+        lastErr = 'Upstream Google AI API request timed out';
+        continue;
+      }
       lastErr = err.message;
     }
   }
 
-  throw new Error(`Google AI API error (${lastStatus}): ${lastErr}`);
+  const errorObj = new Error(lastErr || `Google AI API error (${lastStatus})`);
+  (errorObj as any).status = lastStatus;
+  (errorObj as any).isRateLimited = isRateLimited;
+  (errorObj as any).isTimeout = isTimeout;
+  throw errorObj;
 }
 
 serve(async (req) => {
@@ -130,10 +157,43 @@ serve(async (req) => {
     // ──────────────────────────────────────────────────────────────────────────
     if (task === "food_multi_item_vision" || task === "food_image_analysis") {
       if (!image_base64 || typeof image_base64 !== "string") {
-        return new Response(JSON.stringify({ error: "No image data received for analysis" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: "No image data received for analysis. Please select a photo.",
+            code: "MISSING_IMAGE",
+            retryable: false,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      let cleanBase64 = image_base64.trim();
+      let cleanMime = mime_type || "image/jpeg";
+
+      // Strip data URI scheme prefix if present
+      if (cleanBase64.startsWith("data:")) {
+        const mimeMatch = cleanBase64.match(/^data:([^;]+);base64,/i);
+        if (mimeMatch) {
+          cleanMime = mimeMatch[1];
+        }
+        cleanBase64 = cleanBase64.replace(/^data:[^;]+;base64,/i, "").trim();
+      }
+
+      if (!cleanBase64 || cleanBase64.length < 50) {
+        return new Response(
+          JSON.stringify({
+            error: "Invalid or empty image payload. Please select a valid photo.",
+            code: "INVALID_IMAGE",
+            retryable: false,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
       const visionPrompt = `You are an expert clinical nutrition AI specialized in visual dietary assessment.
@@ -151,7 +211,7 @@ TASKS:
    - Include brief visual notes (e.g., "Portion estimated from standard bowl; oil content appears moderate").
 
 OUTPUT FORMAT:
-Return PURE JSON adhering to this exact schema:
+Return PURE JSON adhering to this exact schema (no markdown, no backticks):
 {
   "is_food": true,
   "items": [
@@ -180,8 +240,8 @@ Return PURE JSON adhering to this exact schema:
             parts: [
               {
                 inlineData: {
-                  mimeType: mime_type || "image/jpeg",
-                  data: image_base64,
+                  mimeType: cleanMime,
+                  data: cleanBase64,
                 },
               },
               {
@@ -200,12 +260,29 @@ Return PURE JSON adhering to this exact schema:
 
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
+      // Strip markdown code fences if output returned them despite responseMimeType
+      const sanitizedJson = rawText
+        .trim()
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+
       let parsedResult;
       try {
-        parsedResult = JSON.parse(rawText);
+        parsedResult = JSON.parse(sanitizedJson);
       } catch (e) {
         console.error("Failed to parse Gemini vision JSON output:", rawText, e);
-        throw new Error("Invalid structured JSON returned from vision model");
+        return new Response(
+          JSON.stringify({
+            error: "Unable to parse nutritional details from the image. Please try again with a clearer photo.",
+            code: "INVALID_AI_RESPONSE",
+            retryable: true,
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
       return new Response(JSON.stringify(parsedResult), {
@@ -366,17 +443,41 @@ ${JSON.stringify(context, null, 2)}`;
     });
   } catch (error: any) {
     console.error("Edge function error:", error);
-    
+
     if (error.message === "Missing GEMINI_API_KEY secret") {
-       return new Response(JSON.stringify({ error: "AI service requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "AI service requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets.",
+          code: "MISSING_SERVER_CONFIG",
+          retryable: false,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    return new Response(JSON.stringify({ error: error.message || "AI Coach is temporarily unavailable. Please try again." }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const status = typeof error.status === 'number' && error.status >= 400 && error.status < 600 ? error.status : 500;
+    const isRateLimit = error.isRateLimited || status === 429;
+    const isTimeout = error.isTimeout || status === 504;
+
+    const userMessage = isRateLimit
+      ? "AI service is currently experiencing high demand. Please retry in a few seconds."
+      : isTimeout
+      ? "AI analysis request timed out. Please retry with a compressed image."
+      : error.message || "AI service is temporarily unavailable. Please try again.";
+
+    return new Response(
+      JSON.stringify({
+        error: userMessage,
+        code: isRateLimit ? "RATE_LIMIT" : isTimeout ? "TIMEOUT" : "INTERNAL_ERROR",
+        retryable: isRateLimit || isTimeout || status >= 500,
+      }),
+      {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });

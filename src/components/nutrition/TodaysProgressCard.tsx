@@ -27,17 +27,20 @@ export function TodaysProgressCard({
   fiberTarget = 30,
   onEditGoals,
 }: TodaysProgressCardProps) {
-  const remaining = target - consumed
-  const isOver = remaining < 0
+  const hasTarget = target > 0
+  const remaining = hasTarget ? target - consumed : 0
+  const isOver = hasTarget && remaining < 0
   const overAmount = Math.abs(remaining)
-  const percent = target > 0 ? Math.min(100, Math.round((consumed / target) * 100)) : 0
+  const percent = hasTarget ? Math.min(100, Math.round((consumed / target) * 100)) : 0
 
   // SVG Circular Ring Calculations
   const size = 138
   const strokeWidth = 11
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (Math.min(100, percent) / 100) * circumference
+  const strokeDashoffset = hasTarget
+    ? circumference - (Math.min(100, percent) / 100) * circumference
+    : circumference
 
   // Macro percentages
   const proteinPct = proteinTarget > 0 ? Math.min(100, Math.round((protein / proteinTarget) * 100)) : 0
@@ -51,10 +54,10 @@ export function TodaysProgressCard({
       <div className="flex items-center justify-between pb-4 border-b border-surface-100">
         <div>
           <h2 className="text-base sm:text-lg font-black text-surface-900 tracking-tight leading-tight flex items-center gap-2">
-            <span>Today's Progress</span>
+            <span>Today's Nutrition</span>
           </h2>
           <p className="text-xs text-surface-500 font-medium mt-0.5">
-            How you're tracking against your goals
+            Daily caloric balance and macronutrient breakdown
           </p>
         </div>
 
@@ -64,7 +67,7 @@ export function TodaysProgressCard({
             id="edit-nutrition-goals-btn"
             className="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 px-3 py-1.5 rounded-xl transition-colors"
           >
-            Adjust Goals
+            {hasTarget ? 'Adjust Targets' : 'Set Targets'}
           </button>
         )}
       </div>
@@ -85,18 +88,20 @@ export function TodaysProgressCard({
                 fill="transparent"
               />
               {/* Progress circle */}
-              <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                stroke={isOver ? '#f59e0b' : '#10b981'}
-                strokeWidth={strokeWidth}
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                fill="transparent"
-                className="transition-all duration-700 ease-out"
-              />
+              {hasTarget && (
+                <circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  stroke={isOver ? '#f59e0b' : '#10b981'}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                  className="transition-all duration-700 ease-out"
+                />
+              )}
             </svg>
 
             {/* Inner Content */}
@@ -105,14 +110,28 @@ export function TodaysProgressCard({
                 {consumed.toLocaleString()}
               </span>
               <span className="text-[11px] font-semibold text-surface-400 mt-1">
-                of {target.toLocaleString()} kcal
+                {hasTarget ? `of ${target.toLocaleString()} kcal` : 'calories consumed'}
               </span>
             </div>
           </div>
 
           {/* Calorie Status Pill */}
           <div className="mt-3 text-center">
-            {isOver ? (
+            {!hasTarget ? (
+              onEditGoals ? (
+                <button
+                  type="button"
+                  onClick={onEditGoals}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors"
+                >
+                  <span>Configure daily target</span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-surface-600 bg-surface-100 border border-surface-200">
+                  <span>No target set</span>
+                </span>
+              )
+            ) : isOver ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300">
                 <span>+{overAmount.toLocaleString()} kcal over target</span>
               </span>
@@ -135,8 +154,15 @@ export function TodaysProgressCard({
                 <span>Protein</span>
               </span>
               <span className="font-medium text-surface-600">
-                <strong className="text-surface-900 font-bold">{protein.toFixed(0)}g</strong> / {proteinTarget.toFixed(0)}g{' '}
-                <span className="text-[11px] text-surface-400 font-semibold">({proteinPct}%)</span>
+                <strong className="text-surface-900 font-bold">{protein.toFixed(0)}g</strong>
+                {proteinTarget > 0 ? (
+                  <>
+                    {' '}/ {proteinTarget.toFixed(0)}g{' '}
+                    <span className="text-[11px] text-surface-400 font-semibold">({proteinPct}%)</span>
+                  </>
+                ) : (
+                  <span className="text-[11px] text-surface-400 font-normal"> (no target)</span>
+                )}
               </span>
             </div>
             <div className="w-full bg-surface-100 rounded-full h-2.5 overflow-hidden">
@@ -155,8 +181,15 @@ export function TodaysProgressCard({
                 <span>Carbohydrates</span>
               </span>
               <span className="font-medium text-surface-600">
-                <strong className="text-surface-900 font-bold">{carbs.toFixed(0)}g</strong> / {carbsTarget.toFixed(0)}g{' '}
-                <span className="text-[11px] text-surface-400 font-semibold">({carbsPct}%)</span>
+                <strong className="text-surface-900 font-bold">{carbs.toFixed(0)}g</strong>
+                {carbsTarget > 0 ? (
+                  <>
+                    {' '}/ {carbsTarget.toFixed(0)}g{' '}
+                    <span className="text-[11px] text-surface-400 font-semibold">({carbsPct}%)</span>
+                  </>
+                ) : (
+                  <span className="text-[11px] text-surface-400 font-normal"> (no target)</span>
+                )}
               </span>
             </div>
             <div className="w-full bg-surface-100 rounded-full h-2.5 overflow-hidden">
@@ -175,8 +208,15 @@ export function TodaysProgressCard({
                 <span>Fat</span>
               </span>
               <span className="font-medium text-surface-600">
-                <strong className="text-surface-900 font-bold">{fat.toFixed(0)}g</strong> / {fatTarget.toFixed(0)}g{' '}
-                <span className="text-[11px] text-surface-400 font-semibold">({fatPct}%)</span>
+                <strong className="text-surface-900 font-bold">{fat.toFixed(0)}g</strong>
+                {fatTarget > 0 ? (
+                  <>
+                    {' '}/ {fatTarget.toFixed(0)}g{' '}
+                    <span className="text-[11px] text-surface-400 font-semibold">({fatPct}%)</span>
+                  </>
+                ) : (
+                  <span className="text-[11px] text-surface-400 font-normal"> (no target)</span>
+                )}
               </span>
             </div>
             <div className="w-full bg-surface-100 rounded-full h-2.5 overflow-hidden">
