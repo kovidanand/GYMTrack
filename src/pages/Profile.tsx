@@ -18,9 +18,14 @@ const fitnessGoalLabel: Record<string, string> = {
   improve_flexibility:'Improve Flexibility',
 }
 
+import { NutritionFitnessProfile } from '@/components/profile/NutritionFitnessProfile'
+
 export default function Profile() {
   const { user, profile, updateUserProfile, signOut } = useAuth()
   const navigate = useNavigate()
+
+  // Tab: 'nutrition_fitness' | 'overview'
+  const [activeProfileTab, setActiveProfileTab] = useState<'nutrition_fitness' | 'overview'>('nutrition_fitness')
 
   // Local state for editing
   const [isEditing, setIsEditing] = useState(false)
@@ -186,196 +191,231 @@ export default function Profile() {
         </div>
       </section>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* ── Body Information ── */}
-        <section aria-label="Body information">
-          <SectionHeader title="Body Information" />
-          <div className="card p-5 space-y-4">
-            
-            {/* Height */}
-            <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                <Ruler size={16} />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-surface-500">Height (cm)</p>
-                {isEditing ? (
-                  <input type="number" className="input-base mt-1" value={height} onChange={e => setHeight(e.target.value)} />
-                ) : (
-                  <p className="text-sm font-semibold text-surface-900">{profile.height ? `${profile.height} cm` : '—'}</p>
-                )}
-              </div>
-            </div>
+      {/* ── Sub-navigation Tabs: Nutrition & Fitness Profile vs Overview & Records ── */}
+      <div className="flex items-center gap-2 border-b border-surface-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveProfileTab('nutrition_fitness')}
+          id="profile-tab-nutrition"
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            activeProfileTab === 'nutrition_fitness'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'
+          }`}
+        >
+          <span>🥗 Nutrition & Fitness Profile</span>
+        </button>
 
-            {/* Weight */}
-            <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                <Weight size={16} />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-surface-500">Weight (kg)</p>
-                {isEditing ? (
-                  <input type="number" className="input-base mt-1" value={weight} onChange={e => setWeight(e.target.value)} />
-                ) : (
-                  <p className="text-sm font-semibold text-surface-900">{profile.weight ? `${profile.weight} kg` : '—'}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Age */}
-            <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                <Calendar size={16} />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-surface-500">Age</p>
-                {isEditing ? (
-                  <input type="number" className="input-base mt-1" value={age} onChange={e => setAge(e.target.value)} />
-                ) : (
-                  <p className="text-sm font-semibold text-surface-900">{profile.age ? `${profile.age} years` : '—'}</p>
-                )}
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        {/* ── Fitness Information ── */}
-        <section aria-label="Fitness information">
-          <SectionHeader title="Fitness Information" />
-          <div className="card p-5 space-y-4">
-            
-            {/* Goal */}
-            <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                <Target size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-surface-500">Primary Goal</p>
-                {isEditing ? (
-                  <select className="input-base mt-1" value={goal} onChange={e => setGoal(e.target.value as FitnessGoal)}>
-                    <option value="">Select a goal</option>
-                    {Object.entries(fitnessGoalLabel).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-sm font-semibold text-surface-900 truncate">
-                    {profile.fitness_goal ? fitnessGoalLabel[profile.fitness_goal] : '—'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Experience */}
-            <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                <User size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-surface-500">Experience Level</p>
-                {isEditing ? (
-                  <select className="input-base mt-1" value={experience} onChange={e => setExperience(e.target.value as ExperienceLevel)}>
-                    <option value="">Select level</option>
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
-                ) : (
-                  <p className="text-sm font-semibold text-surface-900 truncate">
-                    {profile.experience_level ? capitalise(profile.experience_level) : '—'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Frequency */}
-            <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                <Calendar size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-surface-500">Training Frequency</p>
-                {isEditing ? (
-                  <select className="input-base mt-1" value={frequency} onChange={e => setFrequency(e.target.value)}>
-                    <option value="">Select days/week</option>
-                    {[1, 2, 3, 4, 5, 6, 7].map(n => (
-                      <option key={n} value={n}>{n} days/week</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-sm font-semibold text-surface-900 truncate">
-                    {profile.training_frequency ? `${profile.training_frequency} days per week` : '—'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Equipment (View only for now, complex multi-select UI omitted for brevity) */}
-            <div className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
-                <Dumbbell size={16} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-surface-500">Preferred Equipment</p>
-                <p className="text-sm font-semibold text-surface-900 truncate">
-                  {profile.preferred_equipment?.length ? profile.preferred_equipment.map(capitalise).join(', ') : '—'}
-                </p>
-              </div>
-            </div>
-
-          </div>
-        </section>
+        <button
+          type="button"
+          onClick={() => setActiveProfileTab('overview')}
+          id="profile-tab-overview"
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            activeProfileTab === 'overview'
+              ? 'bg-surface-900 text-white shadow-xs'
+              : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'
+          }`}
+        >
+          <span>🏆 Overview & PRs</span>
+        </button>
       </div>
 
-      {/* ── Training Tools ── */}
-      <section aria-label="Training tools">
-        <SectionHeader title="Training Tools" />
-        <div className="card p-5 bg-white border border-surface-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
-              <Timer size={20} />
-            </div>
-            <div>
-              <h3 className="font-bold text-surface-900 text-sm">Workout Timer & Stopwatch</h3>
-              <p className="text-xs text-surface-500 mt-0.5">Control your rest periods, HIIT intervals, or timed workout sets.</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsTimerOpen(true)}
-            className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5 flex-shrink-0"
-          >
-            <Timer size={14} />
-            Open Timer
-          </button>
-        </div>
-      </section>
+      {activeProfileTab === 'nutrition_fitness' ? (
+        /* ─── NUTRITION & FITNESS PROFILE (Phase 9) ─── */
+        <NutritionFitnessProfile />
+      ) : (
+        /* ─── ACCOUNT OVERVIEW, BODY & FITNESS STATS, AND RECORDS ─── */
+        <>
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* ── Body Information ── */}
+            <section aria-label="Body information">
+              <SectionHeader title="Body Information" />
+              <div className="card p-5 space-y-4">
+                {/* Height */}
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                    <Ruler size={16} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-surface-500">Height (cm)</p>
+                    {isEditing ? (
+                      <input type="number" className="input-base mt-1" value={height} onChange={e => setHeight(e.target.value)} />
+                    ) : (
+                      <p className="text-sm font-semibold text-surface-900">{profile.height ? `${profile.height} cm` : '—'}</p>
+                    )}
+                  </div>
+                </div>
 
-      {/* ── Personal Records ── */}
-      <section aria-label="Personal records">
-        <SectionHeader title="Personal Records" />
-        {loadingPRs ? (
-          <div className="card p-6 flex justify-center items-center">
-            <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
-          </div>
-        ) : userPRs.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {userPRs.map(pr => (
-              <div key={pr.id} className="card p-4 text-center">
-                <Trophy size={18} className="text-amber-400 mx-auto mb-2" aria-hidden="true" />
-                <p className="text-xs text-surface-500 mb-1 leading-snug">{pr.exerciseName}</p>
-                <p className="text-lg font-bold text-brand-600">{pr.value}</p>
-                <p className="text-xs text-surface-400">{pr.unit}</p>
+                {/* Weight */}
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                    <Weight size={16} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-surface-500">Weight (kg)</p>
+                    {isEditing ? (
+                      <input type="number" className="input-base mt-1" value={weight} onChange={e => setWeight(e.target.value)} />
+                    ) : (
+                      <p className="text-sm font-semibold text-surface-900">{profile.weight ? `${profile.weight} kg` : '—'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Age */}
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                    <Calendar size={16} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-surface-500">Age</p>
+                    {isEditing ? (
+                      <input type="number" className="input-base mt-1" value={age} onChange={e => setAge(e.target.value)} />
+                    ) : (
+                      <p className="text-sm font-semibold text-surface-900">{profile.age ? `${profile.age} years` : '—'}</p>
+                    )}
+                  </div>
+                </div>
+
               </div>
-            ))}
+            </section>
+
+            {/* ── Fitness Information ── */}
+            <section aria-label="Fitness information">
+              <SectionHeader title="Fitness Information" />
+              <div className="card p-5 space-y-4">
+                {/* Goal */}
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                    <Target size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-surface-500">Primary Goal</p>
+                    {isEditing ? (
+                      <select className="input-base mt-1" value={goal} onChange={e => setGoal(e.target.value as FitnessGoal)}>
+                        <option value="">Select a goal</option>
+                        {Object.entries(fitnessGoalLabel).map(([k, v]) => (
+                          <option key={k} value={k}>{v}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm font-semibold text-surface-900 truncate">
+                        {profile.fitness_goal ? (fitnessGoalLabel[profile.fitness_goal] || capitalise(profile.fitness_goal)) : '—'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Experience */}
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                    <User size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-surface-500">Experience Level</p>
+                    {isEditing ? (
+                      <select className="input-base mt-1" value={experience} onChange={e => setExperience(e.target.value as ExperienceLevel)}>
+                        <option value="">Select level</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                      </select>
+                    ) : (
+                      <p className="text-sm font-semibold text-surface-900 truncate">
+                        {profile.experience_level ? capitalise(profile.experience_level) : '—'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Frequency */}
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                    <Calendar size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-surface-500">Training Frequency</p>
+                    {isEditing ? (
+                      <select className="input-base mt-1" value={frequency} onChange={e => setFrequency(e.target.value)}>
+                        <option value="">Select days/week</option>
+                        {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                          <option key={n} value={n}>{n} days/week</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm font-semibold text-surface-900 truncate">
+                        {profile.training_frequency ? `${profile.training_frequency} days per week` : '—'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Equipment */}
+                <div className="flex items-center gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-surface-50 flex items-center justify-center text-surface-500 flex-shrink-0">
+                    <Dumbbell size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-surface-500">Preferred Equipment</p>
+                    <p className="text-sm font-semibold text-surface-900 truncate">
+                      {profile.preferred_equipment?.length ? profile.preferred_equipment.map(capitalise).join(', ') : '—'}
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+            </section>
           </div>
-        ) : (
-          <div className="card p-6 text-center text-xs text-surface-500 space-y-1">
-            <p className="font-semibold text-surface-700">No personal records achieved yet</p>
-            <p>Log your exercises and sets in workouts to automatically track your all-time best lifts.</p>
-          </div>
-        )}
-      </section>
+
+          {/* ── Training Tools ── */}
+          <section aria-label="Training tools">
+            <SectionHeader title="Training Tools" />
+            <div className="card p-5 bg-white border border-surface-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
+                  <Timer size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-surface-900 text-sm">Workout Timer & Stopwatch</h3>
+                  <p className="text-xs text-surface-500 mt-0.5">Control your rest periods, HIIT intervals, or timed workout sets.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsTimerOpen(true)}
+                className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5 flex-shrink-0"
+              >
+                <Timer size={14} />
+                Open Timer
+              </button>
+            </div>
+          </section>
+
+          {/* ── Personal Records ── */}
+          <section aria-label="Personal records">
+            <SectionHeader title="Personal Records" />
+            {loadingPRs ? (
+              <div className="card p-6 flex justify-center items-center">
+                <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
+              </div>
+            ) : userPRs.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {userPRs.map(pr => (
+                  <div key={pr.id} className="card p-4 text-center">
+                    <Trophy size={18} className="text-amber-400 mx-auto mb-2" aria-hidden="true" />
+                    <p className="text-xs text-surface-500 mb-1 leading-snug">{pr.exerciseName}</p>
+                    <p className="text-lg font-bold text-brand-600">{pr.value}</p>
+                    <p className="text-xs text-surface-400">{pr.unit}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="card p-6 text-center text-xs text-surface-500 space-y-1">
+                <p className="font-semibold text-surface-700">No personal records achieved yet</p>
+                <p>Log your exercises and sets in workouts to automatically track your all-time best lifts.</p>
+              </div>
+            )}
+          </section>
+        </>
+      )}
 
       {/* ── Account Session & Logout ── */}
       <section aria-label="Account session" className="pt-4 border-t border-surface-200/80">

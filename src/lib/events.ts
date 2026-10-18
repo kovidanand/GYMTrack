@@ -11,6 +11,8 @@ export type GymtrackEventType =
   | 'gymtrack:exercise_favorited'
   | 'gymtrack:sets_logged'
   | 'gymtrack:plan_progress_updated'
+  | 'gymtrack:food_logged'
+  | 'gymtrack:goals_updated'
 
 interface EventDetailMap {
   'gymtrack:workout_updated': { workoutId?: string; sessionId?: string; action?: 'create' | 'update' | 'delete' | 'add_exercise'; exerciseId?: string; source?: string }
@@ -19,6 +21,8 @@ interface EventDetailMap {
   'gymtrack:exercise_favorited': { exerciseId: string; isFavorite: boolean }
   'gymtrack:sets_logged': { sessionId?: string; workoutId?: string; exerciseName?: string; setsCount?: number; volume?: number; source?: string }
   'gymtrack:plan_progress_updated': { planId?: string; instanceId?: string }
+  'gymtrack:food_logged': { entryId?: string; date?: string; calories?: number }
+  'gymtrack:goals_updated': { userId?: string }
 }
 
 export function emitGymtrackEvent<T extends GymtrackEventType>(

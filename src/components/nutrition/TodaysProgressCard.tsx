@@ -1,4 +1,5 @@
 import { Flame } from 'lucide-react'
+import { getDashboardDateHeadings, toLocalISODate } from '@/lib/dateUtils'
 
 interface TodaysProgressCardProps {
   consumed: number
@@ -11,6 +12,7 @@ interface TodaysProgressCardProps {
   fatTarget: number
   fiber?: number
   fiberTarget?: number
+  selectedDate?: string
   onEditGoals?: () => void
 }
 
@@ -25,8 +27,10 @@ export function TodaysProgressCard({
   fatTarget,
   fiber = 0,
   fiberTarget = 30,
+  selectedDate,
   onEditGoals,
 }: TodaysProgressCardProps) {
+  const headings = getDashboardDateHeadings(selectedDate || toLocalISODate())
   const hasTarget = target > 0
   const remaining = hasTarget ? target - consumed : 0
   const isOver = hasTarget && remaining < 0
@@ -54,10 +58,10 @@ export function TodaysProgressCard({
       <div className="flex items-center justify-between pb-4 border-b border-surface-100">
         <div>
           <h2 className="text-base sm:text-lg font-black text-surface-900 tracking-tight leading-tight flex items-center gap-2">
-            <span>Today's Nutrition</span>
+            <span>{headings.heading}</span>
           </h2>
           <p className="text-xs text-surface-500 font-medium mt-0.5">
-            Daily caloric balance and macronutrient breakdown
+            {headings.subtitle}
           </p>
         </div>
 

@@ -1686,3 +1686,73 @@ export async function queryNutritionAssistant(
     answer: `Today you have consumed ${ctx.todayCalories.toLocaleString()} / ${ctx.targetCalories.toLocaleString()} kcal and ${ctx.todayProtein}g / ${ctx.targetProtein}g protein. Ask me about remaining macros, logged meals, or high-protein recommendations!`,
   }
 }
+
+/**
+ * Fetch dates within a range where the authenticated user logged food or completed workouts.
+ * Used for subtle, authentic activity dots on the calendar without clutter.
+ */
+export async function getCalendarActivityIndicators(
+  userId: string,
+  startDate: string,
+  endDate: string
+): Promise<{ foodDates: Set<string>; workoutDates: Set<string> }> {
+  const foodDates = new Set<string>()
+  const workoutDates = new Set<string>()
+
+  if (!userId || userId === 'guest_user') {
+    return { foodDates, workoutDates }
+  }
+
+  try {
+    const [foodRes, workoutRes] = await Promise.all([
+      supabase
+        .from('food_entries')
+        .select('date')
+        .eq('user_id', userId)
+        .gte('date', startDate)
+        .lte('date', endDate),
+      supabase
+        .from('workout_sessions')
+        .select('started_at')
+        .eq('user_id', userId)
+        .gte('started_at', `${startDate}T00:00:00`)
+        .lte('started_at', `${endDate}T23:59:59`),
+    ])
+
+    if (foodRes.data) {
+      for (const row of foodRes.data) {
+        if (row.date) foodDates.add(String(row.date))
+      }
+    }
+
+    if (workoutRes.data) {
+      for (const row of workoutRes.data) {
+        if (row.started_at) {
+          const dStr = String(row.started_at).split('T')[0]
+          workoutDates.add(dStr)
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[NutritionService] Failed to load calendar activity indicators:', err)
+  }
+
+  // Also check local storage for cached food entries on dates
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(`${ENTRIES_KEY_PREFIX}${userId}_`)) {
+        const dStr = key.replace(`${ENTRIES_KEY_PREFIX}${userId}_`, '')
+        const item = localStorage.getItem(key)
+        if (item && item.length > 5) {
+          const parsed = JSON.parse(item)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            foodDates.add(dStr)
+          }
+        }
+      }
+    }
+  } catch {}
+
+  return { foodDates, workoutDates }
+}

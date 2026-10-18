@@ -4,15 +4,26 @@ import {
   X, 
   Send, 
   Dumbbell,
-  CheckCircle2
+  CheckCircle2,
+  Utensils,
+  Sparkles
 } from 'lucide-react'
-import { useAiCoach, type CoachChatMessage } from '@/hooks/useAiCoach'
+import { useAiCoach } from '@/hooks/useAiCoach'
 import { useAuth } from '@/context/AuthContext'
 import { AiResponseRenderer, sanitizeAiContent } from '@/components/ai/AiResponseRenderer'
 
 export function FloatingAiCoach() {
   const { user, profile } = useAuth()
-  const { analysis, messages, isAsking, ask, confirmPendingLog, cancelPendingLog } = useAiCoach()
+  const {
+    analysis,
+    messages,
+    isAsking,
+    ask,
+    confirmPendingLog,
+    cancelPendingLog,
+    confirmPendingFoodLog,
+    cancelPendingFoodLog
+  } = useAiCoach()
 
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
@@ -49,17 +60,17 @@ export function FloatingAiCoach() {
   }
 
   const defaultQuickPrompts = [
-    'What should I train today?',
-    'How did I progress this week?',
-    'How do I do a bench press?',
-    'What weight did I use last time?',
-    "What's my best Bench Press?"
+    'What should I eat today?',
+    'How much protein do I need?',
+    "Review today's nutrition",
+    'Suggest a post-workout meal',
+    'What should I train today?'
   ]
 
   if (!user) return null
 
   return (
-    <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-40 select-none">
+    <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-40 select-none">
       {/* ── Collapsed Floating Button (Compact Circular FAB) ── */}
       {!isOpen && (
         <button
@@ -87,9 +98,9 @@ export function FloatingAiCoach() {
       {/* ── Expanded Chat Panel ── */}
       {isOpen && (
         <div 
-          className="w-[92vw] sm:w-[400px] h-[580px] max-h-[82vh] bg-white rounded-2xl shadow-2xl border border-surface-200 flex flex-col overflow-hidden animate-scale-in"
+          className="w-[94vw] sm:w-[410px] h-[580px] max-h-[82vh] bg-white rounded-2xl shadow-2xl border border-surface-200 flex flex-col overflow-hidden animate-scale-in"
           role="dialog"
-          aria-label="GYMTrack AI Fitness Coach"
+          aria-label="GYMTrack AI Fitness and Nutrition Coach"
         >
           {/* ── Header ── */}
           <div className="p-3.5 px-4 bg-gradient-to-r from-surface-900 to-surface-800 text-white flex items-center justify-between shadow-sm flex-shrink-0">
@@ -102,12 +113,10 @@ export function FloatingAiCoach() {
               </div>
               <div>
                 <h3 className="text-sm font-bold leading-none">
-                  GYMTrack AI Coach
+                  Your GYMTrack Coach
                 </h3>
                 <p className="text-[11px] text-surface-300 mt-0.5">
-                  {analysis?.hasData 
-                    ? `Based on ${analysis.totalWorkouts} logged sessions` 
-                    : 'Ready to guide your training'}
+                  Training & Nutrition Unified AI
                 </p>
               </div>
             </div>
@@ -125,23 +134,26 @@ export function FloatingAiCoach() {
 
           {/* ── Status Ribbon ── */}
           <div className="p-2 px-3 bg-brand-50 border-b border-brand-100 flex items-center justify-between text-[11px] text-brand-800 flex-shrink-0">
-            <span className="flex items-center gap-1 font-medium truncate">
+            <span className="flex items-center gap-1.5 font-medium truncate">
               {analysis && analysis.hasData ? (
                 <>
-                  <CheckCircle2 size={12} className="text-emerald-600 flex-shrink-0" />
-                  <span>Last 14D: <strong>{analysis.recentSessionsCount} sessions</strong> ({analysis.recentVolume.toLocaleString()} kg)</span>
+                  <Dumbbell size={12} className="text-brand-600 flex-shrink-0" />
+                  <span>Last 14D: <strong>{analysis.recentSessionsCount} workouts</strong></span>
                 </>
               ) : (
                 <>
-                  <Dumbbell size={12} className="text-brand-600 flex-shrink-0" />
-                  <span>Ready to guide your training</span>
+                  <Sparkles size={12} className="text-brand-600 flex-shrink-0" />
+                  <span>Workout & NutriTrack Connected</span>
                 </>
               )}
+            </span>
+            <span className="flex items-center gap-1 text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
+              <Utensils size={10} /> NutriTrack Sync
             </span>
           </div>
 
           {/* ── Chat Messages Scroll Area ── */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-surface-50/50 text-xs">
+          <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-surface-50/50 text-xs">
             {/* Welcome Greeting */}
             <div className="flex items-start gap-2.5 animate-fade-in">
               <div className="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -149,10 +161,10 @@ export function FloatingAiCoach() {
               </div>
               <div className="bg-white border border-surface-200 rounded-2xl rounded-tl-none p-3 shadow-xs max-w-[85%] text-surface-800 leading-relaxed">
                 <p className="font-bold text-surface-900 mb-1">
-                  Hello, {profile?.first_name || 'Athlete'}
+                  Hello, {profile?.first_name || 'Athlete'}!
                 </p>
-                <p>
-                  I can help with <strong>exercise technique</strong>, <strong>what to train today</strong>, your <strong>recent progress</strong>, or <strong>target muscle groups</strong>.
+                <p className="text-surface-600">
+                  Ask about your <strong>training</strong>, <strong>nutrition</strong>, <strong>progress</strong>, or <strong>what to eat next</strong>.
                 </p>
               </div>
             </div>
@@ -172,7 +184,7 @@ export function FloatingAiCoach() {
                 )}
 
                 <div
-                  className={`rounded-2xl p-3 shadow-xs max-w-[85%] leading-relaxed ${
+                  className={`rounded-2xl p-3 shadow-xs max-w-[88%] leading-relaxed ${
                     msg.role === 'user'
                       ? 'bg-brand-500 text-white rounded-tr-none font-medium'
                       : 'bg-white border border-surface-200 rounded-tl-none text-surface-800'
@@ -191,6 +203,68 @@ export function FloatingAiCoach() {
                     </div>
                   )}
 
+                  {/* ── Actionable Nutrition / Meal Recommendation Card ── */}
+                  {msg.pendingFoodLog && !msg.pendingFoodLog.logged && (
+                    <div className="mt-3 p-3 bg-emerald-50/90 border border-emerald-200 rounded-xl space-y-2.5 text-left">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <Utensils size={13} className="text-emerald-600 flex-shrink-0" />
+                            <span className="text-xs font-bold text-surface-900">{msg.pendingFoodLog.foodName}</span>
+                          </div>
+                          <p className="text-[11px] text-surface-500 mt-0.5 capitalize">
+                            {msg.pendingFoodLog.mealType} • {msg.pendingFoodLog.servingSize} {msg.pendingFoodLog.servingUnit}
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 font-mono">
+                          {Math.round(msg.pendingFoodLog.calories)} kcal
+                        </span>
+                      </div>
+
+                      {/* Macros Bar */}
+                      <div className="grid grid-cols-3 gap-1.5 text-[10px] text-center">
+                        <div className="bg-white/90 rounded-lg p-1 border border-emerald-100">
+                          <span className="text-surface-400 block text-[9px] uppercase font-semibold">Protein</span>
+                          <span className="font-bold text-emerald-700">{Math.round(msg.pendingFoodLog.protein)}g</span>
+                        </div>
+                        <div className="bg-white/90 rounded-lg p-1 border border-emerald-100">
+                          <span className="text-surface-400 block text-[9px] uppercase font-semibold">Carbs</span>
+                          <span className="font-bold text-amber-700">{Math.round(msg.pendingFoodLog.carbs)}g</span>
+                        </div>
+                        <div className="bg-white/90 rounded-lg p-1 border border-emerald-100">
+                          <span className="text-surface-400 block text-[9px] uppercase font-semibold">Fat</span>
+                          <span className="font-bold text-rose-700">{Math.round(msg.pendingFoodLog.fat)}g</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => cancelPendingFoodLog(msg.id)}
+                          className="flex-1 py-1.5 px-3 bg-white border border-surface-200 hover:bg-surface-100 text-surface-700 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                          Dismiss
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => confirmPendingFoodLog(msg.id)}
+                          className="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1.5"
+                        >
+                          <CheckCircle2 size={13} />
+                          <span>Confirm & Log</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {msg.pendingFoodLog && msg.pendingFoodLog.logged && (
+                    <div className="mt-2.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-xs text-emerald-800 font-medium">
+                      <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" />
+                      <span>Logged to NutriTrack ({Math.round(msg.pendingFoodLog.calories)} kcal)</span>
+                    </div>
+                  )}
+
+                  {/* ── Actionable Workout Recommendation Card ── */}
                   {msg.pendingLog && !msg.pendingLog.logged && (
                     <div className="mt-3 p-3 bg-brand-50/70 border border-brand-200 rounded-xl space-y-2 text-left">
                       <div className="text-xs font-bold text-brand-950 flex items-center justify-between">
@@ -201,7 +275,7 @@ export function FloatingAiCoach() {
                         <button
                           type="button"
                           onClick={() => cancelPendingLog(msg.id)}
-                          className="flex-1 py-1.5 px-3 bg-white border border-surface-200 hover:bg-surface-100 text-surface-700 rounded-lg text-xs font-bold transition-colors"
+                          className="flex-1 py-1.5 px-3 bg-white border border-surface-200 hover:bg-surface-100 text-surface-700 rounded-lg text-xs font-semibold transition-colors"
                         >
                           Cancel
                         </button>
@@ -214,6 +288,13 @@ export function FloatingAiCoach() {
                           <span>Confirm & Log</span>
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {msg.pendingLog && msg.pendingLog.logged && (
+                    <div className="mt-2.5 p-2 bg-brand-50 border border-brand-200 rounded-lg flex items-center gap-2 text-xs text-brand-800 font-medium">
+                      <CheckCircle2 size={14} className="text-brand-600 flex-shrink-0" />
+                      <span>Workout session logged</span>
                     </div>
                   )}
 
@@ -255,7 +336,7 @@ export function FloatingAiCoach() {
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce" />
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:0.2s]" />
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-bounce [animation-delay:0.4s]" />
-                  <span className="text-[11px] font-medium ml-1">Thinking...</span>
+                  <span className="text-[11px] font-medium ml-1">Analyzing training & nutrition...</span>
                 </div>
               </div>
             )}
@@ -287,7 +368,7 @@ export function FloatingAiCoach() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about your training, exercises or progress..."
+                placeholder="Ask about workouts, calories, or what to eat..."
                 className="flex-1 bg-transparent border-0 text-xs text-surface-900 placeholder-surface-400 focus:outline-none py-1.5"
                 disabled={isAsking}
               />

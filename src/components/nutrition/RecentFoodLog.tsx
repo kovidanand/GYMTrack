@@ -12,8 +12,11 @@ import {
 } from 'lucide-react'
 import type { FoodEntry, MealType } from '@/types/nutrition'
 
+import { getDashboardDateHeadings, toLocalISODate } from '@/lib/dateUtils'
+
 interface RecentFoodLogProps {
   entries: FoodEntry[]
+  selectedDate?: string
   onOpenAddModal: (mealType?: MealType) => void
   onOpenEditModal: (entry: FoodEntry) => void
   onDeleteEntry: (entryId: string) => Promise<void>
@@ -35,11 +38,13 @@ const MEAL_BADGE_STYLES: Record<MealType, string> = {
 
 export function RecentFoodLog({
   entries,
+  selectedDate,
   onOpenAddModal,
   onOpenEditModal,
   onDeleteEntry,
 }: RecentFoodLogProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const headings = getDashboardDateHeadings(selectedDate || toLocalISODate())
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -63,11 +68,11 @@ export function RecentFoodLog({
       <div className="flex items-center justify-between pb-3 border-b border-surface-100">
         <div>
           <h2 className="text-base sm:text-lg font-black text-surface-900 tracking-tight leading-tight">
-            Today's Logged Meals
+            {headings.logHeading}
           </h2>
           <p className="text-xs text-surface-500 font-medium mt-0.5">
             {entries.length === 0
-              ? 'No foods recorded yet today'
+              ? 'No foods recorded for this date'
               : `${entries.length} ${entries.length === 1 ? 'food entry' : 'food entries'} logged`}
           </p>
         </div>

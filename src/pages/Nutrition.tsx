@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   BookOpen,
   LineChart,
-  Settings,
   Loader2,
   Flame,
   Lightbulb,
@@ -21,6 +20,7 @@ import {
   generateNutritionInsights,
   DEFAULT_NUTRITION_GOALS,
 } from '@/lib/nutritionService'
+import { toLocalISODate } from '@/lib/dateUtils'
 import type {
   FoodEntry,
   MealType,
@@ -46,8 +46,8 @@ export default function Nutrition() {
   // Primary Subview: 'dashboard' | 'library' | 'analytics'
   const [activeTab, setActiveTab] = useState<'dashboard' | 'library' | 'analytics'>('dashboard')
 
-  // Selected Date (YYYY-MM-DD)
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
+  // Selected Date (YYYY-MM-DD in local time)
+  const [selectedDate, setSelectedDate] = useState(() => toLocalISODate())
 
   // Data States
   const [goals, setGoals] = useState<NutritionGoals>(DEFAULT_NUTRITION_GOALS)
@@ -102,6 +102,11 @@ export default function Nutrition() {
     }
   }, [userId, selectedDate])
 
+  const handleDateChange = useCallback((newDate: string) => {
+    setSelectedDate(newDate)
+    window.dispatchEvent(new CustomEvent('gymtrack:date_selected', { detail: { date: newDate } }))
+  }, [])
+
   useEffect(() => {
     loadGoals()
     loadStreak()
@@ -110,6 +115,20 @@ export default function Nutrition() {
   useEffect(() => {
     loadDateEntries()
   }, [loadDateEntries])
+
+  // Sync date selection with AI Coach and listen for remote food log events
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('gymtrack:date_selected', { detail: { date: selectedDate } }))
+  }, [selectedDate])
+
+  useEffect(() => {
+    const handleFoodLogged = () => {
+      loadDateEntries()
+      loadStreak()
+    }
+    window.addEventListener('gymtrack:food_logged', handleFoodLogged)
+    return () => window.removeEventListener('gymtrack:food_logged', handleFoodLogged)
+  }, [loadDateEntries, loadStreak])
 
   // Aggregated Daily Totals
   const dailyTotals = useMemo(() => {
@@ -255,17 +274,6 @@ export default function Nutrition() {
                 <span>History</span>
               </button>
             </div>
-
-            {/* Goals Settings Button */}
-            <button
-              onClick={() => setIsGoalsModalOpen(true)}
-              id="open-goals-modal-btn"
-              className="p-2 rounded-xl text-surface-600 hover:text-surface-900 bg-white border border-surface-200 hover:bg-surface-50 transition-colors shadow-2xs"
-              title="Configure Nutrition Goals"
-              aria-label="Configure Nutrition Goals"
-            >
-              <Settings size={18} />
-            </button>
           </div>
         </div>
 
@@ -294,7 +302,8 @@ export default function Nutrition() {
               {/* Date Navigator */}
               <DateNavigator
                 selectedDate={selectedDate}
-                onSelectDate={d => setSelectedDate(d)}
+                onSelectDate={handleDateChange}
+                userId={userId}
               />
             </div>
 
@@ -320,12 +329,14 @@ export default function Nutrition() {
                     fatTarget={goals.fat_target}
                     fiber={dailyTotals.fiber}
                     fiberTarget={goals.fiber_target}
+                    selectedDate={selectedDate}
                     onEditGoals={() => setIsGoalsModalOpen(true)}
                   />
 
                   {/* Section 2: Today's Logged Meals (Recent Food Log) */}
                   <RecentFoodLog
                     entries={entries}
+                    selectedDate={selectedDate}
                     onOpenAddModal={handleOpenAdd}
                     onOpenEditModal={handleOpenEdit}
                     onDeleteEntry={handleDeleteFoodEntry}

@@ -344,22 +344,37 @@ GUIDELINES:
       });
     }
 
-    // Build the system prompt using the provided context
-    const systemPrompt = `You are the "GYMTrack AI Coach", a senior evidence-based fitness assistant.
-You provide intelligent, concise, and structured coaching based strictly on the user's authentic logged GYMTrack data and verified exercise science.
+    // Build the system prompt using the provided unified context
+    const systemPrompt = `You are the "GYMTrack AI Coach & NutriTrack Nutrition Assistant", an expert, evidence-based fitness and sports nutrition coach.
+You provide intelligent, concise, and structured guidance based strictly on the user's authentic logged workout data, food entries, and configured targets.
 
 CRITICAL RULES:
-1. NEVER fabricate statistics, personal records, sets, volume, or workout history. If data does not exist, explicitly say: "I don't have enough logged data to personalize this yet. Log a few sessions and I'll be able to compare your progression."
+1. NEVER fabricate statistics, personal records, sets, volume, logged meals, or body measurements. If data does not exist, explicitly state: "I don't have enough logged data to personalize this yet."
 2. DO NOT use raw markdown hashes (###), strange decorative symbols, or excessive stars. Keep formatting clean and readable.
 3. Structure responses professionally:
    Title
    Short explanation
    Key points (using simple bullet points •)
    Action / recommendation
-   Evidence: (e.g. "Based on your last 3 logged bench press sessions." Only include if personalized to logged data; omit for general exercise queries).
-4. When asked about an exercise, provide: Targets, Equipment, How to perform (starting position, movement, breathing), Common mistakes, and alternative options.
-5. If the user asks what to train, inspect their recovery context and previous day's workouts. If they trained chest/push yesterday, recommend Pull (Back/Biceps) or Legs.
-6. Safety: Never provide medical diagnoses or advice on acute pain/injuries. Recommend resting and consulting a healthcare professional.
+   Evidence: (e.g. "Based on your 3 recent bench press sessions" or "Based on your remaining 45g protein budget today").
+4. FITNESS & WORKOUTS:
+   - When asked about an exercise: provide Targets, Equipment, Step-by-step form cues, Common mistakes, and alternative options.
+   - When asked what to train: inspect their recovery context and previous day's workouts. If they trained chest/push recently, recommend Pull (Back/Biceps) or Legs.
+5. NUTRITION & FOOD RECOMMENDATIONS:
+   - When asked "What should I eat?", "What should I eat for dinner?", "How much protein do I need?":
+     a) Read the user's authentic goals and today's logged intake from context.nutrition.
+     b) Compute exact remaining calories and macros: Remaining = Target - Consumed.
+     c) Strictly respect context.nutrition.dietary_profile.dietary_preference:
+        * If Vegetarian: NEVER suggest chicken, beef, pork, fish, seafood, or gelatin.
+        * If Vegan: NEVER suggest meat, poultry, fish, eggs, dairy, paneer, whey, or honey.
+        * If Eggetarian: Vegetarian foods + eggs are permitted; no meat or fish.
+        * If Non-vegetarian: Chicken, eggs, meat, fish, and dairy are all permitted.
+     d) Strictly respect context.nutrition.dietary_profile.allergies and food_restrictions (e.g. peanuts, dairy/lactose, gluten). NEVER recommend foods containing their allergens.
+     e) Factor in food_budget (e.g., budget-friendly options like lentils, eggs, oats vs flexible), cooking_access (hostel/mess vs full kitchen), and meal_prep_time.
+     f) Give specific food portions and realistic estimated macronutrients (calories, protein, carbs, fat).
+     g) Explain how the recommendation fits their remaining daily budget.
+     h) When recommending a specific meal, invoke the "propose_meal" tool so the user can review and log it directly with one tap!
+6. SAFETY: Never provide medical diagnoses or advice on acute joint pain/injuries. Recommend consulting a healthcare professional.
 
 USER CONTEXT:
 ${JSON.stringify(context, null, 2)}`;
@@ -370,7 +385,7 @@ ${JSON.stringify(context, null, 2)}`;
       parts: [{ text: m.content }],
     }));
 
-    // Define the tool for structured output
+    // Define tools for structured output
     const tools = [
       {
         functionDeclarations: [
@@ -399,7 +414,28 @@ ${JSON.stringify(context, null, 2)}`;
               },
               required: ["name", "description", "exercises"],
             },
-          }
+          },
+          {
+            name: "propose_meal",
+            description: "Propose an actionable meal recommendation that fits the user's remaining daily calories/macros and dietary preferences.",
+            parameters: {
+              type: "object",
+              properties: {
+                meal_name: { type: "string", description: "Descriptive meal name, e.g. Yellow Dal Tadka with Brown Rice & Cucumber Salad" },
+                meal_type: { type: "string", enum: ["breakfast", "lunch", "dinner", "snack"], description: "Meal category" },
+                food_name: { type: "string", description: "Primary food item name for food logging" },
+                serving_size: { type: "number", description: "Serving portion number, e.g. 1" },
+                serving_unit: { type: "string", description: "Serving unit, e.g. plate, bowl, serving" },
+                calories: { type: "number", description: "Total estimated calories" },
+                protein: { type: "number", description: "Total estimated protein in grams" },
+                carbs: { type: "number", description: "Total estimated carbohydrates in grams" },
+                fat: { type: "number", description: "Total estimated fat in grams" },
+                fiber: { type: "number", description: "Estimated fiber in grams" },
+                explanation: { type: "string", description: "Why this meal fits their remaining daily macros" },
+              },
+              required: ["meal_name", "meal_type", "food_name", "serving_size", "serving_unit", "calories", "protein", "carbs", "fat"],
+            },
+          },
         ]
       },
     ];
@@ -410,13 +446,14 @@ ${JSON.stringify(context, null, 2)}`;
       },
       tools: tools,
       generationConfig: {
-        temperature: 0.7,
+        temperature: 0.6,
       },
     });
 
     // Parse Gemini response
     let replyContent = "";
     let structuredData = null;
+    let proposedMeal = null;
 
     if (data.candidates && data.candidates.length > 0) {
       const candidate = data.candidates[0];
@@ -424,21 +461,36 @@ ${JSON.stringify(context, null, 2)}`;
         for (const part of candidate.content.parts) {
           if (part.text) {
             replyContent += part.text;
-          } else if (part.functionCall && part.functionCall.name === "propose_workout") {
-            try {
-              structuredData = part.functionCall.args;
-              if (!replyContent) {
-                replyContent = `Here is a proposed workout for you: **${structuredData.name}**. You can review the details below.`;
+          } else if (part.functionCall) {
+            if (part.functionCall.name === "propose_workout") {
+              try {
+                structuredData = part.functionCall.args;
+                if (!replyContent) {
+                  replyContent = `Here is a proposed workout for you: **${structuredData.name}**. You can review the details below.`;
+                }
+              } catch (e) {
+                console.error("Failed to parse propose_workout function call arguments", e);
               }
-            } catch (e) {
-              console.error("Failed to parse function call arguments", e);
+            } else if (part.functionCall.name === "propose_meal") {
+              try {
+                proposedMeal = part.functionCall.args;
+                if (!replyContent) {
+                  replyContent = `Recommended Meal: **${proposedMeal.meal_name}**\n\n• Estimated Nutrition: ${proposedMeal.calories} kcal | ${proposedMeal.protein}g protein | ${proposedMeal.carbs}g carbs | ${proposedMeal.fat}g fat\n• ${proposedMeal.explanation || 'Fits within your remaining daily nutritional budget.'}`;
+                }
+              } catch (e) {
+                console.error("Failed to parse propose_meal function call arguments", e);
+              }
             }
           }
         }
       }
     }
 
-    return new Response(JSON.stringify({ content: replyContent, structured_data: structuredData }), {
+    return new Response(JSON.stringify({
+      content: replyContent,
+      structured_data: structuredData,
+      proposed_meal: proposedMeal,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {

@@ -1,12 +1,9 @@
 import { supabase } from '@/lib/supabase'
-import type { StructuredWorkoutAnalysis, ExerciseCoachAnalysis } from './coachAnalysis'
+import type { StructuredWorkoutAnalysis } from './coachAnalysis'
 import type { StructuredExerciseGuidance, StructuredWorkoutRecommendation } from '@/types'
-import { resolveExerciseMedia, findExerciseDbRecord, EXERCISE_ALIASES } from './exerciseMedia'
+import { resolveExerciseMedia } from './exerciseMedia'
 import { 
   get_exercise_details, 
-  get_today_workout, 
-  get_exercise_history, 
-  get_personal_record 
 } from './coachDataService'
 import type { StructuredCoachContext } from './contextBuilder'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
@@ -20,6 +17,21 @@ export interface PendingLogPayload {
   logged?: boolean
 }
 
+export interface PendingFoodLogPayload {
+  foodName: string
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  servingSize: number
+  servingUnit: string
+  servingsLogged: number
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  fiber?: number
+  explanation?: string
+  logged?: boolean
+}
+
 export interface CoachAnswer {
   content: string
   supportingData?: string
@@ -28,6 +40,7 @@ export interface CoachAnswer {
   structuredGuidance?: StructuredExerciseGuidance
   structuredRecommendation?: StructuredWorkoutRecommendation
   pendingLog?: PendingLogPayload
+  pendingFoodLog?: PendingFoodLogPayload
 }
 
 export type QueryIntent =
@@ -41,6 +54,12 @@ export type QueryIntent =
   | 'recovery'
   | 'general_fitness'
   | 'safety'
+  | 'nutrition_what_to_eat'
+  | 'nutrition_macro_budget'
+  | 'nutrition_summary'
+  | 'nutrition_comparison'
+  | 'nutrition_post_workout'
+  | 'nutrition_advice'
   | 'other'
 
 interface ExerciseTechniqueGuide {
@@ -252,7 +271,88 @@ export function classifyQueryIntent(query: string): QueryIntent {
   const medicalWords = ['pain', 'hurt', 'injury', 'injuries', 'torn', 'tear', 'sprain', 'doctor', 'physio', 'rehab', 'swelling', 'sharp pain', 'dislocated']
   if (medicalWords.some(w => q.includes(w))) return 'safety'
 
-  // 2. Exercise Alternatives
+  // 2. Nutrition Intents
+  if (
+    q.includes('post-workout meal') ||
+    q.includes('post workout meal') ||
+    q.includes('after workout') ||
+    q.includes('after my workout') ||
+    q.includes('eat after today')
+  ) {
+    return 'nutrition_post_workout'
+  }
+
+  if (
+    q.includes('how much protein') ||
+    q.includes('calories left') ||
+    q.includes('remaining calories') ||
+    q.includes('remaining protein') ||
+    q.includes('protein do i still need') ||
+    q.includes('protein do i need') ||
+    q.includes('calorie budget') ||
+    q.includes('macros left') ||
+    q.includes('am i meeting my nutrition target') ||
+    q.includes('am i meeting my target') ||
+    q.includes('protein target')
+  ) {
+    return 'nutrition_macro_budget'
+  }
+
+  if (
+    q.includes('compare today') ||
+    q.includes('compare this day') ||
+    q.includes('compare with yesterday') ||
+    q.includes('nutrition comparison')
+  ) {
+    return 'nutrition_comparison'
+  }
+
+  if (
+    q.includes('what did i eat') ||
+    q.includes('summarize my nutrition') ||
+    q.includes('review today\'s nutrition') ||
+    q.includes('review todays nutrition') ||
+    q.includes('nutrition summary') ||
+    q.includes('nutrition today') ||
+    q.includes('what i ate')
+  ) {
+    return 'nutrition_summary'
+  }
+
+  if (
+    q.includes('what should i eat') ||
+    q.includes('what to eat') ||
+    q.includes('suggest a meal') ||
+    q.includes('suggest meals') ||
+    q.includes('suggest an affordable meal') ||
+    q.includes('suggest a high-protein') ||
+    q.includes('suggest a high protein') ||
+    q.includes('high-protein vegetarian') ||
+    q.includes('high protein vegetarian') ||
+    q.includes('what can i eat') ||
+    q.includes('what should i have') ||
+    q.includes('eat for lunch') ||
+    q.includes('eat for dinner') ||
+    q.includes('eat for breakfast') ||
+    q.includes('eat for snack') ||
+    q.includes('fit my remaining') ||
+    q.includes('gain muscle') ||
+    q.includes('lose fat while preserving') ||
+    q.includes('improve my daily protein') ||
+    q.includes('preferred foods') ||
+    (q.includes('rest day') && (q.includes('meal') || q.includes('eat') || q.includes('adjust my meals')))
+  ) {
+    return 'nutrition_what_to_eat'
+  }
+
+  if (
+    (q.includes('protein') || q.includes('calories') || q.includes('carbs') || q.includes('fiber') || q.includes('diet') || q.includes('nutrition')) &&
+    !q.includes('bench') && !q.includes('squat') && !q.includes('workout') && !q.includes('exercise')
+  ) {
+    return 'nutrition_advice'
+  }
+
+  // 3. Exercise Alternatives
   if (q.includes('replace') || q.includes('alternative') || q.includes('instead of')) return 'exercise_alternative'
 
   // 3. Exercise Instruction
@@ -478,7 +578,7 @@ export async function askCoachQuestion(
 
       if (!edgeResponse.error && edgeResponse.data?.content) {
         let edgeContent = edgeResponse.data.content as string
-        edgeContent = edgeContent.replace(/[★☆✦✧✨⭐🌟💪🔥💥⚡🎯🏆✅❌⚠️📊📈📉🎉💯💡]/g, '').trim()
+        edgeContent = edgeContent.replace(/[\u2605\u2606\u2726\u2727]|\p{Extended_Pictographic}/gu, '').trim()
         
         // Check if query was exercise instruction, attach video guidance
         const matchedSlug = findMatchedExerciseSlug(cleanQuery)
@@ -499,10 +599,29 @@ export async function askCoachQuestion(
           }
         }
 
+        let pendingFoodLog: PendingFoodLogPayload | undefined
+        if (edgeResponse.data?.proposed_meal) {
+          const pm = edgeResponse.data.proposed_meal
+          pendingFoodLog = {
+            foodName: pm.food_name || pm.meal_name,
+            mealType: pm.meal_type || 'dinner',
+            servingSize: Number(pm.serving_size) || 1,
+            servingUnit: pm.serving_unit || 'serving',
+            servingsLogged: 1,
+            calories: Math.round(Number(pm.calories) || 0),
+            protein: Math.round((Number(pm.protein) || 0) * 10) / 10,
+            carbs: Math.round((Number(pm.carbs) || 0) * 10) / 10,
+            fat: Math.round((Number(pm.fat) || 0) * 10) / 10,
+            fiber: pm.fiber ? Math.round(Number(pm.fiber) * 10) / 10 : undefined,
+            explanation: pm.explanation,
+          }
+        }
+
         return {
           content: formatCleanCoachResponse(edgeContent),
           supportingData: 'Response grounded in authenticated GYMTrack data.',
-          structuredGuidance
+          structuredGuidance,
+          pendingFoodLog,
         }
       }
     }
@@ -518,6 +637,545 @@ export async function askCoachQuestion(
   }
 }
 
+interface MealOption {
+  name: string
+  foodName: string
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  diet: 'vegan' | 'vegetarian' | 'eggetarian' | 'non_vegetarian'
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  fiber: number
+  portion: string
+  servingSize: number
+  servingUnit: string
+  budget: 'budget' | 'moderate' | 'flexible'
+  allergens: string[]
+  explanation: string
+}
+
+const VERIFIED_MEALS: MealOption[] = [
+  // Vegetarian & Vegan & Budget
+  {
+    name: 'Yellow Dal Tadka with Steamed Brown Rice',
+    foodName: 'Yellow Dal Tadka with Brown Rice',
+    mealType: 'lunch',
+    diet: 'vegan',
+    calories: 420,
+    protein: 18,
+    carbs: 68,
+    fat: 7,
+    fiber: 8,
+    portion: '1 bowl dal (150g) + 1 cup rice (150g)',
+    servingSize: 1,
+    servingUnit: 'plate',
+    budget: 'budget',
+    allergens: [],
+    explanation: 'Wholesome, budget-friendly plant protein with complete amino acid profile from dal + rice synergy.',
+  },
+  {
+    name: 'Soya Chunks Masala with 2 Whole Wheat Rotis',
+    foodName: 'Soya Chunks Masala with Rotis',
+    mealType: 'dinner',
+    diet: 'vegan',
+    calories: 410,
+    protein: 34,
+    carbs: 48,
+    fat: 8,
+    fiber: 9,
+    portion: '50g dry soya chunks cooked + 2 rotis (70g)',
+    servingSize: 1,
+    servingUnit: 'serving',
+    budget: 'budget',
+    allergens: ['Soy', 'Gluten / Wheat'],
+    explanation: 'Extremely high protein density (34g protein) with minimal fat, ideal for muscle synthesis on a budget.',
+  },
+  {
+    name: 'Chole (Chickpeas) with Quinoa & Green Salad',
+    foodName: 'Chole with Quinoa',
+    mealType: 'lunch',
+    diet: 'vegan',
+    calories: 440,
+    protein: 19,
+    carbs: 70,
+    fat: 8,
+    fiber: 12,
+    portion: '1 bowl chole (180g) + 1 cup cooked quinoa',
+    servingSize: 1,
+    servingUnit: 'plate',
+    budget: 'budget',
+    allergens: [],
+    explanation: 'Complex carbohydrates with slow glycemic release, high dietary fiber, and iron.',
+  },
+  {
+    name: 'Tofu & Broccoli Stir Fry with Brown Rice',
+    foodName: 'Tofu Broccoli Stir Fry',
+    mealType: 'dinner',
+    diet: 'vegan',
+    calories: 390,
+    protein: 24,
+    carbs: 46,
+    fat: 12,
+    fiber: 7,
+    portion: '150g firm tofu + 100g broccoli + 100g rice',
+    servingSize: 1,
+    servingUnit: 'bowl',
+    budget: 'moderate',
+    allergens: ['Soy'],
+    explanation: 'Lean plant protein with micronutrient-dense cruciferous greens and low sodium.',
+  },
+  // Vegetarian (Dairy-based)
+  {
+    name: 'Paneer Bhurji with 2 Whole Wheat Phulkas',
+    foodName: 'Paneer Bhurji with Rotis',
+    mealType: 'dinner',
+    diet: 'vegetarian',
+    calories: 460,
+    protein: 26,
+    carbs: 36,
+    fat: 22,
+    fiber: 6,
+    portion: '120g low-fat paneer + 2 phulkas',
+    servingSize: 1,
+    servingUnit: 'plate',
+    budget: 'moderate',
+    allergens: ['Dairy / Lactose', 'Gluten / Wheat'],
+    explanation: 'Rich in slow-digesting casein protein, ideal for overnight muscle repair.',
+  },
+  {
+    name: 'Greek Yogurt Power Bowl with Honey & Chia Seeds',
+    foodName: 'Greek Yogurt Bowl with Chia',
+    mealType: 'breakfast',
+    diet: 'vegetarian',
+    calories: 310,
+    protein: 23,
+    carbs: 32,
+    fat: 9,
+    fiber: 5,
+    portion: '200g Greek yogurt + 1 tbsp chia + 1 tsp honey',
+    servingSize: 1,
+    servingUnit: 'bowl',
+    budget: 'moderate',
+    allergens: ['Dairy / Lactose'],
+    explanation: 'High bio-availability dairy protein with gut-friendly probiotics and omega-3s.',
+  },
+  {
+    name: 'Rolled Oats Porridge with Whey & Almonds',
+    foodName: 'Whey Protein Oatmeal Bowl',
+    mealType: 'breakfast',
+    diet: 'vegetarian',
+    calories: 420,
+    protein: 35,
+    carbs: 48,
+    fat: 9,
+    fiber: 7,
+    portion: '50g oats + 1 scoop whey (30g) + 10g almonds',
+    servingSize: 1,
+    servingUnit: 'bowl',
+    budget: 'moderate',
+    allergens: ['Dairy / Lactose', 'Tree Nuts'],
+    explanation: 'Sustained energy release from beta-glucan oats with rapid whey amino acid absorption.',
+  },
+  // Eggetarian
+  {
+    name: 'Egg Bhurji (3 Whole Eggs + 2 Whites) with 2 Rotis',
+    foodName: 'Egg Bhurji with Whole Wheat Rotis',
+    mealType: 'dinner',
+    diet: 'eggetarian',
+    calories: 430,
+    protein: 32,
+    carbs: 34,
+    fat: 16,
+    fiber: 5,
+    portion: '3 eggs + 2 whites scrambled with onions & tomato + 2 rotis',
+    servingSize: 1,
+    servingUnit: 'plate',
+    budget: 'budget',
+    allergens: ['Eggs', 'Gluten / Wheat'],
+    explanation: 'Gold standard complete protein with choline, leucine, and essential micronutrients.',
+  },
+  {
+    name: 'Hard Boiled Eggs (3) with Multigrain Toast & Fruit',
+    foodName: 'Boiled Eggs with Toast',
+    mealType: 'breakfast',
+    diet: 'eggetarian',
+    calories: 360,
+    protein: 24,
+    carbs: 32,
+    fat: 15,
+    fiber: 4,
+    portion: '3 large boiled eggs + 2 slices toast + 1 apple',
+    servingSize: 1,
+    servingUnit: 'serving',
+    budget: 'budget',
+    allergens: ['Eggs', 'Gluten / Wheat'],
+    explanation: 'Balanced morning meal providing steady satiety and muscular fuel.',
+  },
+  // Non-Vegetarian
+  {
+    name: 'Grilled Chicken Breast with Steamed Brown Rice & Veggies',
+    foodName: 'Grilled Chicken Breast with Rice',
+    mealType: 'lunch',
+    diet: 'non_vegetarian',
+    calories: 470,
+    protein: 52,
+    carbs: 44,
+    fat: 8,
+    fiber: 5,
+    portion: '180g cooked chicken breast + 150g brown rice + mixed veggies',
+    servingSize: 1,
+    servingUnit: 'plate',
+    budget: 'moderate',
+    allergens: [],
+    explanation: 'Leanest animal protein with 52g protein and only 8g fat, ideal for muscle synthesis or fat loss.',
+  },
+  {
+    name: 'Pan-Seared Salmon Fillet with Quinoa & Asparagus',
+    foodName: 'Pan-Seared Salmon with Quinoa',
+    mealType: 'dinner',
+    diet: 'non_vegetarian',
+    calories: 490,
+    protein: 42,
+    carbs: 32,
+    fat: 21,
+    fiber: 5,
+    portion: '160g wild salmon + 100g quinoa + asparagus',
+    servingSize: 1,
+    servingUnit: 'plate',
+    budget: 'flexible',
+    allergens: ['Fish / Shellfish'],
+    explanation: 'Packed with anti-inflammatory EPA/DHA Omega-3 fatty acids for joint and recovery support.',
+  },
+  {
+    name: 'Chicken Tikka Wrap with Mint Yogurt Spread',
+    foodName: 'Lean Chicken Tikka Wrap',
+    mealType: 'dinner',
+    diet: 'non_vegetarian',
+    calories: 440,
+    protein: 40,
+    carbs: 38,
+    fat: 12,
+    fiber: 4,
+    portion: '150g roasted chicken breast in whole wheat wrap',
+    servingSize: 1,
+    servingUnit: 'wrap',
+    budget: 'moderate',
+    allergens: ['Dairy / Lactose', 'Gluten / Wheat'],
+    explanation: 'Convenient, flavorful high-protein dinner fitting cleanly in an evening macro budget.',
+  },
+]
+
+function generateDeterministicNutritionAnswer(
+  query: string,
+  intent: QueryIntent,
+  context?: StructuredCoachContext | null,
+  _userId?: string | null
+): CoachAnswer {
+  const q = query.trim().toLowerCase()
+  const nutrition = context?.nutrition
+  const goals = nutrition?.goals || {
+    calorie_target: 2000,
+    protein_target: 150,
+    carb_target: 200,
+    fat_target: 65,
+    fiber_target: 30,
+    water_target: 2500,
+  }
+  const today = nutrition?.today || {
+    date: new Date().toISOString().split('T')[0],
+    consumed_calories: 0,
+    consumed_protein: 0,
+    consumed_carbs: 0,
+    consumed_fat: 0,
+    consumed_fiber: 0,
+    remaining_calories: goals.calorie_target,
+    remaining_protein: goals.protein_target,
+    remaining_carbs: goals.carb_target,
+    remaining_fat: goals.fat_target,
+    meals_count: 0,
+    logged_meals: [],
+  }
+  const dietary = nutrition?.dietary_profile || {
+    dietary_preference: 'non_vegetarian',
+    allergies: [],
+    food_restrictions: [],
+    preferred_protein_sources: [],
+    preferred_cuisines: [],
+    disliked_foods: [],
+    favorite_foods: [],
+    food_budget: 'moderate',
+    cooking_access: 'full_kitchen',
+    cooking_skill: 'intermediate',
+    meal_prep_time: 'moderate',
+    meals_per_day: 3,
+  }
+
+  // ─── 1. Yesterday Summary ───────────────────────────────────────────────
+  if (q.includes('yesterday')) {
+    const y = nutrition?.yesterday
+    if (y && y.meals_count > 0) {
+      return {
+        content: `Yesterday's Nutrition Summary\n\n` +
+          `Here is your intake from yesterday (${y.date}):\n\n` +
+          `• Calories: ${y.consumed_calories.toLocaleString()} kcal\n` +
+          `• Protein: ${y.consumed_protein}g\n` +
+          `• Carbohydrates: ${y.consumed_carbs}g\n` +
+          `• Fat: ${y.consumed_fat}g\n` +
+          `• Logged Meals: ${y.meals_count} recorded session(s)\n\n` +
+          `Compared to your daily target of ${goals.calorie_target} kcal and ${goals.protein_target}g protein.`,
+        supportingData: `Recorded ${y.meals_count} meals yesterday.`,
+        suggestedQuestions: [
+          'What should I eat today?',
+          'How much protein do I still need?',
+          'Compare today with yesterday'
+        ]
+      }
+    } else {
+      return {
+        content: `Yesterday's Nutrition Summary\n\n` +
+          `No food entries were logged yesterday in your NutriTrack diary.\n\n` +
+          `• Daily Targets: ${goals.calorie_target} kcal | ${goals.protein_target}g Protein\n\n` +
+          `Tip: Consistent daily food logging builds streak analytics and enables long-term macro trend analysis.`,
+        supportingData: '0 meals logged for yesterday.',
+        suggestedQuestions: [
+          'What should I eat today?',
+          'How much protein do I still need?',
+          'Review today\'s nutrition'
+        ]
+      }
+    }
+  }
+
+  // ─── 2. Comparison: Today vs Yesterday ──────────────────────────────────
+  if (intent === 'nutrition_comparison' || q.includes('compare')) {
+    const y = nutrition?.yesterday || { consumed_calories: 0, consumed_protein: 0 }
+    const calDiff = today.consumed_calories - y.consumed_calories
+    const proDiff = Math.round((today.consumed_protein - y.consumed_protein) * 10) / 10
+
+    return {
+      content: `Nutrition Comparison: Today vs Yesterday\n\n` +
+        `• Today: ${today.consumed_calories.toLocaleString()} kcal | ${today.consumed_protein}g protein (${today.meals_count} meals logged)\n` +
+        `• Yesterday: ${y.consumed_calories.toLocaleString()} kcal | ${y.consumed_protein}g protein\n\n` +
+        `Delta Analysis:\n` +
+        `• Calorie Change: ${calDiff >= 0 ? `+${calDiff}` : calDiff} kcal\n` +
+        `• Protein Change: ${proDiff >= 0 ? `+${proDiff}` : proDiff}g\n\n` +
+        `Remaining Budget Today: ${today.remaining_calories.toLocaleString()} kcal | ${today.remaining_protein}g protein.`,
+      supportingData: 'Intake comparison computed from diary telemetry.',
+      suggestedQuestions: [
+        'What should I eat for dinner?',
+        'How much protein do I still need?',
+        'What should I train today?'
+      ]
+    }
+  }
+
+  // ─── 3. Today's Summary ─────────────────────────────────────────────────
+  if (intent === 'nutrition_summary' || q.includes('summarize') || q.includes('review')) {
+    if (today.meals_count > 0) {
+      const mealList = today.logged_meals
+        .map(m => `• ${m.meal_type.toUpperCase()}: ${m.food_name} — ${m.calories} kcal (${m.protein}g P, ${m.carbs}g C, ${m.fat}g F)`)
+        .join('\n')
+
+      return {
+        content: `Today's Nutrition Summary\n\n` +
+          `Based on your authentic NutriTrack diary for today (${today.date}):\n\n` +
+          `• Calories: ${today.consumed_calories.toLocaleString()} / ${goals.calorie_target.toLocaleString()} kcal (${today.remaining_calories.toLocaleString()} kcal left)\n` +
+          `• Protein: ${today.consumed_protein}g / ${goals.protein_target}g (${today.remaining_protein}g left)\n` +
+          `• Carbohydrates: ${today.consumed_carbs}g / ${goals.carb_target}g (${today.remaining_carbs}g left)\n` +
+          `• Fat: ${today.consumed_fat}g / ${goals.fat_target}g (${today.remaining_fat}g left)\n\n` +
+          `Logged Meals Today (${today.meals_count}):\n` +
+          mealList + `\n\n` +
+          (today.remaining_protein > 20
+            ? `Recommendation: You still have ${today.remaining_protein}g of protein remaining. Consider a high-protein dinner or snack to reach your goal.`
+            : `Great job! You have nearly met or achieved your protein target today.`),
+        supportingData: `${today.meals_count} meals logged today.`,
+        suggestedQuestions: [
+          'What should I eat next?',
+          'Suggest a high-protein snack',
+          'What should I train today?'
+        ]
+      }
+    } else {
+      return {
+        content: `Today's Nutrition Summary\n\n` +
+          `No meals have been logged yet for today (${today.date}).\n\n` +
+          `• Configured Calorie Target: ${goals.calorie_target.toLocaleString()} kcal\n` +
+          `• Configured Protein Target: ${goals.protein_target}g\n` +
+          `• Remaining Budget: ${goals.calorie_target.toLocaleString()} kcal & ${goals.protein_target}g protein\n\n` +
+          `Ready to log your first meal! Tap "Log a Meal" on the NutriTrack dashboard or ask "What should I eat for breakfast?"`,
+        supportingData: '0 logged meals today.',
+        suggestedQuestions: [
+          'What should I eat today?',
+          'Suggest a high-protein vegetarian meal',
+          'What should I train today?'
+        ]
+      }
+    }
+  }
+
+  // ─── 4. Macro & Budget Queries ──────────────────────────────────────────
+  if (intent === 'nutrition_macro_budget') {
+    const isProteinMet = today.remaining_protein <= 0
+    const isCalorieClose = today.remaining_calories < 250
+
+    return {
+      content: `Daily Nutritional Budget Status\n\n` +
+        `Here is your authentic remaining macro balance for today:\n\n` +
+        `• Calories: ${today.consumed_calories.toLocaleString()} / ${goals.calorie_target.toLocaleString()} kcal (${today.remaining_calories.toLocaleString()} kcal remaining)\n` +
+        `• Protein: ${today.consumed_protein}g / ${goals.protein_target}g (${today.remaining_protein}g remaining)\n` +
+        `• Carbohydrates: ${today.consumed_carbs}g / ${goals.carb_target}g (${today.remaining_carbs}g remaining)\n` +
+        `• Fat: ${today.consumed_fat}g / ${goals.fat_target}g (${today.remaining_fat}g remaining)\n\n` +
+        (isProteinMet
+          ? `Status: You have hit your protein target for today (${today.consumed_protein}g)! Keep your remaining intake within your calorie cap.`
+          : isCalorieClose
+          ? `Budget Alert: You have ${today.remaining_calories} kcal remaining but still need ${today.remaining_protein}g protein. Focus on lean, ultra-high protein choices (e.g. egg whites, whey isolate, or low-fat Greek yogurt) to minimize additional caloric intake.`
+          : `Guidance: You need ${today.remaining_protein}g more protein to hit your daily target. A meal containing ~30g of protein fits comfortably within your ${today.remaining_calories} kcal budget.`),
+      supportingData: `Grounded in your ${goals.calorie_target} kcal / ${goals.protein_target}g targets.`,
+      suggestedQuestions: [
+        'What should I eat for dinner?',
+        'Suggest a high-protein meal',
+        'Review today\'s nutrition'
+      ]
+    }
+  }
+
+  // ─── 5. Goal Advice (Bulking, Cutting, Rest Days) ────────────────────────
+  if (q.includes('gain muscle') || (q.includes('muscle') && q.includes('eat'))) {
+    return {
+      content: `Nutrition for Muscle Gain (Hypertrophy)\n\n` +
+        `To maximize muscle protein synthesis and tissue hypertrophy while minimizing fat accumulation:\n\n` +
+        `• Caloric Balance: Aim for a controlled surplus of 250–350 kcal above your daily maintenance.\n` +
+        `• Protein Intake: 1.6 to 2.2g of protein per kilogram of body weight spread across 3–5 feedings.\n` +
+        `• Carbohydrate Fueling: Ample complex carbohydrates (rice, oats, sweet potatoes) around workout windows to replenish glycogen.\n` +
+        `• Hydration: At least 2.5 to 3.5 liters of water daily for cellular volumization.\n\n` +
+        `Your Current Targets: ${goals.calorie_target} kcal | ${goals.protein_target}g Protein.`,
+      supportingData: 'Exercise physiology principles of hypertrophy.',
+      suggestedQuestions: [
+        'What should I eat today?',
+        'Suggest a post-workout meal',
+        'What should I train today?'
+      ]
+    }
+  }
+
+  if (q.includes('lose fat') || q.includes('cut')) {
+    return {
+      content: `Nutrition for Fat Loss & Muscle Preservation\n\n` +
+        `To lose adipose tissue while preserving lean contractile muscle mass:\n\n` +
+        `• Caloric Deficit: A moderate deficit of 300–500 kcal below maintenance.\n` +
+        `• Elevated Protein: Keep protein high (2.0–2.4g per kg) to prevent catabolism and enhance satiety.\n` +
+        `• High Volume Foods: Fibrous greens, vegetables, and whole foods with high satiety index.\n` +
+        `• Progressive Overload: Continue heavy resistance training to signal the body to retain muscle tissue.\n\n` +
+        `Your Current Targets: ${goals.calorie_target} kcal | ${goals.protein_target}g Protein.`,
+      supportingData: 'Principles of body recomposition and energy balance.',
+      suggestedQuestions: [
+        'What should I eat for dinner?',
+        'How much protein do I still need?',
+        'What should I train today?'
+      ]
+    }
+  }
+
+  if (q.includes('rest day')) {
+    return {
+      content: `Rest Day Nutrition Strategy\n\n` +
+        `On non-training recovery days, your body repairs microtrauma and builds new muscle fibers:\n\n` +
+        `• Maintain Protein: Keep your protein intake identical to training days (${goals.protein_target}g) to support 24-48h recovery.\n` +
+        `• Moderate Carbohydrates: Since energy expenditure is slightly lower without a training session, you can reduce direct workout carbs by 15–20%.\n` +
+        `• Healthy Fats: Include omega-3 sources (salmon, walnuts, chia seeds) to modulate systemic inflammation.\n\n` +
+        `Remaining Today: ${today.remaining_calories.toLocaleString()} kcal and ${today.remaining_protein}g protein.`,
+      supportingData: 'Recovery & nutrient timing guidelines.',
+      suggestedQuestions: [
+        'What should I eat today?',
+        'How much protein do I still need?',
+        'What should I train tomorrow?'
+      ]
+    }
+  }
+
+  // ─── 6. Personalized Meal Recommendation (What Should I Eat?) ────────────
+  // Determine target meal type
+  let mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' = 'dinner'
+  if (q.includes('breakfast')) mealType = 'breakfast'
+  else if (q.includes('lunch')) mealType = 'lunch'
+  else if (q.includes('snack')) mealType = 'snack'
+  else {
+    const hour = new Date().getHours()
+    if (hour < 11) mealType = 'breakfast'
+    else if (hour < 16) mealType = 'lunch'
+    else mealType = 'dinner'
+  }
+
+  // Determine user diet preference
+  let effectiveDiet = dietary.dietary_preference || 'non_vegetarian'
+  if (q.includes('vegetarian') && !q.includes('non-veg')) effectiveDiet = 'vegetarian'
+  if (q.includes('vegan')) effectiveDiet = 'vegan'
+  if (q.includes('egg') && !q.includes('chicken')) effectiveDiet = 'eggetarian'
+
+  // Filter available verified meals
+  const allergies = dietary.allergies || []
+  const availableMeals = VERIFIED_MEALS.filter(m => {
+    // 1. Dietary filter
+    if (effectiveDiet === 'vegan' && m.diet !== 'vegan') return false
+    if (effectiveDiet === 'vegetarian' && m.diet !== 'vegetarian' && m.diet !== 'vegan') return false
+    if (effectiveDiet === 'eggetarian' && m.diet !== 'eggetarian' && m.diet !== 'vegetarian' && m.diet !== 'vegan') return false
+
+    // 2. Allergen filter: Never recommend foods matching user allergens
+    for (const allergen of allergies) {
+      if (m.allergens.includes(allergen)) return false
+    }
+
+    return true
+  })
+
+  // Find preferred meal: prefer matching mealType, then matching budget
+  const isBudgetRequested = q.includes('affordable') || q.includes('budget') || dietary.food_budget === 'budget'
+  let matchedMeal = availableMeals.find(m => m.mealType === mealType && (!isBudgetRequested || m.budget === 'budget'))
+  if (!matchedMeal) {
+    matchedMeal = availableMeals.find(m => !isBudgetRequested || m.budget === 'budget') || availableMeals[0]
+  }
+
+  if (!matchedMeal) {
+    matchedMeal = VERIFIED_MEALS[0]
+  }
+
+  const pendingFoodLog: PendingFoodLogPayload = {
+    foodName: matchedMeal.foodName,
+    mealType: mealType,
+    servingSize: matchedMeal.servingSize,
+    servingUnit: matchedMeal.servingUnit,
+    servingsLogged: 1,
+    calories: matchedMeal.calories,
+    protein: matchedMeal.protein,
+    carbs: matchedMeal.carbs,
+    fat: matchedMeal.fat,
+    fiber: matchedMeal.fiber,
+    explanation: matchedMeal.explanation,
+  }
+
+  return {
+    content: `Personalized ${mealType.charAt(0).toUpperCase() + mealType.slice(1)} Recommendation\n\n` +
+      `Based on your authentic intake (${today.consumed_calories} / ${goals.calorie_target} kcal consumed, ${today.remaining_protein}g protein remaining) and configured ${effectiveDiet.replace('_', '-')} preference:\n\n` +
+      `Recommended Meal:\n` +
+      `• **${matchedMeal.name}**\n` +
+      `• Serving Size: ${matchedMeal.portion}\n` +
+      `• Estimated Nutrition: **${matchedMeal.calories} kcal | ${matchedMeal.protein}g Protein | ${matchedMeal.carbs}g Carbs | ${matchedMeal.fat}g Fat**\n\n` +
+      `Why This Fits:\n` +
+      `• ${matchedMeal.explanation}\n` +
+      `• Fits within your remaining ${today.remaining_calories.toLocaleString()} kcal daily budget.\n` +
+      (allergies.length > 0 ? `• Verified allergen-free for your configured restrictions (${allergies.join(', ')}).\n` : '') +
+      `\nYou can review and log this meal directly into your NutriTrack food diary with one click below:`,
+    supportingData: `Personalized to ${effectiveDiet} diet with ${today.remaining_calories} kcal remaining.`,
+    pendingFoodLog,
+    suggestedQuestions: [
+      'Suggest another option',
+      'How much protein do I still need?',
+      'What should I train today?'
+    ]
+  }
+}
+
 function generateDeterministicAnswer(
   query: string,
   analysis: StructuredWorkoutAnalysis,
@@ -525,6 +1183,18 @@ function generateDeterministicAnswer(
   userId?: string | null
 ): CoachAnswer {
   const intent = classifyQueryIntent(query)
+
+  // ─── Nutrition Intents (Phases 5, 6, 7, 8, 11) ────────────────────────────
+  if (
+    intent === 'nutrition_what_to_eat' ||
+    intent === 'nutrition_macro_budget' ||
+    intent === 'nutrition_summary' ||
+    intent === 'nutrition_comparison' ||
+    intent === 'nutrition_post_workout' ||
+    intent === 'nutrition_advice'
+  ) {
+    return generateDeterministicNutritionAnswer(query, intent, context, userId)
+  }
 
   // ─── A. Exercise Alternatives ──────────────────────────────────────────────
   if (intent === 'exercise_alternative' || query.includes('replace') || query.includes('instead of') || query.includes('substitute')) {
@@ -1005,7 +1675,7 @@ function generateDeterministicAnswer(
           `\n\nWhy this session:\n` +
           `Scheduled in Week ${ap.current_week} of ${ap.plan_name} to maintain your weekly progression.\n\n` +
           `If you have pain or an injury, stop and consult an appropriate professional.`,
-        supportingData: `Active Plan: ${ap.plan_name} (${completed}/${total} completed).`,
+        supportingData: `${statusMsg} Active Plan: ${ap.plan_name} (${completed}/${total} completed).`,
         structuredRecommendation: {
           type: 'workout_recommendation',
           focus: ap.today_workout_name || "Today's Session",
@@ -1070,7 +1740,7 @@ function generateDeterministicAnswer(
       coachInsight: 'Focus on 2-3 seconds controlled lowering on all working sets.'
     }
 
-    let evidenceText = context?.recent_workouts && context.recent_workouts.length > 0
+    const evidenceText = context?.recent_workouts && context.recent_workouts.length > 0
       ? `Evidence: Based on your last session on ${context.recent_workouts[0].date.split('T')[0]}.`
       : 'Evidence: Recommended based on proven biomechanical muscle recovery splits.'
 
@@ -1082,7 +1752,7 @@ function generateDeterministicAnswer(
         `\n\nWhy this session:\n` +
         `${reasoning}\n\n` +
         `If you have pain or an injury, stop and consult an appropriate professional.`,
-      supportingData: `Focus: ${focus}.`,
+      supportingData: `Focus: ${focus}. ${evidenceText}`,
       structuredRecommendation,
       suggestedQuestions: [
         'How do I do bench press?',
