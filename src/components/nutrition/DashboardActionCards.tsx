@@ -32,13 +32,13 @@ export function DashboardActionCards({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 items-stretch w-full">
       {/* ─── CARD 1: LOG A MEAL ─── */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-surface-200/90 shadow-2xs hover:border-emerald-200/80 transition-all flex flex-col justify-between">
-        <div className="space-y-3">
-          <div className="flex items-start gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center flex-shrink-0 shadow-2xs">
-              <Plus size={24} className="stroke-[2.5]" />
+      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-surface-200/90 shadow-2xs hover:border-emerald-200/80 transition-all flex flex-col justify-between h-full">
+        <div className="space-y-3.5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center flex-shrink-0 shadow-2xs">
+              <Plus size={20} className="stroke-[2.5]" />
             </div>
 
             <div>
@@ -46,7 +46,7 @@ export function DashboardActionCards({
                 Log Food
               </h3>
               <p className="text-xs text-surface-500 font-medium mt-1 leading-relaxed">
-                Add food items to your diary to track calories and macros with precision.
+                Record your food and serving quantities to track calories and macros accurately.
               </p>
             </div>
           </div>
@@ -54,45 +54,49 @@ export function DashboardActionCards({
           {/* Primary Action Button */}
           <button
             onClick={() => onOpenAddModal('breakfast')}
-            id="sidebar-log-meal-btn"
-            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-all flex items-center justify-center gap-2"
+            id="nutritrack-log-food-btn"
+            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-all flex items-center justify-center gap-2 active:scale-[0.99]"
           >
-            <Plus size={16} />
+            <Plus size={15} />
             <span>Log Food</span>
           </button>
 
           {/* Quick-Select Meal Type Chips */}
-          <div className="pt-2 border-t border-surface-100">
+          <div className="pt-2.5 border-t border-surface-100">
             <span className="text-[11px] font-bold text-surface-400 uppercase tracking-wider block mb-2">
-              Quick select meal
+              Quick select meal category
             </span>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               <button
                 onClick={() => onOpenAddModal('breakfast')}
-                className="py-1.5 px-2.5 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-surface-100 border border-surface-200/70 transition-colors flex items-center gap-1.5"
+                className="py-1.5 px-2 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-emerald-50 hover:text-emerald-800 border border-surface-200/70 transition-colors flex items-center justify-center gap-1.5"
+                title="Log Breakfast"
               >
-                <Coffee size={13} className="text-amber-600" />
+                <Coffee size={13} className="text-amber-600 shrink-0" />
                 <span>Breakfast</span>
               </button>
               <button
                 onClick={() => onOpenAddModal('lunch')}
-                className="py-1.5 px-2.5 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-surface-100 border border-surface-200/70 transition-colors flex items-center gap-1.5"
+                className="py-1.5 px-2 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-emerald-50 hover:text-emerald-800 border border-surface-200/70 transition-colors flex items-center justify-center gap-1.5"
+                title="Log Lunch"
               >
-                <Sun size={13} className="text-emerald-600" />
+                <Sun size={13} className="text-emerald-600 shrink-0" />
                 <span>Lunch</span>
               </button>
               <button
                 onClick={() => onOpenAddModal('dinner')}
-                className="py-1.5 px-2.5 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-surface-100 border border-surface-200/70 transition-colors flex items-center gap-1.5"
+                className="py-1.5 px-2 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-emerald-50 hover:text-emerald-800 border border-surface-200/70 transition-colors flex items-center justify-center gap-1.5"
+                title="Log Dinner"
               >
-                <Moon size={13} className="text-indigo-600" />
+                <Moon size={13} className="text-indigo-600 shrink-0" />
                 <span>Dinner</span>
               </button>
               <button
                 onClick={() => onOpenAddModal('snack')}
-                className="py-1.5 px-2.5 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-surface-100 border border-surface-200/70 transition-colors flex items-center gap-1.5"
+                className="py-1.5 px-2 rounded-lg text-xs font-semibold text-surface-700 bg-surface-50 hover:bg-emerald-50 hover:text-emerald-800 border border-surface-200/70 transition-colors flex items-center justify-center gap-1.5"
+                title="Log Snacks"
               >
-                <Cookie size={13} className="text-purple-600" />
+                <Cookie size={13} className="text-purple-600 shrink-0" />
                 <span>Snacks</span>
               </button>
             </div>
@@ -101,11 +105,11 @@ export function DashboardActionCards({
       </div>
 
       {/* ─── CARD 2: ANALYZE MEAL PHOTO (AI FOOD VISION) ─── */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-surface-200/90 shadow-2xs hover:border-emerald-200/80 transition-all">
-        <div className="space-y-3">
-          <div className="flex items-start gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-              <Camera size={22} />
+      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-surface-200/90 shadow-2xs hover:border-emerald-200/80 transition-all flex flex-col justify-between h-full">
+        <div className="space-y-3.5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+              <Camera size={20} />
             </div>
 
             <div>
@@ -113,22 +117,22 @@ export function DashboardActionCards({
                 <h3 className="text-base font-black text-surface-900 tracking-tight leading-tight">
                   Analyze Meal Photo
                 </h3>
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.2 rounded-full border border-emerald-200">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
                   AI Vision
                 </span>
               </div>
               <p className="text-xs text-surface-500 font-medium mt-1 leading-relaxed">
-                Take or upload a photo of your food. AI identifies ingredients and estimates portion nutrition.
+                AI-assisted meal recognition and nutrition estimation from camera capture or upload.
               </p>
             </div>
           </div>
 
           {/* Action Buttons: Camera & Upload */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
             <button
               onClick={handleCameraClick}
-              id="sidebar-camera-btn"
-              className="py-2.5 px-3 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200 border border-emerald-300 transition-colors flex items-center justify-center gap-1.5"
+              id="nutritrack-camera-btn"
+              className="py-2.5 px-3 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-colors flex items-center justify-center gap-1.5 active:scale-[0.99]"
             >
               <Camera size={14} />
               <span>Camera</span>
@@ -136,11 +140,11 @@ export function DashboardActionCards({
 
             <button
               onClick={handleUploadClick}
-              id="sidebar-upload-btn"
-              className="py-2.5 px-3 rounded-xl text-xs font-bold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-200 transition-colors flex items-center justify-center gap-1.5"
+              id="nutritrack-upload-btn"
+              className="py-2.5 px-3 rounded-xl text-xs font-bold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-200 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.99]"
             >
               <Upload size={14} />
-              <span>Upload</span>
+              <span>Upload Photo</span>
             </button>
           </div>
 
@@ -151,9 +155,9 @@ export function DashboardActionCards({
             className="hidden"
           />
 
-          <div className="flex items-center gap-1.5 text-[11px] text-surface-400 font-medium pt-1">
-            <Sparkles size={12} className="text-emerald-500 shrink-0" />
-            <span>Review and edit every detected item before confirming.</span>
+          <div className="pt-2.5 border-t border-surface-100 flex items-center gap-1.5 text-[11px] text-surface-500 font-medium">
+            <Sparkles size={12} className="text-emerald-600 shrink-0" />
+            <span>Review, edit detected items, and adjust servings before saving.</span>
           </div>
         </div>
       </div>

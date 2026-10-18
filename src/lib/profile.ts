@@ -18,7 +18,15 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     return null
   }
 
-  return data as Profile
+  const profile = data as Profile
+  if (profile && !profile.sex) {
+    try {
+      const storedSex = localStorage.getItem(`gymtrack_sex_${userId}`)
+      if (storedSex) profile.sex = storedSex
+    } catch {}
+  }
+
+  return profile
 }
 
 // ─── Create a profile (on signup) ────────────────────────────────────────────
@@ -56,8 +64,23 @@ export async function updateProfile(
     .single()
 
   if (error) {
+    // Graceful fallback if database column 'sex' is missing in schema cache
+    if (error.message && error.message.includes('column') && 'sex' in updates) {
+      const { sex, ...restUpdates } = updates
+      const retry = await supabase.from('profiles').update(restUpdates).eq('id', userId).select().single()
+      if (!retry.error) {
+        if (sex) {
+          try { localStorage.setItem(`gymtrack_sex_${userId}`, sex) } catch {}
+        }
+        return { data: { ...(retry.data as Profile), sex: sex ?? null }, error: null }
+      }
+    }
     console.error('[GYMTrack] updateProfile error:', error.message)
     return { data: null, error: 'Failed to save changes. Please try again.' }
+  }
+
+  if (data && 'sex' in updates && updates.sex) {
+    try { localStorage.setItem(`gymtrack_sex_${userId}`, updates.sex) } catch {}
   }
 
   return { data: data as Profile, error: null }

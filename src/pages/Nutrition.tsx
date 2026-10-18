@@ -214,11 +214,10 @@ export default function Nutrition() {
   }
 
   return (
-    <div className="relative min-h-screen -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 bg-white [background-image:radial-gradient(#10b981_0.75px,transparent_0.75px)] [background-size:20px_20px] animate-fade-in">
-      <div className="max-w-6xl mx-auto w-full space-y-6 pb-16">
-        {/* ─── 1. HEADER & SUB-NAVIGATION ─── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
-          <div>
+    <div className="animate-fade-in space-y-6 pb-6 w-full">
+      {/* ─── 1. HEADER & SUB-NAVIGATION ─── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl sm:text-3xl font-black text-surface-900 tracking-tight flex items-center gap-2">
                 <span>NutriTrack</span>
@@ -313,53 +312,50 @@ export default function Nutrition() {
                 <p className="text-xs font-semibold">Loading daily nutrition entries...</p>
               </div>
             ) : (
-              /* ─── TWO-COLUMN DESKTOP LAYOUT (Matches Reference Dashboard) ─── */
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* ─── MAIN COLUMN (Left, 8 Cols) ─── */}
-                <div className="lg:col-span-8 space-y-6">
-                  {/* Section 1: Today's Nutrition Card (Calorie Ring + Macro Bars) */}
-                  <TodaysProgressCard
-                    consumed={dailyTotals.calories}
-                    target={goals.calorie_target}
-                    protein={dailyTotals.protein}
-                    proteinTarget={goals.protein_target}
-                    carbs={dailyTotals.carbs}
-                    carbsTarget={goals.carb_target}
-                    fat={dailyTotals.fat}
-                    fatTarget={goals.fat_target}
-                    fiber={dailyTotals.fiber}
-                    fiberTarget={goals.fiber_target}
-                    selectedDate={selectedDate}
-                    onEditGoals={() => setIsGoalsModalOpen(true)}
-                  />
+              /* ─── UNIFIED VERTICAL FLOW (Directly Below Today's Nutrition) ─── */
+              <div className="space-y-6">
+                {/* Section C: Today's Nutrition Summary Card (Calorie Ring + Macro Bars) */}
+                <TodaysProgressCard
+                  consumed={dailyTotals.calories}
+                  target={goals.calorie_target}
+                  protein={dailyTotals.protein}
+                  proteinTarget={goals.protein_target}
+                  carbs={dailyTotals.carbs}
+                  carbsTarget={goals.carb_target}
+                  fat={dailyTotals.fat}
+                  fatTarget={goals.fat_target}
+                  fiber={dailyTotals.fiber}
+                  fiberTarget={goals.fiber_target}
+                  selectedDate={selectedDate}
+                  onEditGoals={() => setIsGoalsModalOpen(true)}
+                />
 
-                  {/* Section 2: Today's Logged Meals (Recent Food Log) */}
-                  <RecentFoodLog
-                    entries={entries}
-                    selectedDate={selectedDate}
-                    onOpenAddModal={handleOpenAdd}
-                    onOpenEditModal={handleOpenEdit}
-                    onDeleteEntry={handleDeleteFoodEntry}
-                  />
+                {/* Section D: Log Food and Analyze Meal Photo (Appearing directly below Today's Nutrition) */}
+                <DashboardActionCards
+                  onOpenAddModal={handleOpenAdd}
+                  onOpenCameraModal={handleOpenCamera}
+                />
 
-                  {/* Section 3: 7-Day Nutrition Summary */}
-                  <WeeklySummaryCard
-                    userId={userId}
-                    calorieTarget={goals.calorie_target}
-                    proteinTarget={goals.protein_target}
-                  />
-                </div>
+                {/* Section E: Today's Logged Meals (Recent Food Log, Full Width) */}
+                <RecentFoodLog
+                  entries={entries}
+                  selectedDate={selectedDate}
+                  onOpenAddModal={handleOpenAdd}
+                  onOpenEditModal={handleOpenEdit}
+                  onDeleteEntry={handleDeleteFoodEntry}
+                />
 
-                {/* ─── SECONDARY COLUMN (Right, 4 Cols) ─── */}
-                <div className="lg:col-span-4 space-y-5">
-                  {/* Action Cards: Log a Meal + Snap Your Meal */}
-                  <DashboardActionCards
-                    onOpenAddModal={handleOpenAdd}
-                    onOpenCameraModal={handleOpenCamera}
-                  />
+                {/* Section F: Useful History, Summary, and Insights */}
+                <WeeklySummaryCard
+                  userId={userId}
+                  calorieTarget={goals.calorie_target}
+                  proteinTarget={goals.protein_target}
+                />
 
+                {/* Daily Insight & Configured Targets in Balanced 2-Column Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   {/* Data-Backed Daily Insight */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-2">
+                  <div className="p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-2">
                     <div className="flex items-center gap-2 text-emerald-800">
                       <Lightbulb size={16} className="text-emerald-600" />
                       <h4 className="text-xs font-black uppercase tracking-wider text-surface-900">
@@ -373,7 +369,7 @@ export default function Nutrition() {
                   </div>
 
                   {/* Daily Goals Summary Card */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-3">
+                  <div className="p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Target size={16} className="text-emerald-600" />
@@ -385,16 +381,16 @@ export default function Nutrition() {
                         onClick={() => setIsGoalsModalOpen(true)}
                         className="text-[11px] font-bold text-emerald-700 hover:underline"
                       >
-                        Edit
+                        Adjust Targets
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                       <div className="p-2.5 rounded-xl bg-surface-50 border border-surface-100">
                         <span className="text-[10px] text-surface-400 font-bold block uppercase">
                           Calories
                         </span>
-                        <span className="text-sm font-black text-surface-900">
+                        <span className="text-xs font-black text-surface-900">
                           {goals.calorie_target} kcal
                         </span>
                       </div>
@@ -402,7 +398,7 @@ export default function Nutrition() {
                         <span className="text-[10px] text-emerald-700 font-bold block uppercase">
                           Protein
                         </span>
-                        <span className="text-sm font-black text-surface-900">
+                        <span className="text-xs font-black text-surface-900">
                           {goals.protein_target}g
                         </span>
                       </div>
@@ -410,7 +406,7 @@ export default function Nutrition() {
                         <span className="text-[10px] text-amber-800 font-bold block uppercase">
                           Carbs
                         </span>
-                        <span className="text-sm font-black text-surface-900">
+                        <span className="text-xs font-black text-surface-900">
                           {goals.carb_target}g
                         </span>
                       </div>
@@ -418,7 +414,7 @@ export default function Nutrition() {
                         <span className="text-[10px] text-rose-700 font-bold block uppercase">
                           Fat
                         </span>
-                        <span className="text-sm font-black text-surface-900">
+                        <span className="text-xs font-black text-surface-900">
                           {goals.fat_target}g
                         </span>
                       </div>
@@ -490,7 +486,6 @@ export default function Nutrition() {
           onLogMealItems={handleBatchLogItems}
           onSwitchToLibrary={() => setActiveTab('library')}
         />
-      </div>
     </div>
   )
 }

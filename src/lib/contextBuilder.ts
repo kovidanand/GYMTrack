@@ -110,6 +110,7 @@ export interface StructuredCoachContext {
     target_weight?: number | null
     target_date?: string | null
     age?: number | null
+    sex?: string | null
     dietary_preference?: string
     allergies?: string[]
   }
@@ -514,6 +515,7 @@ export async function buildCoachContext(
         target_weight: resolvedProfile.target_weight,
         target_date: resolvedProfile.target_date,
         age: resolvedProfile.age,
+        sex: resolvedProfile.sex,
         dietary_preference: resolvedProfile.dietary_preference,
         allergies: resolvedProfile.allergies,
       },
