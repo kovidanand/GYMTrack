@@ -75,18 +75,18 @@ export default function Profile() {
       />
 
       {/* ── Sub-navigation Tabs: Nutrition & Fitness Profile vs Records & Tools ── */}
-      <div className="flex items-center gap-2 border-b border-surface-200 pb-2">
+      <div className="flex items-center gap-2 border-b border-surface-200 pb-2 overflow-x-auto no-scrollbar max-w-full">
         <button
           type="button"
           onClick={() => setActiveProfileTab('nutrition_fitness')}
           id="profile-tab-nutrition"
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap shrink-0 transition-all ${
             activeProfileTab === 'nutrition_fitness'
               ? 'bg-brand-600 text-white shadow-xs'
               : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'
           }`}
         >
-          <Sparkles size={15} />
+          <Sparkles size={15} className="shrink-0" />
           <span>Fitness & Nutrition Profile</span>
         </button>
 
@@ -94,13 +94,13 @@ export default function Profile() {
           type="button"
           onClick={() => setActiveProfileTab('records')}
           id="profile-tab-records"
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap shrink-0 transition-all ${
             activeProfileTab === 'records'
               ? 'bg-surface-900 text-white shadow-xs'
               : 'text-surface-600 hover:text-surface-900 hover:bg-surface-100'
           }`}
         >
-          <Trophy size={15} />
+          <Trophy size={15} className="shrink-0" />
           <span>Personal Records & Tools</span>
         </button>
       </div>
@@ -198,9 +198,9 @@ export default function Profile() {
       {/* ── Account Session & Logout ── */}
       <section aria-label="Account session" className="pt-2 border-t border-surface-200/80">
         <div className="card p-4 sm:p-5 bg-white border border-surface-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 className="text-sm font-bold text-surface-900">Account Session</h3>
-            <p className="text-xs text-surface-500 mt-0.5">
+            <p className="text-xs text-surface-500 mt-0.5 break-all">
               Signed in as <span className="font-semibold text-surface-700">{user.email || 'Authenticated User'}</span>
             </p>
           </div>

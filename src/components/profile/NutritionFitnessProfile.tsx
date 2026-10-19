@@ -276,6 +276,7 @@ export function NutritionFitnessProfile() {
     setSaving(false)
 
     if (!error) {
+      setValidationError(null)
       setToastMessage('Profile updated successfully!')
       // Dispatch shared event for real-time coach and nutrition context updates
       window.dispatchEvent(new CustomEvent('gymtrack:profile_updated', { detail: updates }))
@@ -325,17 +326,17 @@ export function NutritionFitnessProfile() {
         <div className="flex items-center gap-3.5 min-w-0">
           <Avatar name={fullName} size="lg" className="shrink-0" />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
-              <h2 className="text-base sm:text-lg font-bold text-surface-900 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-surface-900 tracking-tight break-words min-w-0 leading-snug">
                 {fullName}
               </h2>
               {fitnessGoalLabel[primaryGoal] && (
-                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
+                <span className="self-start sm:self-auto shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
                   {fitnessGoalLabel[primaryGoal]}
                 </span>
               )}
             </div>
-            <p className="text-xs text-surface-500 truncate mt-0.5 font-medium">
+            <p className="text-xs text-surface-500 truncate mt-0.5 font-medium max-w-full">
               {user?.email}
             </p>
           </div>
@@ -844,7 +845,7 @@ export function NutritionFitnessProfile() {
           onClick={handleSaveProfile}
           disabled={saving}
           id="profile-save-mobile-sticky-btn"
-          className="px-5 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-60 min-h-[42px] active:scale-95 shrink-0"
+          className="px-5 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-60 min-h-[44px] active:scale-95 shrink-0"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
           <span>{saving ? 'Saving…' : 'Save Changes'}</span>

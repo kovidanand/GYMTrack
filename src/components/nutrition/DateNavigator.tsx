@@ -235,7 +235,7 @@ export function DateNavigator({
           ref={popoverRef}
           role="dialog"
           aria-label="Calendar date picker"
-          className="absolute top-full right-0 mt-2 z-50 w-[310px] sm:w-[330px] p-4 bg-white rounded-2xl shadow-xl border border-surface-200 animate-scale-in"
+          className="absolute top-full right-0 mt-2 z-50 w-[calc(100vw-2rem)] sm:w-[330px] max-w-[330px] p-4 bg-white rounded-2xl shadow-xl border border-surface-200 animate-scale-in"
         >
           {/* Popover Header: Month/Year navigation & Close */}
           <div className="flex items-center justify-between pb-3 border-b border-surface-100">

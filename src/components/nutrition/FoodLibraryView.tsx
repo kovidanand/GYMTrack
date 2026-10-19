@@ -298,7 +298,7 @@ export function FoodLibraryView({
           <RadixDialog.Portal>
             <RadixDialog.Overlay className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-xs animate-fade-in" />
             <RadixDialog.Content
-              className="fixed z-[101] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md bg-white rounded-2xl shadow-2xl p-5 sm:p-6 animate-scale-in focus:outline-none"
+              className="fixed z-[101] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl p-5 sm:p-6 animate-scale-in focus:outline-none"
               aria-describedby="serving-modal-desc"
             >
               <div className="flex items-center justify-between pb-3 border-b border-surface-200">

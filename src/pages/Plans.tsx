@@ -468,41 +468,41 @@ export default function Plans() {
                           targetReps: we.reps || '8-12',
                           restSeconds: we.rest_seconds || 90
                         })}
-                        className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 group ${
+                        className={`p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5 sm:gap-3 group ${
                           isCompleted
                             ? 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300'
                             : 'bg-surface-50/60 border-surface-200 hover:border-brand-300 hover:bg-surface-50 shadow-2xs'
                         }`}
                       >
                         {/* Video Thumbnail Box - Clean 16:9 ratio, seamless neutral surface, no black background */}
-                        <div className="w-20 sm:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 flex-shrink-0 relative border border-surface-200/80 shadow-2xs">
+                        <div className="w-16 sm:w-20 md:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 flex-shrink-0 relative border border-surface-200/80 shadow-2xs">
                           <ExerciseMedia exercise={ex} variant="thumbnail" />
                         </div>
 
                         {/* Title & Sets */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-extrabold text-surface-400">#{idx + 1}</span>
-                            <h4 className="text-sm font-bold text-surface-900 group-hover:text-brand-600 transition-colors truncate">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-xs font-extrabold text-surface-400 shrink-0">#{idx + 1}</span>
+                            <h4 className="text-xs sm:text-sm font-bold text-surface-900 group-hover:text-brand-600 transition-colors truncate">
                               {ex.name}
                             </h4>
                           </div>
 
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                             {ex.muscle_group && (
                               <MuscleGroupBadge group={ex.muscle_group} />
                             )}
-                            <span className="text-[11px] font-semibold text-surface-500">
+                            <span className="text-[10px] sm:text-[11px] font-semibold text-surface-500 whitespace-nowrap">
                               {we.sets} × {we.reps}
                             </span>
                           </div>
                         </div>
 
                         {/* Completion Status */}
-                        <div>
+                        <div className="flex-shrink-0">
                           {isCompleted ? (
-                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
-                              <CheckCircle2 size={14} className="text-emerald-600" /> Done
+                            <span className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-emerald-700 bg-emerald-100 px-2 sm:px-2.5 py-1 rounded-full whitespace-nowrap">
+                              <CheckCircle2 size={13} className="text-emerald-600" /> Done
                             </span>
                           ) : (
                             <button
