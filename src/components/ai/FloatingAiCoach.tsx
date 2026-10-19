@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { 
   Bot, 
   X, 
@@ -67,10 +68,13 @@ export function FloatingAiCoach() {
     'What should I train today?'
   ]
 
+  const location = useLocation()
+  const isProfile = location.pathname === '/profile'
+
   if (!user) return null
 
   return (
-    <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-40 select-none">
+    <div className={`fixed ${isProfile ? 'bottom-32' : 'bottom-20'} sm:bottom-6 right-3 sm:right-6 z-40 select-none`}>
       {/* ── Collapsed Floating Button (Compact Circular FAB) ── */}
       {!isOpen && (
         <button

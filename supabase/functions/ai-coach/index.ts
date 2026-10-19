@@ -25,6 +25,7 @@ async function callGemini(
     ...(configuredModel ? [configuredModel] : []),
     "gemini-1.5-flash",
     "gemini-2.0-flash",
+    "gemini-2.0-flash-exp",
     "gemini-1.5-flash-8b",
     "gemini-1.5-pro",
     "gemini-flash-latest",
@@ -67,6 +68,8 @@ async function callGemini(
 
       if (resp.status === 429) {
         isRateLimited = true;
+        // Brief pause before trying fallback model to allow per-second rate limits to clear
+        await new Promise((r) => setTimeout(r, 750));
       }
 
       // If model not found (404), overloaded (503), rate limited (429), or unsupported param (400), try next candidate

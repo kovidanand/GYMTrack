@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
-  Sparkles,
   Target,
   Salad,
-  Wallet,
-  Flame,
+  Sparkles,
   CheckCircle2,
   Loader2,
   ShieldAlert,
@@ -12,7 +10,12 @@ import {
   User,
   Scale,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Sliders,
+  Utensils,
+  Clock,
+  Heart,
+  ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/shared'
@@ -29,6 +32,16 @@ import type { NutritionGoals } from '@/types/nutrition'
 import { NutritionGoalsModal } from '@/components/nutrition/NutritionGoalsModal'
 import { getNutritionGoals, saveNutritionGoals, DEFAULT_NUTRITION_GOALS } from '@/lib/nutritionService'
 import { getActiveWorkoutPlan } from '@/lib/workouts'
+
+const fitnessGoalLabel: Record<string, string> = {
+  build_muscle:       'Muscle Gain',
+  lose_weight:        'Weight Loss / Fat Loss',
+  recomposition:      'Body Recomposition',
+  improve_strength:   'Strength & Power',
+  maintain_fitness:   'General Fitness',
+  weight_maintenance: 'Maintenance',
+  increase_endurance: 'Athletic Endurance',
+}
 
 const COMMON_ALLERGIES = [
   'Peanuts',
@@ -59,7 +72,7 @@ const CUISINES = [
   'South Indian',
   'Mediterranean',
   'Asian',
-  'Western / Continental',
+  'Continental / Western',
   'Middle Eastern',
 ]
 
@@ -72,39 +85,43 @@ export function NutritionFitnessProfile() {
   const [isGoalsModalOpen, setIsGoalsModalOpen] = useState(false)
   const [activePlanName, setActivePlanName] = useState<string | null>(null)
 
-  // Form states & feedback
+  // Feedback states
   const [saving, setSaving] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
 
-  // ─── SECTION A: PERSONAL INFORMATION ───
+  // ─── 1. PERSONAL INFORMATION ───
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [age, setAge] = useState<string>('')
   const [height, setHeight] = useState<string>('')
   const [weight, setWeight] = useState<string>('')
   const [sex, setSex] = useState<string>('')
+  const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>('metric')
 
-  // ─── SECTION B: FITNESS GOALS ───
+  // ─── 2. FITNESS GOALS ───
   const [primaryGoal, setPrimaryGoal] = useState<string>('build_muscle')
   const [secondaryGoal, setSecondaryGoal] = useState<string>('')
   const [targetWeight, setTargetWeight] = useState<string>('')
   const [targetDate, setTargetDate] = useState<string>('')
   const [experienceLevel, setExperienceLevel] = useState<string>('intermediate')
   const [trainingFrequency, setTrainingFrequency] = useState<number>(4)
+  const [sessionDuration, setSessionDuration] = useState<number>(60)
 
-  // ─── SECTION C: NUTRITION PREFERENCES ───
+  // ─── 3. NUTRITION PREFERENCES ───
   const [dietaryPref, setDietaryPref] = useState<DietaryPreference>('non_vegetarian')
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([])
   const [customAllergyInput, setCustomAllergyInput] = useState('')
-  const [selectedProteins, setSelectedProteins] = useState<string[]>([])
+  const [dislikedFoodsInput, setDislikedFoodsInput] = useState('')
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([])
+  const [mealsPerDay, setMealsPerDay] = useState<number>(3)
+
+  // ─── 4. AI PERSONALIZATION ───
   const [foodBudget, setFoodBudget] = useState<FoodBudget>('moderate')
   const [cookingAccess, setCookingAccess] = useState<CookingAccess>('full_kitchen')
   const [cookingSkill, setCookingSkill] = useState<CookingSkill>('intermediate')
   const [mealPrepTime, setMealPrepTime] = useState<MealPrepTime>('moderate')
-  const [mealsPerDay, setMealsPerDay] = useState<number>(3)
-  const [dislikedFoodsInput, setDislikedFoodsInput] = useState('')
+  const [selectedProteins, setSelectedProteins] = useState<string[]>([])
   const [favoriteFoodsInput, setFavoriteFoodsInput] = useState('')
 
   // Initialize from authenticated profile
@@ -123,17 +140,19 @@ export function NutritionFitnessProfile() {
       setTargetDate(profile.target_date || '')
       setExperienceLevel(profile.experience_level || 'intermediate')
       setTrainingFrequency(profile.training_frequency || 4)
+      setSessionDuration(profile.session_duration || 60)
 
       setDietaryPref(profile.dietary_preference || 'non_vegetarian')
       setSelectedAllergies(profile.allergies || [])
-      setSelectedProteins(profile.preferred_protein_sources || [])
+      setDislikedFoodsInput(profile.disliked_foods?.join(', ') || '')
       setSelectedCuisines(profile.preferred_cuisines || [])
+      setMealsPerDay(profile.meals_per_day || 3)
+
       setFoodBudget(profile.food_budget || 'moderate')
       setCookingAccess(profile.cooking_access || 'full_kitchen')
       setCookingSkill(profile.cooking_skill || 'intermediate')
       setMealPrepTime(profile.meal_prep_time || 'moderate')
-      setMealsPerDay(profile.meals_per_day || 3)
-      setDislikedFoodsInput(profile.disliked_foods?.join(', ') || '')
+      setSelectedProteins(profile.preferred_protein_sources || [])
       setFavoriteFoodsInput(profile.favorite_foods?.join(', ') || '')
     }
   }, [profile])
@@ -150,21 +169,24 @@ export function NutritionFitnessProfile() {
     }).catch(() => {})
   }, [userId])
 
-  // Profile completeness score
-  const completeness = React.useMemo(() => {
-    let filled = 0
-    const total = 9
-    if (firstName.trim()) filled++
-    if (age) filled++
-    if (height) filled++
-    if (weight) filled++
-    if (sex) filled++
-    if (primaryGoal) filled++
-    if (dietaryPref) filled++
-    if (goals.calorie_target > 0) filled++
-    if (foodBudget) filled++
-    return Math.round((filled / total) * 100)
-  }, [firstName, age, height, weight, sex, primaryGoal, dietaryPref, goals, foodBudget])
+  // Calculate actual completeness & missing information
+  const { completeness, missingFields } = useMemo(() => {
+    const missing: string[] = []
+    if (!firstName.trim()) missing.push('First Name')
+    if (!age) missing.push('Age')
+    if (!height) missing.push('Height')
+    if (!weight) missing.push('Weight')
+    if (!sex) missing.push('Sex')
+    if (!primaryGoal) missing.push('Primary Goal')
+    if (!targetWeight) missing.push('Target Weight')
+    if (!dietaryPref) missing.push('Dietary Preference')
+    if (goals.calorie_target <= 0) missing.push('Calorie Target')
+
+    const totalFields = 9
+    const completedCount = totalFields - missing.length
+    const score = Math.round((completedCount / totalFields) * 100)
+    return { completeness: score, missingFields: missing }
+  }, [firstName, age, height, weight, sex, primaryGoal, targetWeight, dietaryPref, goals])
 
   const toggleAllergy = (allergy: string) => {
     setSelectedAllergies(prev =>
@@ -194,7 +216,7 @@ export function NutritionFitnessProfile() {
   const handleSaveProfile = async () => {
     setValidationError(null)
 
-    // Validation
+    // Boundaries validation
     const parsedAge = age ? parseInt(age, 10) : null
     const parsedHeight = height ? parseFloat(height) : null
     const parsedWeight = weight ? parseFloat(weight) : null
@@ -236,6 +258,7 @@ export function NutritionFitnessProfile() {
       target_date: targetDate || null,
       experience_level: (experienceLevel as ExperienceLevel) || null,
       training_frequency: trainingFrequency || null,
+      session_duration: sessionDuration || null,
       dietary_preference: dietaryPref,
       allergies: selectedAllergies,
       preferred_protein_sources: selectedProteins,
@@ -254,588 +277,577 @@ export function NutritionFitnessProfile() {
 
     if (!error) {
       setToastMessage('Profile updated successfully!')
+      // Dispatch shared event for real-time coach and nutrition context updates
+      window.dispatchEvent(new CustomEvent('gymtrack:profile_updated', { detail: updates }))
       setTimeout(() => setToastMessage(null), 3000)
     } else {
-      setToastMessage('Error saving profile changes. Please try again.')
-      setTimeout(() => setToastMessage(null), 3500)
+      setValidationError(error || 'Failed to save changes. Please try again.')
     }
   }
 
   const handleSaveGoals = async (updated: Partial<NutritionGoals>) => {
     const saved = await saveNutritionGoals(userId, updated)
     setGoals(saved)
-    setToastMessage('Daily nutrition targets updated successfully!')
+    setToastMessage('Nutrition targets updated!')
     setTimeout(() => setToastMessage(null), 3000)
   }
 
+  // User display name kept on one line
   const fullName = `${firstName} ${lastName}`.trim() || `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Athlete'
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-16 sm:pb-8 w-full">
       {/* Toast Notification */}
       {toastMessage && (
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-6 right-4 sm:right-6 z-50 bg-surface-900 text-white text-xs sm:text-sm px-4 py-3 rounded-xl shadow-xl border border-surface-700 animate-slide-up flex items-center gap-2"
+          className="fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-50 bg-surface-900 text-white text-xs sm:text-sm px-4 py-3 rounded-xl shadow-xl border border-surface-700 animate-slide-up flex items-center gap-2"
         >
-          <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />
+          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Validation Error Banner */}
+      {/* Validation Alert */}
       {validationError && (
         <div
           role="alert"
-          className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 text-xs sm:text-sm flex items-center gap-2.5 animate-fade-in"
+          className="bg-red-50 text-red-700 p-3.5 rounded-2xl border border-red-200 text-xs sm:text-sm flex items-center gap-2.5 animate-fade-in"
         >
-          <AlertCircle size={18} className="text-red-500 flex-shrink-0" />
+          <AlertCircle size={18} className="text-red-500 shrink-0" />
           <span>{validationError}</span>
         </div>
       )}
 
-      {/* ─── Profile Header & Completeness Overview ─── */}
-      <div className="card p-5 sm:p-6 bg-white border border-surface-200/90 rounded-2xl shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <Avatar name={fullName} size="lg" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-surface-900 leading-tight">
-                  {fullName}
-                </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-100 text-surface-600 border border-surface-200">
-                  {user?.email}
+      {/* ─── B. COMPACT PROFILE SUMMARY CARD ─── */}
+      <div className="p-4 sm:p-5 bg-white border border-surface-200/90 rounded-2xl shadow-2xs space-y-3">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <Avatar name={fullName} size="lg" className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+              <h2 className="text-base sm:text-lg font-bold text-surface-900 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis min-w-0">
+                {fullName}
+              </h2>
+              {fitnessGoalLabel[primaryGoal] && (
+                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
+                  {fitnessGoalLabel[primaryGoal]}
                 </span>
-              </div>
-              <p className="text-xs text-surface-500 font-medium mt-0.5">
-                Personalized fitness goals, dietary preferences, and daily nutrition targets.
-              </p>
+              )}
             </div>
+            <p className="text-xs text-surface-500 truncate mt-0.5 font-medium">
+              {user?.email}
+            </p>
           </div>
-
-          <button
-            type="button"
-            onClick={handleSaveProfile}
-            disabled={saving}
-            id="profile-save-btn-top"
-            className="self-start sm:self-auto px-5 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-all flex items-center gap-2 disabled:opacity-50"
-          >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-            <span>{saving ? 'Saving…' : 'Save Changes'}</span>
-          </button>
         </div>
 
-        {/* Completeness Bar */}
-        <div className="pt-2 border-t border-surface-100 space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold text-surface-700">
-            <span className="flex items-center gap-1.5">
-              <span>Profile Completeness</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-800 border border-brand-200">
-                {completeness}%
+        {/* Compact Completeness */}
+        <div className="pt-2.5 border-t border-surface-100 space-y-1.5">
+          <div className="flex items-center justify-between text-xs font-semibold text-surface-600 gap-2">
+            <span className="truncate">
+              Profile completeness: <strong className="text-surface-900 font-bold">{completeness}%</strong>
+              {missingFields.length > 0 && (
+                <span className="text-surface-400 font-normal ml-1 hidden sm:inline">
+                  • Missing: {missingFields.slice(0, 2).join(', ')}{missingFields.length > 2 ? ` +${missingFields.length - 2} more` : ''}
+                </span>
+              )}
+            </span>
+            {missingFields.length > 0 ? (
+              <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0 font-medium">
+                {missingFields.length} {missingFields.length === 1 ? 'field' : 'fields'} to complete
               </span>
-            </span>
-            <span className="text-[11px] text-surface-400 font-normal">
-              Used by GYMTrack & AI Coach for personalized guidance
-            </span>
+            ) : (
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0 font-medium flex items-center gap-1">
+                <CheckCircle2 size={10} />
+                <span>Complete</span>
+              </span>
+            )}
           </div>
-          <div className="w-full bg-surface-100 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-surface-100 rounded-full h-1.5 overflow-hidden">
             <div
-              className="bg-brand-500 h-2 rounded-full transition-all duration-500"
+              className="bg-brand-600 h-1.5 rounded-full transition-all duration-500"
               style={{ width: `${completeness}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* ─── SECTION A: PERSONAL INFORMATION ─── */}
-      <section aria-label="Personal Information" className="card p-5 sm:p-6 bg-white border border-surface-200/90 rounded-2xl shadow-2xs space-y-4">
-        <div className="flex items-center gap-2 text-surface-900 pb-3 border-b border-surface-100">
-          <User size={18} className="text-brand-600" />
-          <h3 className="text-sm font-bold tracking-tight text-surface-900">
-            Section A: Personal Information
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">First Name</label>
-            <input
-              type="text"
-              placeholder="e.g. John"
-              value={firstName}
-              onChange={e => setFirstName(e.target.value)}
-              className="input-base text-xs font-semibold"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">Last Name</label>
-            <input
-              type="text"
-              placeholder="e.g. Doe"
-              value={lastName}
-              onChange={e => setLastName(e.target.value)}
-              className="input-base text-xs font-semibold"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">Sex (Biological / Metabolic)</label>
-            <select
-              value={sex}
-              onChange={e => setSex(e.target.value)}
-              className="input-base text-xs font-semibold"
-            >
-              <option value="">Select (Optional)</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other</option>
-              <option value="prefer_not_to_say">Prefer not to say</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">Age (Years)</label>
-            <input
-              type="number"
-              placeholder="e.g. 26"
-              value={age}
-              onChange={e => setAge(e.target.value)}
-              className="input-base text-xs font-semibold"
-              min="10"
-              max="120"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">Height (cm)</label>
-            <input
-              type="number"
-              step="0.1"
-              placeholder="e.g. 175"
-              value={height}
-              onChange={e => setHeight(e.target.value)}
-              className="input-base text-xs font-semibold"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">Current Body Weight (kg)</label>
-            <input
-              type="number"
-              step="0.1"
-              placeholder="e.g. 74.5"
-              value={weight}
-              onChange={e => setWeight(e.target.value)}
-              className="input-base text-xs font-semibold"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ─── SECTION B: FITNESS GOALS ─── */}
-      <section aria-label="Fitness Goals" className="card p-5 sm:p-6 bg-white border border-surface-200/90 rounded-2xl shadow-2xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-surface-100">
-          <div className="flex items-center gap-2 text-surface-900">
-            <Target size={18} className="text-brand-600" />
-            <h3 className="text-sm font-bold tracking-tight text-surface-900">
-              Section B: Fitness Goals
+      {/* ─── D. UNIFIED FORM SECTIONS ─── */}
+      <div className="bg-white border border-surface-200/90 rounded-2xl shadow-2xs divide-y divide-surface-100 overflow-hidden">
+        {/* ── 1. PERSONAL INFORMATION ── */}
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2 text-surface-900 pb-1">
+            <User size={16} className="text-brand-600" />
+            <h3 className="text-sm font-bold tracking-tight text-surface-900 uppercase tracking-wider text-[11px]">
+              1. Personal Information
             </h3>
           </div>
-          {activePlanName && (
-            <span className="text-[11px] font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <Dumbbell size={11} />
-              <span>Active Plan: {activePlanName}</span>
-            </span>
-          )}
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Primary Goal
-            </label>
-            <select
-              value={primaryGoal}
-              onChange={e => setPrimaryGoal(e.target.value)}
-              className="input-base text-xs font-semibold"
-            >
-              <option value="build_muscle">Muscle Gain (Hypertrophy)</option>
-              <option value="lose_weight">Weight Loss & Fat Loss</option>
-              <option value="recomposition">Body Recomposition</option>
-              <option value="improve_strength">Strength & Power</option>
-              <option value="maintain_fitness">General Fitness & Health</option>
-              <option value="weight_maintenance">Maintenance</option>
-              <option value="increase_endurance">Athletic Endurance</option>
-            </select>
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">First Name</label>
+              <input
+                type="text"
+                placeholder="e.g. John"
+                value={firstName}
+                onChange={e => setFirstName(e.target.value)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Secondary Goal (Optional)
-            </label>
-            <select
-              value={secondaryGoal}
-              onChange={e => setSecondaryGoal(e.target.value)}
-              className="input-base text-xs"
-            >
-              <option value="">None</option>
-              <option value="improve_strength">Build Core Strength</option>
-              <option value="increase_endurance">Cardiovascular Health</option>
-              <option value="improve_flexibility">Mobility & Joint Flexibility</option>
-              <option value="lose_weight">Gradual Fat Reduction</option>
-            </select>
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Last Name</label>
+              <input
+                type="text"
+                placeholder="e.g. Doe"
+                value={lastName}
+                onChange={e => setLastName(e.target.value)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Activity & Experience Level
-            </label>
-            <select
-              value={experienceLevel}
-              onChange={e => setExperienceLevel(e.target.value)}
-              className="input-base text-xs font-semibold"
-            >
-              <option value="beginner">Beginner (&lt; 1 year training)</option>
-              <option value="intermediate">Intermediate (1–3 years training)</option>
-              <option value="advanced">Advanced (3+ years structured training)</option>
-            </select>
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Age (Years)</label>
+              <input
+                type="number"
+                placeholder="e.g. 26"
+                value={age}
+                onChange={e => setAge(e.target.value)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+                min="10"
+                max="120"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Training Frequency
-            </label>
-            <select
-              value={trainingFrequency}
-              onChange={e => setTrainingFrequency(parseInt(e.target.value, 10))}
-              className="input-base text-xs font-semibold"
-            >
-              {[1, 2, 3, 4, 5, 6, 7].map(n => (
-                <option key={n} value={n}>
-                  {n} {n === 1 ? 'day' : 'days'} per week
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Target Body Weight (kg)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              placeholder="e.g. 70.0 (Optional)"
-              value={targetWeight}
-              onChange={e => setTargetWeight(e.target.value)}
-              className="input-base text-xs"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Target Goal Date
-            </label>
-            <input
-              type="date"
-              value={targetDate}
-              onChange={e => setTargetDate(e.target.value)}
-              className="input-base text-xs"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ─── SECTION C: NUTRITION PREFERENCES ─── */}
-      <section aria-label="Nutrition Preferences" className="card p-5 sm:p-6 bg-white border border-surface-200/90 rounded-2xl shadow-2xs space-y-5">
-        <div className="flex items-center gap-2 text-surface-900 pb-3 border-b border-surface-100">
-          <Salad size={18} className="text-emerald-600" />
-          <h3 className="text-sm font-bold tracking-tight text-surface-900">
-            Section C: Nutrition Preferences & Restrictions
-          </h3>
-        </div>
-
-        {/* Dietary Preference Buttons */}
-        <div className="space-y-2">
-          <label className="block text-xs font-bold text-surface-700">
-            Dietary Preference
-          </label>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {[
-              { id: 'vegetarian', label: 'Vegetarian', desc: 'Plant foods + dairy, no meat' },
-              { id: 'eggetarian', label: 'Eggetarian', desc: 'Vegetarian + Eggs' },
-              { id: 'non_vegetarian', label: 'Non-Vegetarian', desc: 'Meat, poultry, fish' },
-              { id: 'vegan', label: 'Vegan', desc: '100% plant-based, no dairy' },
-              { id: 'other', label: 'Other / Custom', desc: 'Flexible dietary pattern' },
-            ].map(item => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setDietaryPref(item.id as DietaryPreference)}
-                className={`p-3 rounded-xl border text-left transition-all ${
-                  dietaryPref === item.id
-                    ? 'border-emerald-500 bg-emerald-50/80 text-emerald-950 font-bold shadow-2xs ring-1 ring-emerald-500'
-                    : 'border-surface-200 hover:border-surface-300 bg-white text-surface-700'
-                }`}
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Biological / Metabolic Sex</label>
+              <select
+                value={sex}
+                onChange={e => setSex(e.target.value)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
               >
-                <div className="text-xs font-bold">{item.label}</div>
-                <div className="text-[10px] text-surface-500 font-normal mt-0.5">{item.desc}</div>
+                <option value="">Select (Optional)</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Height (cm)</label>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="e.g. 175"
+                value={height}
+                onChange={e => setHeight(e.target.value)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Current Body Weight (kg)</label>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="e.g. 74.5"
+                value={weight}
+                onChange={e => setWeight(e.target.value)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── 2. FITNESS GOALS ── */}
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between pb-1">
+            <div className="flex items-center gap-2 text-surface-900">
+              <Target size={16} className="text-brand-600" />
+              <h3 className="text-sm font-bold tracking-tight text-surface-900 uppercase tracking-wider text-[11px]">
+                2. Fitness Goals
+              </h3>
+            </div>
+            {activePlanName && (
+              <span className="text-[10px] font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Dumbbell size={11} />
+                <span>Active: {activePlanName}</span>
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Primary Fitness Goal</label>
+              <select
+                value={primaryGoal}
+                onChange={e => setPrimaryGoal(e.target.value)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              >
+                <option value="build_muscle">Muscle Gain (Hypertrophy)</option>
+                <option value="lose_weight">Weight Loss & Fat Loss</option>
+                <option value="recomposition">Body Recomposition</option>
+                <option value="improve_strength">Strength & Power</option>
+                <option value="maintain_fitness">General Fitness & Health</option>
+                <option value="weight_maintenance">Maintenance</option>
+                <option value="increase_endurance">Athletic Endurance</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Target Body Weight (kg)</label>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="e.g. 70.0 (Optional)"
+                value={targetWeight}
+                onChange={e => setTargetWeight(e.target.value)}
+                className="input-base text-xs w-full min-h-[44px]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Training Experience Level</label>
+              <select
+                value={experienceLevel}
+                onChange={e => setExperienceLevel(e.target.value)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              >
+                <option value="beginner">Beginner (&lt; 1 year training)</option>
+                <option value="intermediate">Intermediate (1–3 years training)</option>
+                <option value="advanced">Advanced (3+ years structured training)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Weekly Training Frequency</label>
+              <select
+                value={trainingFrequency}
+                onChange={e => setTrainingFrequency(parseInt(e.target.value, 10))}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              >
+                {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                  <option key={n} value={n}>
+                    {n} {n === 1 ? 'day' : 'days'} per week
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Preferred Workout Duration</label>
+              <select
+                value={sessionDuration}
+                onChange={e => setSessionDuration(parseInt(e.target.value, 10))}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              >
+                <option value={30}>30 minutes</option>
+                <option value={45}>45 minutes</option>
+                <option value={60}>60 minutes</option>
+                <option value={75}>75 minutes</option>
+                <option value={90}>90 minutes</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Target Goal Date</label>
+              <input
+                type="date"
+                value={targetDate}
+                onChange={e => setTargetDate(e.target.value)}
+                className="input-base text-xs w-full min-h-[44px]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── 3. NUTRITION PREFERENCES ── */}
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2 text-surface-900 pb-1">
+            <Salad size={16} className="text-emerald-600" />
+            <h3 className="text-sm font-bold tracking-tight text-surface-900 uppercase tracking-wider text-[11px]">
+              3. Nutrition Preferences & Targets
+            </h3>
+          </div>
+
+          {/* Dietary Preference Buttons */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-surface-700">Dietary Classification</label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {[
+                { id: 'vegetarian', label: 'Vegetarian' },
+                { id: 'eggetarian', label: 'Eggetarian' },
+                { id: 'non_vegetarian', label: 'Non-Veg' },
+                { id: 'vegan', label: 'Vegan' },
+                { id: 'other', label: 'Other' },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setDietaryPref(item.id as DietaryPreference)}
+                  className={`py-2.5 px-2 rounded-xl border text-center transition-all min-h-[40px] ${
+                    dietaryPref === item.id
+                      ? 'border-brand-500 bg-brand-50 text-brand-900 font-bold ring-1 ring-brand-500'
+                      : 'border-surface-200 hover:border-surface-300 bg-white text-surface-700'
+                  }`}
+                >
+                  <span className="text-xs font-bold block">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Food Allergies */}
+          <div className="space-y-1.5 pt-1">
+            <label className="block text-xs font-bold text-surface-700 flex items-center gap-1.5">
+              <ShieldAlert size={14} className="text-rose-500" />
+              <span>Food Allergies & Restrictions (Excluded from AI recommendations)</span>
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {COMMON_ALLERGIES.map(allergy => {
+                const active = selectedAllergies.includes(allergy)
+                return (
+                  <button
+                    key={allergy}
+                    type="button"
+                    onClick={() => toggleAllergy(allergy)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border min-h-[36px] ${
+                      active
+                        ? 'bg-rose-500 text-white border-rose-600'
+                        : 'bg-surface-50 hover:bg-surface-100 text-surface-700 border-surface-200'
+                    }`}
+                  >
+                    {allergy}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="flex items-center gap-2 max-w-sm pt-1">
+              <input
+                type="text"
+                placeholder="Add other restriction (e.g. Mushroom)"
+                value={customAllergyInput}
+                onChange={e => setCustomAllergyInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomAllergy())}
+                className="input-base text-xs py-1.5 min-h-[38px] flex-1"
+              />
+              <button
+                type="button"
+                onClick={addCustomAllergy}
+                className="px-3.5 py-1.5 bg-surface-100 hover:bg-surface-200 text-surface-800 rounded-xl text-xs font-bold border border-surface-200 min-h-[38px]"
+              >
+                Add
               </button>
-            ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Foods to Avoid / Dislike</label>
+              <input
+                type="text"
+                placeholder="e.g. Bitter gourd, Eggplant"
+                value={dislikedFoodsInput}
+                onChange={e => setDislikedFoodsInput(e.target.value)}
+                className="input-base text-xs w-full min-h-[44px]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Preferred Meals Per Day</label>
+              <select
+                value={mealsPerDay}
+                onChange={e => setMealsPerDay(parseInt(e.target.value, 10))}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              >
+                <option value={2}>2 Meals (Intermittent Fasting)</option>
+                <option value={3}>3 Main Meals</option>
+                <option value={4}>3 Meals + 1 Snack</option>
+                <option value={5}>4 Meals + 1 Snack</option>
+                <option value={6}>6 Frequent Smaller Meals</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Daily Nutrition Targets Card */}
+          <div className="p-4 rounded-2xl bg-surface-50 border border-surface-200/90 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-surface-900 block">
+                  Daily Nutrition Targets
+                </span>
+                <span className="text-[11px] text-surface-500">
+                  Calorie and macro targets for NutriTrack and AI Coach
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGoalsModalOpen(true)}
+                id="profile-adjust-targets-btn"
+                className="text-xs font-bold text-brand-700 hover:text-brand-800 bg-brand-50 hover:bg-brand-100/80 border border-brand-200 px-3 py-1.5 rounded-xl transition-colors min-h-[36px]"
+              >
+                Adjust Targets
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+              <div className="p-2.5 rounded-xl bg-white border border-surface-200/80">
+                <span className="text-[10px] text-surface-400 font-bold block uppercase">Calories</span>
+                <span className="text-base font-bold text-surface-900">{goals.calorie_target} <span className="text-xs font-normal">kcal</span></span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white border border-surface-200/80">
+                <span className="text-[10px] text-emerald-700 font-bold block uppercase">Protein</span>
+                <span className="text-base font-bold text-surface-900">{goals.protein_target}g</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white border border-surface-200/80">
+                <span className="text-[10px] text-amber-700 font-bold block uppercase">Carbs</span>
+                <span className="text-base font-bold text-surface-900">{goals.carb_target}g</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white border border-surface-200/80">
+                <span className="text-[10px] text-rose-600 font-bold block uppercase">Fat</span>
+                <span className="text-base font-bold text-surface-900">{goals.fat_target}g</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white border border-surface-200/80 col-span-2 sm:col-span-1">
+                <span className="text-[10px] text-brand-600 font-bold block uppercase">Fiber</span>
+                <span className="text-base font-bold text-surface-900">{goals.fiber_target}g</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Food Allergies or Restrictions */}
-        <div className="space-y-2 pt-1">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-surface-700">
-            <ShieldAlert size={14} className="text-rose-500" />
-            <span>Food Allergies & Restrictions (Never suggested in meals)</span>
+        {/* ── 4. AI PERSONALIZATION (OPTIONAL) ── */}
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2 text-surface-900 pb-1">
+            <Sparkles size={16} className="text-brand-600" />
+            <div>
+              <h3 className="text-sm font-bold tracking-tight text-surface-900 uppercase tracking-wider text-[11px]">
+                4. AI Personalization (Optional)
+              </h3>
+              <p className="text-xs text-surface-500 font-medium mt-0.5">
+                Helps AI Coach suggest meals tailored to your kitchen access, budget, and cooking time.
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
-            {COMMON_ALLERGIES.map(allergy => {
-              const active = selectedAllergies.includes(allergy)
-              return (
-                <button
-                  key={allergy}
-                  type="button"
-                  onClick={() => toggleAllergy(allergy)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                    active
-                      ? 'bg-rose-500 text-white border-rose-600 shadow-2xs'
-                      : 'bg-surface-50 hover:bg-surface-100 text-surface-700 border-surface-200'
-                  }`}
-                >
-                  {allergy}
-                </button>
-              )
-            })}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Food Budget Preference</label>
+              <select
+                value={foodBudget}
+                onChange={e => setFoodBudget(e.target.value as FoodBudget)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              >
+                <option value="budget">Budget-Friendly (Eggs, Dal, Oats, Rice)</option>
+                <option value="moderate">Moderate / Standard Groceries</option>
+                <option value="flexible">Flexible / Premium (Salmon, Greek yogurt, berries)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Kitchen & Food Access</label>
+              <select
+                value={cookingAccess}
+                onChange={e => setCookingAccess(e.target.value as CookingAccess)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              >
+                <option value="full_kitchen">Full Kitchen (Cook own meals)</option>
+                <option value="hostel_mess">Hostel / Mess / Cafeteria</option>
+                <option value="cafeteria">Office Cafeteria / Meal Tiffin</option>
+                <option value="minimal">Minimal (Kettle / Microwave only)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">Cooking Prep Time</label>
+              <select
+                value={mealPrepTime}
+                onChange={e => setMealPrepTime(e.target.value as MealPrepTime)}
+                className="input-base text-xs font-semibold w-full min-h-[44px]"
+              >
+                <option value="quick">Quick (&lt; 15 mins)</option>
+                <option value="moderate">Moderate (15–30 mins)</option>
+                <option value="extended">Extended (30+ mins)</option>
+              </select>
+            </div>
           </div>
 
-          {/* Add custom restriction */}
-          <div className="flex items-center gap-2 max-w-sm pt-1">
+          {/* Preferred Protein Sources */}
+          <div className="space-y-1.5 pt-1">
+            <label className="block text-xs font-bold text-surface-700">Preferred Protein Staples</label>
+            <div className="flex flex-wrap gap-1.5">
+              {PROTEIN_SOURCES.map(source => {
+                const active = selectedProteins.includes(source)
+                return (
+                  <button
+                    key={source}
+                    type="button"
+                    onClick={() => toggleProtein(source)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border min-h-[36px] ${
+                      active
+                        ? 'bg-brand-600 text-white border-brand-700'
+                        : 'bg-surface-50 hover:bg-surface-100 text-surface-700 border-surface-200'
+                    }`}
+                  >
+                    {source}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-surface-700 mb-1">Favorite Foods (Optional)</label>
             <input
               type="text"
-              placeholder="Add other restriction (e.g. Mushrooms)"
-              value={customAllergyInput}
-              onChange={e => setCustomAllergyInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomAllergy())}
-              className="input-base text-xs py-1.5"
-            />
-            <button
-              type="button"
-              onClick={addCustomAllergy}
-              className="px-3 py-1.5 bg-surface-100 hover:bg-surface-200 text-surface-800 rounded-xl text-xs font-bold border border-surface-200 transition-colors"
-            >
-              Add
-            </button>
-          </div>
-        </div>
-
-        {/* Preferred Protein Sources */}
-        <div className="space-y-2 pt-1">
-          <label className="block text-xs font-bold text-surface-700">
-            Preferred Protein Sources
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {PROTEIN_SOURCES.map(source => {
-              const active = selectedProteins.includes(source)
-              return (
-                <button
-                  key={source}
-                  type="button"
-                  onClick={() => toggleProtein(source)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                    active
-                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs'
-                      : 'bg-surface-50 hover:bg-surface-100 text-surface-700 border-surface-200'
-                  }`}
-                >
-                  {source}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Preferred Meal Pattern & Access Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs pt-2">
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Preferred Meal Pattern
-            </label>
-            <select
-              value={mealsPerDay}
-              onChange={e => setMealsPerDay(parseInt(e.target.value, 10))}
-              className="input-base text-xs font-semibold"
-            >
-              <option value={2}>2 Meals (Intermittent Fasting)</option>
-              <option value={3}>3 Main Meals</option>
-              <option value={4}>3 Meals + 1 Snack</option>
-              <option value={5}>4 Meals + 1 Snack</option>
-              <option value={6}>6 Frequent Smaller Meals</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Food Budget
-            </label>
-            <select
-              value={foodBudget}
-              onChange={e => setFoodBudget(e.target.value as FoodBudget)}
-              className="input-base text-xs font-semibold"
-            >
-              <option value="budget">Budget-Friendly (Eggs, Dal, Oats, Rice)</option>
-              <option value="moderate">Moderate / Standard Groceries</option>
-              <option value="flexible">Flexible / Premium (Salmon, Greek yogurt, berries)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Kitchen & Cooking Access
-            </label>
-            <select
-              value={cookingAccess}
-              onChange={e => setCookingAccess(e.target.value as CookingAccess)}
-              className="input-base text-xs font-semibold"
-            >
-              <option value="full_kitchen">Full Kitchen (Cook own meals)</option>
-              <option value="hostel_mess">Hostel / College Mess</option>
-              <option value="cafeteria">Office Cafeteria / Meal Tiffin</option>
-              <option value="minimal">Minimal (Microwave / Kettle only)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Meal Prep Time
-            </label>
-            <select
-              value={mealPrepTime}
-              onChange={e => setMealPrepTime(e.target.value as MealPrepTime)}
-              className="input-base text-xs font-semibold"
-            >
-              <option value="quick">Quick (&lt; 15 mins)</option>
-              <option value="moderate">Moderate (15–30 mins)</option>
-              <option value="extended">Extended (30+ mins)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Disliked & Favorite Foods */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Foods You Dislike (Comma-separated)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Bitter gourd, Eggplant"
-              value={dislikedFoodsInput}
-              onChange={e => setDislikedFoodsInput(e.target.value)}
-              className="input-base text-xs"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-surface-700 mb-1">
-              Favorite Foods (Comma-separated)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Oatmeal, Yellow Dal, Chicken"
+              placeholder="e.g. Oatmeal, Yellow Dal, Chicken, Paneer"
               value={favoriteFoodsInput}
               onChange={e => setFavoriteFoodsInput(e.target.value)}
-              className="input-base text-xs"
+              className="input-base text-xs w-full min-h-[44px]"
             />
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ─── SECTION D: DAILY TARGETS ─── */}
-      <section aria-label="Daily Nutrition Targets" className="card p-5 sm:p-6 bg-white border border-surface-200/90 rounded-2xl shadow-2xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-surface-100">
-          <div className="flex items-center gap-2 text-surface-900">
-            <Flame size={18} className="text-emerald-600" />
-            <h3 className="text-sm font-bold tracking-tight text-surface-900">
-              Section D: Daily Targets
-            </h3>
-          </div>
+      {/* ─── F. SAVE EXPERIENCE: DESKTOP & MOBILE ─── */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+        <span className="text-xs text-surface-500 font-medium hidden sm:inline">
+          {completeness === 100 ? 'All essential details completed.' : `${missingFields.length} optional fields remaining.`}
+        </span>
 
-          <button
-            type="button"
-            onClick={() => setIsGoalsModalOpen(true)}
-            id="profile-adjust-targets-btn"
-            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 px-3.5 py-1.5 rounded-xl transition-colors shadow-2xs"
-          >
-            Adjust Targets
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-          <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-200/80">
-            <span className="text-[10px] text-surface-500 font-bold block uppercase tracking-wider">
-              Calorie Target
-            </span>
-            <span className="text-base sm:text-lg font-black text-surface-900 mt-0.5 block">
-              {goals.calorie_target} <span className="text-xs font-medium text-surface-500">kcal</span>
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-200/80">
-            <span className="text-[10px] text-emerald-700 font-bold block uppercase tracking-wider">
-              Protein
-            </span>
-            <span className="text-base sm:text-lg font-black text-surface-900 mt-0.5 block">
-              {goals.protein_target} <span className="text-xs font-medium text-surface-500">g</span>
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-200/80">
-            <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider">
-              Carbohydrates
-            </span>
-            <span className="text-base sm:text-lg font-black text-surface-900 mt-0.5 block">
-              {goals.carb_target} <span className="text-xs font-medium text-surface-500">g</span>
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-200/80">
-            <span className="text-[10px] text-rose-700 font-bold block uppercase tracking-wider">
-              Fat
-            </span>
-            <span className="text-base sm:text-lg font-black text-surface-900 mt-0.5 block">
-              {goals.fat_target} <span className="text-xs font-medium text-surface-500">g</span>
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-surface-50 border border-surface-200/80 col-span-2 sm:col-span-1">
-            <span className="text-[10px] text-indigo-700 font-bold block uppercase tracking-wider">
-              Dietary Fiber
-            </span>
-            <span className="text-base sm:text-lg font-black text-surface-900 mt-0.5 block">
-              {goals.fiber_target} <span className="text-xs font-medium text-surface-500">g</span>
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Bottom Save Action Bar ─── */}
-      <div className="flex items-center justify-end gap-3 pt-2">
         <button
           type="button"
           onClick={handleSaveProfile}
           disabled={saving}
           id="profile-save-btn-bottom"
-          className="px-6 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-all flex items-center gap-2 disabled:opacity-50"
+          className="w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-xs sm:text-sm bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 min-h-[44px] active:scale-[0.99]"
         >
-          {saving ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-          <span>{saving ? 'Saving Profile…' : 'Save All Preferences'}</span>
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+          <span>{saving ? 'Saving Changes…' : 'Save Changes'}</span>
+        </button>
+      </div>
+
+      {/* ─── F. STICKY MOBILE SAVE BAR (ABOVE BOTTOM NAVIGATION) ─── */}
+      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-surface-200 px-4 py-2.5 flex items-center justify-between shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <div className="min-w-0 pr-3">
+          <p className="text-xs font-bold text-surface-900 truncate">
+            {completeness}% Complete
+          </p>
+          <p className="text-[10px] text-surface-500 truncate">
+            Tap to save preferences
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSaveProfile}
+          disabled={saving}
+          id="profile-save-mobile-sticky-btn"
+          className="px-5 py-2.5 rounded-xl font-bold text-xs bg-brand-600 hover:bg-brand-700 text-white shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-60 min-h-[42px] active:scale-95 shrink-0"
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+          <span>{saving ? 'Saving…' : 'Save Changes'}</span>
         </button>
       </div>
 

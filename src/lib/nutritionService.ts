@@ -1376,6 +1376,8 @@ export interface DetectedFoodAnalysisItem {
   fiber: number
   confidence: 'high' | 'medium' | 'low'
   notes?: string
+  isCatalogMatch?: boolean
+  catalogId?: string
 }
 
 export interface MealPhotoAnalysisResult {
@@ -1385,15 +1387,47 @@ export interface MealPhotoAnalysisResult {
 }
 
 /**
+ * Searches the verified FOOD_CATALOG for items matching the AI-detected food name
+ */
+export function matchDetectedFoodToCatalog(foodName: string) {
+  if (!foodName || typeof foodName !== 'string') return null
+  const clean = foodName.toLowerCase().trim()
+
+  // 1. Exact match by name
+  const exact = FOOD_CATALOG.find(f => f.name.toLowerCase() === clean)
+  if (exact) return exact
+
+  // 2. Exact match by aliases
+  const alias = FOOD_CATALOG.find(f => f.aliases.some(a => a.toLowerCase() === clean))
+  if (alias) return alias
+
+  // 3. Substring matching: e.g. "Cooked Rice" matches "White Rice (Cooked)"
+  const words = clean.split(/[\s,–—-]+/).filter(w => w.length > 2)
+  if (words.length > 0) {
+    const match = FOOD_CATALOG.find(f => {
+      const fName = f.name.toLowerCase()
+      const matchesAll = words.every(w => fName.includes(w) || f.aliases.some(a => a.toLowerCase().includes(w)))
+      if (matchesAll) return true
+      return words.some(w => fName.includes(w))
+    })
+    if (match) return match
+  }
+
+  return null
+}
+
+/**
  * Genuinely analyzes an uploaded meal photo using Google Gemini 1.5 Flash Vision.
  * Handles multi-item plate breakdown, portions, and macro estimation.
- * Never fabricates predetermined responses.
+ * Gracefully handles rate limits and network errors without generic status codes.
  */
 export async function analyzeMealPhoto(
   base64Data: string,
-  mimeType = 'image/jpeg'
+  mimeType = 'image/jpeg',
+  attempt = 1
 ): Promise<MealPhotoAnalysisResult> {
   let remoteError: string | null = null
+  let isRateLimited = false
 
   // Ensure pure base64 without data URI prefix
   let cleanBase64 = base64Data.trim()
@@ -1404,7 +1438,7 @@ export async function analyzeMealPhoto(
     cleanBase64 = cleanBase64.replace(/^data:[^;]+;base64,/i, '').trim()
   }
 
-  // 1. Primary path: Supabase Edge Function (Server-side Gemini 1.5 Flash Vision)
+  // Primary path: Supabase Edge Function (Server-side Gemini Vision)
   try {
     const anonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || ''
     const { data, error } = await supabase.functions.invoke('ai-coach', {
@@ -1438,10 +1472,14 @@ export async function analyzeMealPhoto(
             const rawC = Math.max(0, Math.round((Number(it.carbs) || 0) * 10) / 10)
             const rawF = Math.max(0, Math.round((Number(it.fat) || 0) * 10) / 10)
             const rawFib = Math.max(0, Math.round((Number(it.fiber) || 0) * 10) / 10)
+            const foodName = typeof it.name === 'string' && it.name.trim() ? it.name.trim() : 'Food Item'
+
+            // Check if detected item matches verified local food catalog
+            const catalogMatch = matchDetectedFoodToCatalog(foodName)
 
             return {
               id: `detected_${Date.now()}_${idx}`,
-              name: typeof it.name === 'string' && it.name.trim() ? it.name.trim() : 'Food Item',
+              name: foodName,
               portion: typeof it.portion === 'string' ? it.portion : `${rawServing}g`,
               servingSize: rawServing,
               servingUnit: typeof it.servingUnit === 'string' ? it.servingUnit : 'g',
@@ -1456,6 +1494,8 @@ export async function analyzeMealPhoto(
                   ? it.confidence
                   : 'medium',
               notes: typeof it.notes === 'string' ? it.notes : undefined,
+              isCatalogMatch: Boolean(catalogMatch),
+              catalogId: catalogMatch?.id,
             }
           }
         )
@@ -1466,7 +1506,7 @@ export async function analyzeMealPhoto(
           overallNotes:
             typeof data.overall_notes === 'string'
               ? data.overall_notes
-              : 'Nutritional estimates generated from image analysis. Please review and adjust portions before saving.',
+              : 'Nutritional estimates generated from image analysis. Review and adjust portions before saving.',
         }
       }
     }
@@ -1476,28 +1516,46 @@ export async function analyzeMealPhoto(
       try {
         if ('context' in error && error.context) {
           const ctx = error.context as Response
+          if (ctx.status === 429) {
+            isRateLimited = true
+          }
           const cloned = ctx.clone ? ctx.clone() : ctx
           const json = await cloned.json().catch(() => null)
           if (json && typeof json === 'object') {
             detail = json.error || json.message || ''
+            if (json.code === 'RATE_LIMIT') isRateLimited = true
           }
         }
       } catch {
         // ignore
       }
-      remoteError = detail || error.message || 'Error communicating with AI Edge Function'
+
+      remoteError = detail || error.message || ''
     }
   } catch (err: unknown) {
     remoteError = err instanceof Error ? err.message : 'Network error communicating with AI service'
   }
 
-  // Reject with clear failure reason; never fabricate fake items
-  throw new Error(
-    remoteError?.includes('GEMINI_API_KEY')
-      ? 'AI Vision service requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets.'
-      : remoteError ||
-        'Unable to analyze image. Please ensure your device is online, or search the verified Food Library.'
-  )
+  // Automatic retry on transient rate limiting (once after 2s)
+  if (isRateLimited && attempt < 2) {
+    await new Promise(r => setTimeout(r, 2000))
+    return analyzeMealPhoto(base64Data, mimeType, attempt + 1)
+  }
+
+  // Friendly error mapping to prevent exposing raw stack traces or "Edge Function returned a non-2xx status code"
+  if (isRateLimited || remoteError?.toLowerCase().includes('rate') || remoteError?.includes('429')) {
+    throw new Error('AI Vision is currently handling high demand. Please wait a moment and tap Retry, or select from the Food Library.')
+  }
+
+  if (remoteError?.includes('GEMINI_API_KEY')) {
+    throw new Error('AI Vision requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets.')
+  }
+
+  if (!remoteError || remoteError === 'Edge Function returned a non-2xx status code') {
+    throw new Error('AI Vision service is temporarily unavailable. Please retry in a few moments, or log foods manually from the Food Library.')
+  }
+
+  throw new Error(remoteError)
 }
 
 // ─── Nutrition AI Assistant Context Resolver ──────────────────────────────────

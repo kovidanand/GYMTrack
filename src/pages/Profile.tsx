@@ -68,10 +68,10 @@ export default function Profile() {
   if (!profile || !user) return null
 
   return (
-    <div className="animate-fade-in space-y-6 pb-6 w-full">
+    <div className="animate-fade-in space-y-6 pb-24 sm:pb-6 w-full">
       <PageHeader
-        title="Profile & Preferences"
-        description="Manage your personal information, fitness goals, nutrition preferences, and personal records."
+        title="Profile"
+        description="Manage your fitness and nutrition preferences."
       />
 
       {/* ── Sub-navigation Tabs: Nutrition & Fitness Profile vs Records & Tools ── */}

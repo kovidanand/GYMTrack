@@ -13,6 +13,9 @@ import {
   RotateCcw,
   Edit2,
   Search,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import type { FoodEntry, MealType } from '@/types/nutrition'
 import {
@@ -20,6 +23,7 @@ import {
   processFoodImage,
   type DetectedFoodAnalysisItem,
 } from '@/lib/nutritionService'
+import { FOOD_CATALOG } from '@/data/foodCatalog'
 
 interface FoodCameraModalProps {
   open: boolean
@@ -30,6 +34,25 @@ interface FoodCameraModalProps {
   onLogMealItems: (items: Omit<FoodEntry, 'id' | 'created_at' | 'updated_at'>[]) => Promise<void>
   onSwitchToLibrary?: () => void
 }
+
+interface EnrichedAnalysisItem extends DetectedFoodAnalysisItem {
+  baseCalories: number
+  baseProtein: number
+  baseCarbs: number
+  baseFat: number
+  baseFiber: number
+}
+
+const COMMON_ADDITIONS = [
+  { name: 'White Rice (Cooked)', portion: '1 cup (150g)', calories: 195, protein: 4.0, carbs: 43.0, fat: 0.4, fiber: 0.6 },
+  { name: 'Yellow Dal Tadka', portion: '1 bowl (150g)', calories: 150, protein: 7.0, carbs: 22.0, fat: 3.5, fiber: 4.0 },
+  { name: 'Paneer Gravy / Curry', portion: '1 serving (150g)', calories: 240, protein: 12.0, carbs: 8.0, fat: 18.0, fiber: 2.0 },
+  { name: 'Chicken Breast (Cooked)', portion: '100g', calories: 165, protein: 31.0, carbs: 0.0, fat: 3.6, fiber: 0.0 },
+  { name: 'Whole Wheat Roti', portion: '1 piece (35g)', calories: 85, protein: 3.0, carbs: 17.0, fat: 0.5, fiber: 2.5 },
+  { name: 'Plain Curd / Dahi', portion: '1 bowl (100g)', calories: 60, protein: 3.5, carbs: 4.5, fat: 3.0, fiber: 0.0 },
+  { name: 'Boiled Egg', portion: '1 large (50g)', calories: 78, protein: 6.3, carbs: 0.6, fat: 5.3, fiber: 0.0 },
+  { name: 'Mixed Green Salad', portion: '1 plate (100g)', calories: 25, protein: 1.2, carbs: 4.0, fat: 0.2, fiber: 2.0 },
+]
 
 export function FoodCameraModal({
   open,
@@ -47,11 +70,24 @@ export function FoodCameraModal({
 
   const [isProcessingImage, setIsProcessingImage] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisStage, setAnalysisStage] = useState<string>('')
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [overallNotes, setOverallNotes] = useState<string>('')
-  const [detectedItems, setDetectedItems] = useState<DetectedFoodAnalysisItem[]>([])
+  const [detectedItems, setDetectedItems] = useState<EnrichedAnalysisItem[]>([])
   const [hasAnalyzed, setHasAnalyzed] = useState(false)
-  const [selectedMeal, setSelectedMeal] = useState<MealType>('lunch')
+  const [showAddMenu, setShowAddMenu] = useState(false)
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
+
+  // Default meal type based on current time
+  const defaultMealType = useMemo<MealType>(() => {
+    const hour = new Date().getHours()
+    if (hour < 11) return 'breakfast'
+    if (hour < 16) return 'lunch'
+    if (hour < 21) return 'dinner'
+    return 'snack'
+  }, [])
+
+  const [selectedMeal, setSelectedMeal] = useState<MealType>(defaultMealType)
   const [isSaving, setIsSaving] = useState(false)
 
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -63,11 +99,14 @@ export function FoodCameraModal({
     setImageMeta(null)
     setIsProcessingImage(false)
     setIsAnalyzing(false)
+    setAnalysisStage('')
     setAnalysisError(null)
     setOverallNotes('')
     setDetectedItems([])
     setHasAnalyzed(false)
     setIsSaving(false)
+    setShowAddMenu(false)
+    setExpandedItemId(null)
   }
 
   // Auto-focus camera or file dialog if requested on open
@@ -84,7 +123,7 @@ export function FoodCameraModal({
     }
   }, [open, defaultMode, imagePreview, hasAnalyzed])
 
-  // Handle selected file with safe client-side resizing
+  // Handle selected file with client-side compression
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -108,16 +147,19 @@ export function FoodCameraModal({
       setAnalysisError(err instanceof Error ? err.message : 'Failed to process image.')
     } finally {
       setIsProcessingImage(false)
-      // reset file input value so selecting the same file triggers change
       e.target.value = ''
     }
   }
 
-  // Real AI Vision analysis using Gemini 1.5 Flash via Edge Function
+  // Real Multi-Food AI Vision analysis with progressive stage messaging
   const runAnalysis = async () => {
     if (!imageBase64 || isAnalyzing) return
     setIsAnalyzing(true)
     setAnalysisError(null)
+    setAnalysisStage('Examining meal photograph...')
+
+    const t1 = setTimeout(() => setAnalysisStage('Identifying food items on plate...'), 1200)
+    const t2 = setTimeout(() => setAnalysisStage('Estimating portions and nutritional macros...'), 2600)
 
     try {
       const result = await analyzeMealPhoto(imageBase64, imageMime)
@@ -125,22 +167,25 @@ export function FoodCameraModal({
       if (!result.isFood || result.items.length === 0) {
         setAnalysisError(
           result.overallNotes ||
-            'No recognizable food items were found in this image. Please take a clearer photo of your meal.'
+            'No recognizable food items were found in this photo. Please snap a clearer photo of your meal.'
         )
         setDetectedItems([])
         setHasAnalyzed(false)
         return
       }
 
-      // Attach base values to prevent rounding drift
-      const validated = result.items.map(item => ({
-        ...item,
-        baseCalories: item.calories / (item.quantity || 1),
-        baseProtein: item.protein / (item.quantity || 1),
-        baseCarbs: item.carbs / (item.quantity || 1),
-        baseFat: item.fat / (item.quantity || 1),
-        baseFiber: item.fiber / (item.quantity || 1),
-      }))
+      // Attach base values for precise multiplier scaling without drift
+      const validated: EnrichedAnalysisItem[] = result.items.map(item => {
+        const qty = item.quantity || 1
+        return {
+          ...item,
+          baseCalories: item.calories / qty,
+          baseProtein: item.protein / qty,
+          baseCarbs: item.carbs / qty,
+          baseFat: item.fat / qty,
+          baseFiber: item.fiber / qty,
+        }
+      })
 
       setDetectedItems(validated)
       setOverallNotes(result.overallNotes)
@@ -151,40 +196,31 @@ export function FoodCameraModal({
       setDetectedItems([])
       setHasAnalyzed(false)
     } finally {
+      clearTimeout(t1)
+      clearTimeout(t2)
       setIsAnalyzing(false)
+      setAnalysisStage('')
     }
   }
 
-  // Edit item properties with precise base nutrient scaling
+  // Edit item properties with precise nutrient scaling
   const handleUpdateItem = (
     id: string,
-    updates: Partial<DetectedFoodAnalysisItem & { baseCalories?: number; baseProtein?: number; baseCarbs?: number; baseFat?: number; baseFiber?: number }>
+    updates: Partial<EnrichedAnalysisItem>
   ) => {
     setDetectedItems(prev =>
       prev.map(it => {
         if (it.id !== id) return it
-        const currentItem = it as any
         const updated = { ...it, ...updates }
 
         if (updates.quantity !== undefined) {
           const q = Math.max(0.1, Number(updates.quantity) || 1)
-          const baseCal = currentItem.baseCalories ?? (it.calories / (it.quantity || 1))
-          const baseP = currentItem.baseProtein ?? (it.protein / (it.quantity || 1))
-          const baseC = currentItem.baseCarbs ?? (it.carbs / (it.quantity || 1))
-          const baseF = currentItem.baseFat ?? (it.fat / (it.quantity || 1))
-          const baseFib = currentItem.baseFiber ?? (it.fiber / (it.quantity || 1))
-
           updated.quantity = q
-          updated.calories = Math.max(0, Math.round(baseCal * q))
-          updated.protein = Math.max(0, Math.round(baseP * q * 10) / 10)
-          updated.carbs = Math.max(0, Math.round(baseC * q * 10) / 10)
-          updated.fat = Math.max(0, Math.round(baseF * q * 10) / 10)
-          updated.fiber = Math.max(0, Math.round(baseFib * q * 10) / 10)
-          ;(updated as any).baseCalories = baseCal
-          ;(updated as any).baseProtein = baseP
-          ;(updated as any).baseCarbs = baseC
-          ;(updated as any).baseFat = baseF
-          ;(updated as any).baseFiber = baseFib
+          updated.calories = Math.max(0, Math.round(it.baseCalories * q))
+          updated.protein = Math.max(0, Math.round(it.baseProtein * q * 10) / 10)
+          updated.carbs = Math.max(0, Math.round(it.baseCarbs * q * 10) / 10)
+          updated.fat = Math.max(0, Math.round(it.baseFat * q * 10) / 10)
+          updated.fiber = Math.max(0, Math.round(it.baseFiber * q * 10) / 10)
         }
         return updated
       })
@@ -195,31 +231,59 @@ export function FoodCameraModal({
     setDetectedItems(prev => prev.filter(it => it.id !== id))
   }
 
-  const handleAddMissingItem = () => {
-    const newItem: DetectedFoodAnalysisItem & { baseCalories?: number; baseProtein?: number; baseCarbs?: number; baseFat?: number; baseFiber?: number } = {
-      id: `manual_item_${Date.now()}`,
-      name: 'Additional Food',
+  const handleAddPresetItem = (preset: typeof COMMON_ADDITIONS[0]) => {
+    const newItem: EnrichedAnalysisItem = {
+      id: `manual_${Date.now()}`,
+      name: preset.name,
+      portion: preset.portion,
+      servingSize: 100,
+      servingUnit: 'serving',
+      quantity: 1,
+      calories: preset.calories,
+      protein: preset.protein,
+      carbs: preset.carbs,
+      fat: preset.fat,
+      fiber: preset.fiber,
+      confidence: 'high',
+      notes: 'Added from verified food library.',
+      isCatalogMatch: true,
+      baseCalories: preset.calories,
+      baseProtein: preset.protein,
+      baseCarbs: preset.carbs,
+      baseFat: preset.fat,
+      baseFiber: preset.fiber,
+    }
+    setDetectedItems(prev => [...prev, newItem])
+    setShowAddMenu(false)
+  }
+
+  const handleAddCustomItem = () => {
+    const newItem: EnrichedAnalysisItem = {
+      id: `custom_${Date.now()}`,
+      name: 'Custom Food Item',
       portion: '1 serving (100g)',
       servingSize: 100,
       servingUnit: 'g',
       quantity: 1,
       calories: 120,
-      protein: 5,
-      carbs: 15,
-      fat: 3,
-      fiber: 1,
+      protein: 5.0,
+      carbs: 15.0,
+      fat: 3.0,
+      fiber: 1.0,
       confidence: 'medium',
-      notes: 'Added manually to detected meal plate.',
+      notes: 'Added manually to meal.',
+      isCatalogMatch: false,
       baseCalories: 120,
-      baseProtein: 5,
-      baseCarbs: 15,
-      baseFat: 3,
-      baseFiber: 1,
+      baseProtein: 5.0,
+      baseCarbs: 15.0,
+      baseFat: 3.0,
+      baseFiber: 1.0,
     }
     setDetectedItems(prev => [...prev, newItem])
+    setShowAddMenu(false)
   }
 
-  // Combined totals across all detected items
+  // Combined totals across all confirmed detected items
   const mealTotals = useMemo(() => {
     let calories = 0
     let protein = 0
@@ -286,36 +350,40 @@ export function FoodCameraModal({
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs animate-fade-in" />
         <RadixDialog.Content
-          className="fixed z-[101] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-xl max-h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col animate-scale-in focus:outline-none overflow-hidden"
+          className="fixed z-[101] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-xl max-h-[92vh] bg-white rounded-3xl shadow-2xl flex flex-col animate-scale-in focus:outline-none overflow-hidden"
           aria-describedby="camera-modal-desc"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-surface-200 bg-gradient-to-r from-emerald-50/70 to-teal-50/50">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-xs">
+          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-surface-200 bg-white">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-xs shrink-0">
                 <Camera size={18} />
               </div>
-              <div>
-                <RadixDialog.Title className="text-base font-black text-surface-900 tracking-tight flex items-center gap-2">
+              <div className="min-w-0">
+                <RadixDialog.Title className="text-base font-bold text-surface-900 tracking-tight flex items-center gap-2 truncate">
                   <span>AI Meal Photo Scanner</span>
-                  <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
-                    Vision 1.5
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200 shrink-0">
+                    Vision AI
                   </span>
                 </RadixDialog.Title>
-                <p id="camera-modal-desc" className="text-xs text-surface-500 font-medium">
-                  Snap or upload a photo to identify meal items and estimate macros with AI.
+                <p id="camera-modal-desc" className="text-xs text-surface-500 font-medium truncate">
+                  Identify multiple meal items and estimate nutrition from photo.
                 </p>
               </div>
             </div>
 
             <RadixDialog.Close asChild>
-              <button className="p-1 rounded-xl text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors">
+              <button
+                type="button"
+                className="p-1.5 rounded-xl text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors shrink-0"
+                aria-label="Close"
+              >
                 <X size={18} />
               </button>
             </RadixDialog.Close>
           </div>
 
-          {/* Hidden Inputs */}
+          {/* Hidden File / Camera Inputs */}
           <input
             ref={cameraInputRef}
             type="file"
@@ -336,33 +404,33 @@ export function FoodCameraModal({
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
             {/* Step 1: No Image Selected State */}
             {!imagePreview && (
-              <div className="space-y-4 py-6 text-center">
-                <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-50 border-2 border-dashed border-emerald-300 flex items-center justify-center text-emerald-600">
+              <div className="space-y-4 py-8 text-center">
+                <div className="w-16 h-16 mx-auto rounded-3xl bg-brand-50 border-2 border-dashed border-brand-300 flex items-center justify-center text-brand-600">
                   <Camera size={28} />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-surface-900">Choose a Food Photo</h4>
-                  <p className="text-xs text-surface-500 max-w-sm mx-auto mt-1">
-                    Take a live picture of your plate or upload an existing meal photo from your device.
+                  <h4 className="text-sm font-bold text-surface-900">Select or Capture Meal Photo</h4>
+                  <p className="text-xs text-surface-500 max-w-sm mx-auto mt-1 leading-relaxed">
+                    Take a live photo of your plate or upload an existing image. AI will detect all distinct foods present.
                   </p>
                 </div>
 
-                <div className="flex items-center justify-center gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
                     id="scanner-open-camera-btn"
-                    className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-xs transition-all"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 active:scale-95 shadow-xs transition-all min-h-[44px]"
                   >
                     <Camera size={16} />
-                    <span>Take Meal Photo</span>
+                    <span>Take Photo (Camera)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => uploadInputRef.current?.click()}
                     id="scanner-open-upload-btn"
-                    className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-surface-700 bg-surface-100 hover:bg-surface-200 active:scale-95 transition-all"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl text-xs font-bold text-surface-700 bg-surface-100 hover:bg-surface-200 active:scale-95 transition-all min-h-[44px]"
                   >
                     <Upload size={16} />
                     <span>Upload Image</span>
@@ -374,8 +442,8 @@ export function FoodCameraModal({
             {/* Processing image loader */}
             {isProcessingImage && (
               <div className="py-10 text-center text-surface-500 flex flex-col items-center justify-center gap-2">
-                <Loader2 size={24} className="animate-spin text-emerald-600" />
-                <p className="text-xs font-semibold">Optimizing meal photo resolution...</p>
+                <Loader2 size={24} className="animate-spin text-brand-600" />
+                <p className="text-xs font-semibold">Optimizing image for recognition...</p>
               </div>
             )}
 
@@ -390,15 +458,15 @@ export function FoodCameraModal({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-1 pl-6">
+                <div className="flex flex-wrap items-center gap-2 pt-1 pl-6">
                   {imagePreview && (
                     <button
                       type="button"
                       onClick={runAnalysis}
                       disabled={isAnalyzing}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-rose-800 border border-rose-300 hover:bg-rose-100 shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-rose-800 border border-rose-300 hover:bg-rose-100 shadow-2xs min-h-[36px]"
                     >
-                      <RotateCcw size={12} />
+                      <RotateCcw size={13} />
                       <span>Retry Analysis</span>
                     </button>
                   )}
@@ -410,9 +478,9 @@ export function FoodCameraModal({
                         onOpenChange(false)
                         onSwitchToLibrary()
                       }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-surface-700 border border-surface-200 hover:bg-surface-50 shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-surface-700 border border-surface-200 hover:bg-surface-50 shadow-2xs min-h-[36px]"
                     >
-                      <Search size={12} />
+                      <Search size={13} />
                       <span>Search Food Library</span>
                     </button>
                   )}
@@ -435,53 +503,53 @@ export function FoodCameraModal({
                     <button
                       type="button"
                       onClick={() => cameraInputRef.current?.click()}
-                      className="p-1.5 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
+                      className="p-2 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
                       title="Retake photo"
                     >
-                      <Camera size={14} />
+                      <Camera size={15} />
                     </button>
                     <button
                       type="button"
                       onClick={() => uploadInputRef.current?.click()}
-                      className="p-1.5 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
+                      className="p-2 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
                       title="Choose another image"
                     >
-                      <Upload size={14} />
+                      <Upload size={15} />
                     </button>
                     <button
                       type="button"
                       onClick={resetState}
-                      className="p-1.5 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
+                      className="p-2 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur-xs transition-colors"
                       title="Remove image"
                     >
-                      <X size={14} />
+                      <X size={15} />
                     </button>
                   </div>
 
                   {imageMeta && (
-                    <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] text-white/90 font-mono">
+                    <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-xs text-[10px] text-white/90 font-mono">
                       {imageMeta.width}×{imageMeta.height} • {imageMeta.sizeKb} KB
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-2">
                   <button
                     type="button"
                     onClick={runAnalysis}
                     disabled={isAnalyzing}
                     id="run-ai-vision-analysis-btn"
-                    className="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                    className="w-full py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-60 min-h-[44px]"
                   >
                     {isAnalyzing ? (
                       <>
                         <Loader2 size={16} className="animate-spin" />
-                        <span>Identifying Food Items with AI...</span>
+                        <span>{analysisStage || 'Analyzing Meal with AI...'}</span>
                       </>
                     ) : (
                       <>
                         <Sparkles size={16} />
-                        <span>Analyze Meal with AI</span>
+                        <span>Analyze Meal Photo</span>
                       </>
                     )}
                   </button>
@@ -493,7 +561,7 @@ export function FoodCameraModal({
             {hasAnalyzed && detectedItems.length > 0 && (
               <div className="space-y-4 animate-fade-in">
                 {/* Photo thumbnail & quick retake bar */}
-                <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-surface-50 border border-surface-200">
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-surface-50 border border-surface-200">
                   <div className="w-14 h-14 rounded-xl overflow-hidden bg-surface-200 flex-shrink-0 border border-surface-200">
                     <img
                       src={imagePreview || ''}
@@ -502,7 +570,7 @@ export function FoodCameraModal({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-700">
                       Identified {detectedItems.length} Food {detectedItems.length === 1 ? 'Item' : 'Items'}
                     </span>
                     <p className="text-xs text-surface-600 truncate mt-0.5">
@@ -515,17 +583,17 @@ export function FoodCameraModal({
                       setHasAnalyzed(false)
                       setDetectedItems([])
                     }}
-                    className="p-1.5 text-surface-500 hover:text-surface-800 rounded-lg hover:bg-surface-200 transition-colors"
+                    className="p-2 text-surface-500 hover:text-surface-800 rounded-xl hover:bg-surface-200 transition-colors shrink-0"
                     title="Retake or replace image"
                   >
-                    <RotateCcw size={15} />
+                    <RotateCcw size={16} />
                   </button>
                 </div>
 
                 {/* Target Meal Selector */}
                 <div>
-                  <label className="block text-xs font-bold text-surface-700 mb-1">
-                    Log To Meal
+                  <label className="block text-xs font-bold text-surface-700 mb-1.5">
+                    Log To Meal Category
                   </label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(m => (
@@ -533,9 +601,9 @@ export function FoodCameraModal({
                         key={m}
                         type="button"
                         onClick={() => setSelectedMeal(m)}
-                        className={`py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                        className={`py-2 px-2 rounded-xl text-xs font-bold capitalize transition-all min-h-[40px] flex items-center justify-center ${
                           selectedMeal === m
-                            ? 'bg-emerald-600 text-white shadow-xs'
+                            ? 'bg-brand-600 text-white shadow-xs'
                             : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
                         }`}
                       >
@@ -548,17 +616,49 @@ export function FoodCameraModal({
                 {/* Detected Items List */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-wider text-surface-700">
-                      Detected Food Items
+                    <span className="text-xs font-bold uppercase tracking-wider text-surface-700">
+                      Detected Foods ({detectedItems.length})
                     </span>
-                    <button
-                      type="button"
-                      onClick={handleAddMissingItem}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800"
-                    >
-                      <Plus size={12} />
-                      <span>Add Item</span>
-                    </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddMenu(!showAddMenu)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-700 p-1 rounded-lg"
+                      >
+                        <Plus size={14} />
+                        <span>Add Item</span>
+                      </button>
+
+                      {showAddMenu && (
+                        <div className="absolute right-0 top-7 z-20 w-64 bg-white rounded-2xl shadow-xl border border-surface-200 p-2 space-y-1 text-xs animate-scale-in">
+                          <span className="text-[10px] font-bold text-surface-400 uppercase tracking-wider px-2 py-1 block">
+                            Quick Add Common Foods
+                          </span>
+                          <div className="max-h-48 overflow-y-auto space-y-0.5">
+                            {COMMON_ADDITIONS.map(ca => (
+                              <button
+                                key={ca.name}
+                                type="button"
+                                onClick={() => handleAddPresetItem(ca)}
+                                className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-surface-50 text-surface-800 font-semibold flex items-center justify-between"
+                              >
+                                <span className="truncate">{ca.name}</span>
+                                <span className="text-[10px] text-surface-400 shrink-0">{ca.calories} kcal</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="pt-1 border-t border-surface-100">
+                            <button
+                              type="button"
+                              onClick={handleAddCustomItem}
+                              className="w-full text-left px-2 py-1.5 rounded-lg text-brand-600 font-bold hover:bg-brand-50"
+                            >
+                              + Custom Food Item
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {detectedItems.map(item => (
@@ -567,34 +667,31 @@ export function FoodCameraModal({
                       className="p-3.5 rounded-2xl bg-white border border-surface-200 shadow-2xs space-y-2.5"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           {/* Editable Food Name */}
                           <div className="flex items-center gap-1.5">
                             <input
                               type="text"
                               value={item.name}
                               onChange={e => handleUpdateItem(item.id, { name: e.target.value })}
-                              className="font-bold text-xs sm:text-sm text-surface-900 bg-transparent border-b border-transparent hover:border-surface-300 focus:border-emerald-500 focus:bg-emerald-50/30 px-1 py-0.5 rounded transition-all w-full"
-                              title="Click to rename food"
+                              className="font-bold text-xs sm:text-sm text-surface-900 bg-transparent border-b border-transparent hover:border-surface-300 focus:border-brand-500 focus:bg-brand-50/30 px-1 py-0.5 rounded transition-all w-full truncate"
+                              title="Click to edit name"
                             />
-                            <Edit2 size={12} className="text-surface-400 flex-shrink-0" />
+                            <Edit2 size={12} className="text-surface-400 shrink-0" />
                           </div>
 
-                          <div className="flex items-center gap-2 mt-0.5 px-1">
-                            <span className="text-[10px] text-surface-500">
-                              Estimated: {item.portion}
+                          <div className="flex items-center gap-2 mt-0.5 px-1 flex-wrap">
+                            <span className="text-[11px] text-surface-500">
+                              Portion: {item.portion}
                             </span>
-                            {item.confidence && (
-                              <span
-                                className={`text-[9px] font-black uppercase px-1.5 py-0.2 rounded ${
-                                  item.confidence === 'high'
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : item.confidence === 'low'
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-blue-100 text-blue-800'
-                                }`}
-                              >
-                                {item.confidence} confidence
+                            {item.isCatalogMatch ? (
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                <CheckCircle2 size={10} />
+                                <span>Verified Match</span>
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-surface-100 text-surface-600 border border-surface-200">
+                                AI Estimate
                               </span>
                             )}
                           </div>
@@ -603,25 +700,26 @@ export function FoodCameraModal({
                         <button
                           type="button"
                           onClick={() => handleDeleteItem(item.id)}
-                          className="p-1.5 text-surface-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                          className="p-1.5 text-surface-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors shrink-0"
                           title="Remove item"
+                          aria-label="Remove item"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
 
-                      {/* Portion Multipliers */}
-                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-surface-100">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] font-bold text-surface-400 mr-1">Portion:</span>
+                      {/* Portion Multipliers & Macros */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-surface-100">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-surface-400">Serving:</span>
                           {[0.5, 1, 1.5, 2].map(preset => (
                             <button
                               key={preset}
                               type="button"
                               onClick={() => handleUpdateItem(item.id, { quantity: preset })}
-                              className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all ${
+                              className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all min-h-[30px] ${
                                 item.quantity === preset
-                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                                  ? 'bg-brand-50 border-brand-300 text-brand-700'
                                   : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
                               }`}
                             >
@@ -630,14 +728,14 @@ export function FoodCameraModal({
                           ))}
                         </div>
 
-                        {/* Nutrient Mini Strip */}
-                        <div className="flex items-center gap-2 text-[11px] font-semibold text-surface-700 flex-wrap">
+                        {/* Nutrient Summary */}
+                        <div className="flex items-center gap-2 text-xs font-semibold text-surface-700 flex-wrap">
                           <span className="font-bold text-surface-900">{item.calories} kcal</span>
                           <span className="text-emerald-700 font-bold">{item.protein}g P</span>
                           <span className="text-amber-700">{item.carbs}g C</span>
                           <span className="text-rose-600">{item.fat}g F</span>
                           {item.fiber !== undefined && item.fiber > 0 && (
-                            <span className="text-teal-600">{item.fiber}g Fib</span>
+                            <span className="text-brand-600">{item.fiber}g Fib</span>
                           )}
                         </div>
                       </div>
@@ -646,59 +744,57 @@ export function FoodCameraModal({
                 </div>
 
                 {/* Combined Meal Total Card */}
-                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/90 shadow-2xs">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-black uppercase tracking-wider text-emerald-900">
-                      Total Estimated Meal
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-50/70 to-emerald-50/50 border border-brand-200/80 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-surface-900">
+                      Total Meal Nutrition
                     </span>
-                    <span className="text-[10px] font-medium text-emerald-700">
-                      Visual estimate • Not lab-tested
+                    <span className="text-[10px] text-surface-500 font-medium">
+                      Sum of {detectedItems.length} items
                     </span>
                   </div>
 
-                  <div className={`grid ${mealTotals.fiber > 0 ? 'grid-cols-5' : 'grid-cols-4'} gap-2 text-center`}>
-                    <div className="bg-white/80 p-2 rounded-xl">
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 text-center">
+                    <div className="bg-white p-2 rounded-xl border border-surface-100">
                       <span className="text-[10px] font-bold uppercase text-surface-400 block">
                         Calories
                       </span>
-                      <span className="text-base font-black text-surface-900">
+                      <span className="text-base font-bold text-surface-900">
                         {mealTotals.calories}
                       </span>
                     </div>
-                    <div className="bg-white/80 p-2 rounded-xl">
+                    <div className="bg-white p-2 rounded-xl border border-surface-100">
                       <span className="text-[10px] font-bold uppercase text-emerald-700 block">
                         Protein
                       </span>
-                      <span className="text-base font-black text-surface-900">
+                      <span className="text-base font-bold text-surface-900">
                         {mealTotals.protein}g
                       </span>
                     </div>
-                    <div className="bg-white/80 p-2 rounded-xl">
+                    <div className="bg-white p-2 rounded-xl border border-surface-100">
                       <span className="text-[10px] font-bold uppercase text-amber-700 block">
                         Carbs
                       </span>
-                      <span className="text-base font-black text-surface-900">
+                      <span className="text-base font-bold text-surface-900">
                         {mealTotals.carbs}g
                       </span>
                     </div>
-                    <div className="bg-white/80 p-2 rounded-xl">
+                    <div className="bg-white p-2 rounded-xl border border-surface-100">
                       <span className="text-[10px] font-bold uppercase text-rose-600 block">
                         Fat
                       </span>
-                      <span className="text-base font-black text-surface-900">
+                      <span className="text-base font-bold text-surface-900">
                         {mealTotals.fat}g
                       </span>
                     </div>
-                    {mealTotals.fiber > 0 && (
-                      <div className="bg-white/80 p-2 rounded-xl">
-                        <span className="text-[10px] font-bold uppercase text-teal-600 block">
-                          Fiber
-                        </span>
-                        <span className="text-base font-black text-surface-900">
-                          {mealTotals.fiber}g
-                        </span>
-                      </div>
-                    )}
+                    <div className="bg-white p-2 rounded-xl border border-surface-100 col-span-4 sm:col-span-1">
+                      <span className="text-[10px] font-bold uppercase text-brand-600 block">
+                        Fiber
+                      </span>
+                      <span className="text-base font-bold text-surface-900">
+                        {mealTotals.fiber}g
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -708,16 +804,21 @@ export function FoodCameraModal({
                   onClick={handleConfirmAndLog}
                   disabled={isSaving || detectedItems.length === 0}
                   id="confirm-and-log-meal-btn"
-                  className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                  className="w-full py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50 min-h-[44px]"
                 >
                   {isSaving ? (
-                    <Loader2 size={16} className="animate-spin" />
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Logging Meal...</span>
+                    </>
                   ) : (
-                    <Check size={16} />
+                    <>
+                      <Check size={16} />
+                      <span>
+                        Confirm & Log Meal ({detectedItems.length} {detectedItems.length === 1 ? 'item' : 'items'} to {selectedMeal.toUpperCase()})
+                      </span>
+                    </>
                   )}
-                  <span>
-                    Confirm and Log Meal ({detectedItems.length} {detectedItems.length === 1 ? 'item' : 'items'} to {selectedMeal.toUpperCase()})
-                  </span>
                 </button>
               </div>
             )}
