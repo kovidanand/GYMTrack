@@ -683,20 +683,22 @@ export default function Plans() {
             {plans.filter(p => !p.is_active).map(plan => (
               <div
                 key={plan.id}
-                className="p-4 rounded-xl bg-white border border-surface-200 flex items-center justify-between gap-3"
+                className="p-4 rounded-xl bg-white border border-surface-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 shadow-2xs hover:border-surface-300 transition-colors"
               >
-                <div>
-                  <h4 className="text-sm font-bold text-surface-900">{plan.name}</h4>
-                  <p className="text-xs text-surface-500">
-                    {plan.duration_weeks || 12} Weeks · {plan.days_per_week || 4} days/week · {plan.difficulty || 'Intermediate'}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h4 className="text-sm sm:text-base font-bold text-surface-900 leading-snug break-words">
+                    {plan.name}
+                  </h4>
+                  <p className="text-xs text-surface-500 font-medium">
+                    {plan.duration_weeks || 12} weeks · {plan.days_per_week || 4} days/week · <span className="capitalize">{plan.difficulty || 'Intermediate'}</span>
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-2 pt-2.5 sm:pt-0 border-t border-surface-100 sm:border-0 w-full sm:w-auto flex-wrap sm:flex-nowrap flex-shrink-0">
                   <button
                     type="button"
                     onClick={() => handleToggleActive(plan.id, false, false)}
-                    className="btn-secondary text-xs py-1.5 px-2.5 font-semibold hover:border-brand-300"
+                    className="btn-secondary text-xs py-2 sm:py-1.5 px-3 sm:px-2.5 font-semibold hover:border-brand-300 flex-1 sm:flex-none text-center justify-center min-h-[38px] sm:min-h-0"
                     title="Resume this plan keeping previous progress"
                     id={`resume-plan-${plan.id}`}
                   >
@@ -706,7 +708,7 @@ export default function Plans() {
                   <button
                     type="button"
                     onClick={() => handleToggleActive(plan.id, false, true)}
-                    className="text-xs py-1.5 px-2.5 font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 transition-colors"
+                    className="text-xs py-2 sm:py-1.5 px-3 sm:px-2.5 font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 transition-colors flex-1 sm:flex-none text-center justify-center min-h-[38px] sm:min-h-0 whitespace-nowrap"
                     title="Start this plan as a fresh cycle (0 exercises completed)"
                     id={`start-fresh-plan-${plan.id}`}
                   >
@@ -716,10 +718,11 @@ export default function Plans() {
                   <button
                     type="button"
                     onClick={() => setPlanToDelete(plan)}
-                    className="text-xs py-1.5 px-2.5 font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors flex items-center gap-1"
+                    className="text-xs py-2 sm:py-1.5 px-3 sm:px-2.5 font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg border border-red-200 transition-colors flex items-center justify-center gap-1 min-h-[38px] sm:min-h-0 flex-shrink-0"
+                    title="Delete this training plan"
                     id={`delete-plan-${plan.id}`}
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={13} className="shrink-0" />
                     <span>Delete</span>
                   </button>
                 </div>

@@ -3,7 +3,8 @@ import {
   BarChart2, BookOpen, Timer, TrendingUp,
   ChevronRight, ArrowRight,
   Dumbbell, Target, Zap, CheckCircle2,
-  CalendarDays, Bot, WifiOff, Star
+  CalendarDays, Bot, WifiOff, Star,
+  Utensils, Trophy
 } from 'lucide-react'
 import { GYMTrackLogo } from '@/components/shared'
 import { SparkLine } from '@/components/progress/ProgressComponents'
@@ -33,10 +34,22 @@ const features = [
     color: 'bg-indigo-50 text-indigo-600',
   },
   {
+    icon: Utensils,
+    title: 'NutriTrack Nutrition',
+    description: 'Track daily calories, macros, and hydration. Log foods from an extensive library or analyze meal photos with AI.',
+    color: 'bg-emerald-50 text-emerald-600',
+  },
+  {
     icon: TrendingUp,
     title: 'Progress Analytics',
     description: 'Understand strength, consistency, and volume trends over time based on real logged lifts.',
-    color: 'bg-emerald-50 text-emerald-600',
+    color: 'bg-teal-50 text-teal-600',
+  },
+  {
+    icon: Trophy,
+    title: 'Personal Records',
+    description: 'Automatically celebrate and track new 1RM benchmarks and all-time weight bests for every exercise.',
+    color: 'bg-amber-50 text-amber-600',
   },
   {
     icon: Bot,
@@ -48,7 +61,7 @@ const features = [
     icon: WifiOff,
     title: 'Offline Workout Logging',
     description: 'Train anywhere with full local offline recording that automatically syncs when you reconnect.',
-    color: 'bg-amber-50 text-amber-600',
+    color: 'bg-rose-50 text-rose-600',
   },
 ]
 
@@ -144,7 +157,7 @@ function DashboardPreview() {
             </div>
             <span className="text-xs font-bold text-surface-900">GYMTrack</span>
           </div>
-          {['Dashboard','Workouts','Exercises','Progress','Profile'].map((item, i) => (
+          {['Dashboard','Plans','Exercises','Nutrition','Progress','Profile'].map((item, i) => (
             <div key={item} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium ${i === 0 ? 'bg-brand-50 text-brand-700' : 'text-surface-500'}`}>
               <div className={`w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-brand-500' : 'bg-surface-300'}`} />
               {item}
@@ -216,21 +229,21 @@ export default function Landing() {
               Train. Track. Improve.
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-extrabold text-surface-900 leading-[1.12] tracking-tight mb-6">
+            <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-extrabold text-surface-900 leading-[1.14] tracking-tight mb-5 sm:mb-6">
               Track every workout.<br />
               <span className="text-brand-600">Understand your progress.</span><br />
               Train with purpose.
             </h1>
 
-            <p className="text-lg text-surface-600 leading-relaxed mb-8 max-w-xl">
-              GYMTrack is your serious training companion. Plan structured routines, log every set with precision, and analyze real performance metrics — online or offline.
+            <p className="text-base sm:text-lg text-surface-600 leading-relaxed mb-6 sm:mb-8 max-w-xl">
+              GYMTrack is your serious training companion. Plan structured routines, log every set with precision, manage nutrition with NutriTrack, and analyze real performance metrics — online or offline.
             </p>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <Link
                 to="/signup"
                 id="hero-get-started"
-                className="btn-primary text-base px-7 py-3.5 shadow-sm font-bold"
+                className="btn-primary text-sm sm:text-base px-7 py-3.5 shadow-sm font-bold justify-center"
               >
                 Get Started
                 <ArrowRight size={18} aria-hidden="true" />
@@ -238,7 +251,7 @@ export default function Landing() {
               <Link
                 to="/login"
                 id="hero-login"
-                className="btn-secondary text-base px-7 py-3.5 font-bold"
+                className="btn-secondary text-sm sm:text-base px-7 py-3.5 font-bold justify-center"
               >
                 Log In
               </Link>
@@ -319,7 +332,7 @@ export default function Landing() {
             {/* Connector line */}
             <div className="hidden lg:block absolute top-10 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-brand-200 to-transparent" aria-hidden="true" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
               {workflowSteps.map((step, i) => (
                 <div key={step.step} className="flex flex-col items-center text-center gap-3">
                   <div className="relative">
@@ -329,7 +342,7 @@ export default function Landing() {
                     </div>
                     {i < workflowSteps.length - 1 && (
                       <ChevronRight
-                        className="hidden sm:block absolute -right-4 top-1/2 -translate-y-1/2 text-brand-300"
+                        className="hidden lg:block absolute -right-4 top-1/2 -translate-y-1/2 text-brand-300"
                         size={16}
                         aria-hidden="true"
                       />
@@ -475,7 +488,9 @@ export default function Landing() {
             </div>
             <div className="flex flex-wrap gap-6 text-sm">
               <Link to="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+              <Link to="/plans"     className="hover:text-white transition-colors">Plans</Link>
               <Link to="/exercises" className="hover:text-white transition-colors">Exercises</Link>
+              <Link to="/nutrition" className="hover:text-white transition-colors">Nutrition</Link>
               <Link to="/progress"  className="hover:text-white transition-colors">Progress</Link>
               <Link to="/profile"   className="hover:text-white transition-colors">Profile</Link>
             </div>

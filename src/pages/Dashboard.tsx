@@ -878,17 +878,17 @@ export default function Dashboard() {
       {/* ── 7. RECENT ACHIEVEMENTS & PERSONAL BESTS ── */}
       <section aria-label="Recent personal best record">
         <div className="card p-4 sm:p-5 bg-gradient-to-br from-amber-50/40 via-white to-surface-50 border border-amber-200/70 rounded-2xl shadow-xs">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs flex-shrink-0">
                 <Trophy size={20} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">
                   Personal Record
                 </span>
                 {recentPB ? (
-                  <h3 className="font-black text-surface-900 text-base sm:text-lg">
+                  <h3 className="font-black text-surface-900 text-base sm:text-lg truncate">
                     {recentPB.exerciseName}: <span className="text-brand-600">{recentPB.value} {recentPB.unit}</span>
                   </h3>
                 ) : (
@@ -901,7 +901,7 @@ export default function Dashboard() {
 
             <button
               onClick={() => navigate('/progress')}
-              className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1"
+              className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 self-start sm:self-auto flex-shrink-0"
             >
               <span>View All</span>
               <ChevronRight size={14} />
@@ -913,17 +913,17 @@ export default function Dashboard() {
       {/* ── 8. DAILY NUTRITION SNAPSHOT & SHORTCUT ── */}
       <section aria-label="Daily nutrition shortcut">
         <div className="card p-4 sm:p-5 bg-gradient-to-br from-emerald-50/40 via-white to-surface-50 border border-emerald-200/70 rounded-2xl shadow-xs">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs flex-shrink-0">
                 <UtensilsCrossed size={20} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
                   NutriTrack Fuel
                 </span>
                 <h3 className="font-black text-surface-900 text-sm sm:text-base leading-tight">
-                  Track Daily Meals & Hydration
+                  Track Daily Meals &amp; Hydration
                 </h3>
                 <p className="text-xs text-surface-500 mt-0.5">
                   Log foods, scan meals with AI, track macros, and fuel your workouts.
@@ -934,7 +934,7 @@ export default function Dashboard() {
             <button
               onClick={() => navigate('/nutrition')}
               id="dashboard-open-nutrition-btn"
-              className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors whitespace-nowrap self-center"
+              className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors whitespace-nowrap self-start sm:self-center flex-shrink-0"
             >
               <span>Open NutriTrack</span>
               <ChevronRight size={14} />
