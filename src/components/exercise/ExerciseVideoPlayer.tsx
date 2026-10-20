@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Play, Pause, AlertCircle } from 'lucide-react'
+import { Play, Pause, AlertCircle, Loader2 } from 'lucide-react'
 import type { ExerciseMedia } from '@/types'
 import { cn } from '@/lib/utils'
+import { useExerciseDemo, type DemoGender } from '@/context/ExerciseDemoContext'
 
 interface ExerciseVideoPlayerProps {
   media?: ExerciseMedia | null
@@ -12,6 +13,7 @@ interface ExerciseVideoPlayerProps {
   showControls?: boolean
   showGenderToggle?: boolean
   objectFit?: 'cover' | 'contain'
+  preferredGender?: DemoGender
 }
 
 export function ExerciseVideoPlayer({
@@ -22,14 +24,31 @@ export function ExerciseVideoPlayer({
   autoPlay = true,
   showControls = false,
   showGenderToggle = true,
-  objectFit = 'cover'
+  objectFit = 'cover',
+  preferredGender,
 }: ExerciseVideoPlayerProps) {
-  const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('male')
+  const { demoGender, setDemoGender, resolveDemoVideo } = useExerciseDemo()
+  const targetGender = preferredGender || demoGender
+
+  const resolved = resolveDemoVideo(media, targetGender)
+  const currentVideoUrl = resolved.videoUrl
+  const currentPosterUrl = resolved.posterUrl
+  const isFallback = resolved.isFallback
+  const activeGender = resolved.activeGender
+
   const [isPlaying, setIsPlaying] = useState(autoPlay)
   const [hasError, setHasError] = useState(false)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isBuffering, setIsBuffering] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  // Reset error & load state when video source changes
+  useEffect(() => {
+    setHasError(false)
+    setIsLoaded(false)
+    setIsBuffering(true)
+  }, [currentVideoUrl])
 
   // Check for prefers-reduced-motion
   useEffect(() => {
@@ -40,27 +59,6 @@ export function ExerciseVideoPlayer({
     mediaQuery.addEventListener('change', handler)
     return () => mediaQuery.removeEventListener('change', handler)
   }, [])
-
-  // Auto switch to available gender if selected is not present
-  useEffect(() => {
-    if (media) {
-      if (selectedGender === 'male' && !media.maleVideoUrl && media.femaleVideoUrl) {
-        setSelectedGender('female')
-      } else if (selectedGender === 'female' && !media.femaleVideoUrl && media.maleVideoUrl) {
-        setSelectedGender('male')
-      }
-    }
-  }, [media, selectedGender])
-
-  const currentVideoUrl = selectedGender === 'female'
-    ? (media?.femaleVideoUrl || media?.videoUrl)
-    : (media?.maleVideoUrl || media?.videoUrl)
-
-  const currentPosterUrl = selectedGender === 'female'
-    ? (media?.thumbnailUrl || media?.posterUrl)
-    : (media?.posterUrl || media?.thumbnailUrl)
-
-  const hasMultipleGenders = Boolean(media?.maleVideoUrl && media?.femaleVideoUrl)
 
   const handleTogglePlay = () => {
     if (!videoRef.current) return
@@ -73,7 +71,13 @@ export function ExerciseVideoPlayer({
     }
   }
 
-  // Fallback state when no video is available
+  const handleSwitchGender = (gender: DemoGender) => {
+    if (gender === targetGender) return
+    setIsLoaded(false)
+    setDemoGender(gender)
+  }
+
+  // Fallback state when no video is available or error loading
   if (!currentVideoUrl || hasError) {
     return (
       <div
@@ -112,6 +116,7 @@ export function ExerciseVideoPlayer({
     >
       <video
         ref={videoRef}
+        key={currentVideoUrl}
         src={currentVideoUrl}
         poster={currentPosterUrl}
         autoPlay={autoPlay && !prefersReducedMotion}
@@ -119,47 +124,75 @@ export function ExerciseVideoPlayer({
         loop
         playsInline
         preload="metadata"
-        onLoadedData={() => setIsLoaded(true)}
-        onError={() => setHasError(true)}
-        onPlay={() => setIsPlaying(true)}
+        onLoadedData={() => {
+          setIsLoaded(true)
+          setIsBuffering(false)
+        }}
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => {
+          setIsBuffering(false)
+          setIsPlaying(true)
+        }}
+        onError={() => {
+          setHasError(true)
+          setIsBuffering(false)
+        }}
         onPause={() => setIsPlaying(false)}
         className={cn(
           'w-full h-full transition-opacity duration-300',
           objectFit === 'cover' ? 'object-cover' : 'object-contain',
           isLoaded ? 'opacity-100' : 'opacity-90'
         )}
-        aria-label={`${exerciseName} exercise demonstration`}
+        aria-label={`${exerciseName} ${activeGender} exercise demonstration`}
       />
 
-      {/* Gender Switcher Badge (Male / Female Demo) */}
-      {showGenderToggle && hasMultipleGenders && (
-        <div className="absolute top-3 left-3 z-10 flex items-center p-0.5 bg-black/55 backdrop-blur-md rounded-full border border-white/10 text-[11px] font-medium text-white/80 shadow-md">
-          <button
-            type="button"
-            onClick={() => setSelectedGender('male')}
-            className={cn(
-              'px-2.5 py-0.5 rounded-full transition-all text-xs font-semibold',
-              selectedGender === 'male'
-                ? 'bg-brand-500 text-white shadow-xs'
-                : 'text-white/70 hover:text-white'
-            )}
-            aria-label="Show male demonstration"
-          >
-            Male
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedGender('female')}
-            className={cn(
-              'px-2.5 py-0.5 rounded-full transition-all text-xs font-semibold',
-              selectedGender === 'female'
-                ? 'bg-brand-500 text-white shadow-xs'
-                : 'text-white/70 hover:text-white'
-            )}
-            aria-label="Show female demonstration"
-          >
-            Female
-          </button>
+      {/* Buffering Spinner */}
+      {isBuffering && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none z-10">
+          <Loader2 className="w-7 h-7 text-white/90 animate-spin" />
+        </div>
+      )}
+
+      {/* Top Left: Gender Switcher Badge (Male / Female Demo) */}
+      {showGenderToggle && (
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center p-0.5 bg-black/60 backdrop-blur-md rounded-full border border-white/15 text-[11px] font-medium text-white/90 shadow-md">
+            <button
+              type="button"
+              onClick={() => handleSwitchGender('male')}
+              id={`video-toggle-male-${exerciseName.replace(/\s+/g, '-').toLowerCase()}`}
+              className={cn(
+                'px-2.5 py-0.5 rounded-full transition-all text-xs font-semibold',
+                activeGender === 'male'
+                  ? 'bg-brand-500 text-white shadow-xs'
+                  : 'text-white/70 hover:text-white'
+              )}
+              aria-label="Show male demonstration"
+            >
+              Male
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchGender('female')}
+              id={`video-toggle-female-${exerciseName.replace(/\s+/g, '-').toLowerCase()}`}
+              className={cn(
+                'px-2.5 py-0.5 rounded-full transition-all text-xs font-semibold',
+                activeGender === 'female'
+                  ? 'bg-brand-500 text-white shadow-xs'
+                  : 'text-white/70 hover:text-white'
+              )}
+              aria-label="Show female demonstration"
+            >
+              Female
+            </button>
+          </div>
+
+          {/* Graceful Fallback Notice Pill */}
+          {isFallback && resolved.fallbackMessage && (
+            <span className="text-[10px] font-medium bg-black/70 backdrop-blur-md text-amber-200 px-2 py-0.5 rounded-full border border-amber-400/30 shadow-xs">
+              Showing {activeGender} variant
+            </span>
+          )}
         </div>
       )}
 

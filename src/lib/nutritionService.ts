@@ -30,6 +30,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 0,
     fat: 3.6,
     fiber: 0,
+    saturated_fat: 1.0,
+    sugar: 0,
+    sodium_mg: 74,
     rawSource: 'quick',
   },
   {
@@ -42,6 +45,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 0.4,
     fat: 4.8,
     fiber: 0,
+    saturated_fat: 1.6,
+    sugar: 0.2,
+    sodium_mg: 70,
     rawSource: 'quick',
   },
   {
@@ -54,6 +60,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 0.7,
     fat: 0.2,
     fiber: 0,
+    saturated_fat: 0,
+    sugar: 0.7,
+    sodium_mg: 166,
     rawSource: 'quick',
   },
   {
@@ -66,6 +75,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 66.3,
     fat: 6.9,
     fiber: 10.6,
+    saturated_fat: 1.2,
+    sugar: 1.0,
+    sodium_mg: 6,
     rawSource: 'quick',
   },
   {
@@ -78,6 +90,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 2,
     fat: 1.5,
     fiber: 0,
+    saturated_fat: 0.5,
+    sugar: 1.0,
+    sodium_mg: 50,
     rawSource: 'quick',
   },
   {
@@ -90,6 +105,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 28.2,
     fat: 0.3,
     fiber: 0.4,
+    saturated_fat: 0.1,
+    sugar: 0.1,
+    sodium_mg: 1,
     rawSource: 'quick',
   },
   {
@@ -102,6 +120,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 23.5,
     fat: 0.9,
     fiber: 1.8,
+    saturated_fat: 0.2,
+    sugar: 0.2,
+    sodium_mg: 2,
     rawSource: 'quick',
   },
   {
@@ -114,6 +135,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 3.6,
     fat: 0.4,
     fiber: 0,
+    saturated_fat: 0.1,
+    sugar: 3.2,
+    sodium_mg: 36,
     rawSource: 'quick',
   },
   {
@@ -126,6 +150,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 0,
     fat: 12.3,
     fiber: 0,
+    saturated_fat: 2.5,
+    sugar: 0,
+    sodium_mg: 60,
     rawSource: 'quick',
   },
   {
@@ -138,6 +165,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 0,
     fat: 0.8,
     fiber: 0,
+    saturated_fat: 0.2,
+    sugar: 0,
+    sodium_mg: 338,
     rawSource: 'quick',
   },
   {
@@ -150,6 +180,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 27,
     fat: 0.3,
     fiber: 3.1,
+    saturated_fat: 0.1,
+    sugar: 14.4,
+    sodium_mg: 1,
     rawSource: 'quick',
   },
   {
@@ -162,6 +195,9 @@ export const FITNESS_STAPLES: FoodSearchResult[] = [
     carbs: 20.7,
     fat: 0.1,
     fiber: 3.3,
+    saturated_fat: 0,
+    sugar: 6.5,
+    sodium_mg: 36,
     rawSource: 'quick',
   },
   {
@@ -935,6 +971,10 @@ export async function searchFoods(
           const fat = nutriments['fat_100g'] ?? nutriments['fat'] ?? 0
           const fiber = nutriments['fiber_100g'] ?? nutriments['fiber'] ?? 0
 
+          const saturatedFatRaw = nutriments['saturated-fat_100g'] ?? nutriments['saturated-fat']
+          const sugarRaw = nutriments['sugars_100g'] ?? nutriments['sugars']
+          const sodiumRaw = nutriments['sodium_100g'] ?? nutriments['sodium']
+
           // Only keep items with realistic calorie info
           if (calories > 0 || protein > 0 || carbs > 0 || fat > 0) {
             results.push({
@@ -948,6 +988,9 @@ export async function searchFoods(
               carbs: Math.round(carbs * 10) / 10,
               fat: Math.round(fat * 10) / 10,
               fiber: Math.round(fiber * 10) / 10,
+              saturated_fat: saturatedFatRaw != null ? Math.round(Number(saturatedFatRaw) * 10) / 10 : null,
+              sugar: sugarRaw != null ? Math.round(Number(sugarRaw) * 10) / 10 : null,
+              sodium_mg: sodiumRaw != null ? Math.round(Number(sodiumRaw) * 1000) : null,
               imageUrl: prod.image_thumb_url || prod.image_front_thumb_url,
               rawSource: 'openfoodfacts',
             })
@@ -1440,7 +1483,9 @@ export async function analyzeMealPhoto(
 
   // Primary path: Supabase Edge Function (Server-side Gemini Vision)
   try {
-    const anonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || ''
+    const anonKey =
+      (import.meta as unknown as { env?: Record<string, string> }).env
+        ?.VITE_SUPABASE_ANON_KEY || ''
     const { data, error } = await supabase.functions.invoke('ai-coach', {
       headers: anonKey ? { apikey: anonKey } : undefined,
       body: {
@@ -1810,7 +1855,9 @@ export async function getCalendarActivityIndicators(
         }
       }
     }
-  } catch {}
+  } catch {
+    // Ignore localstorage parse errors
+  }
 
   return { foodDates, workoutDates }
 }

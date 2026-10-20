@@ -19,10 +19,12 @@ import {
   addCustomFood,
   getFoodServingUnits,
   calculateScaledNutrients,
+  convertUnitQuantity,
   processFoodImage,
   analyzeMealPhoto,
+  type ServingUnitOption,
 } from '@/lib/nutritionService'
-import { supabase } from '@/lib/supabase'
+import { emitGymtrackEvent } from '@/lib/events'
 
 interface AddFoodModalProps {
   open: boolean
@@ -91,23 +93,51 @@ export function AddFoodModal({
     [selectedFood]
   )
 
-  const activeUnitOption = useMemo(() => {
+  const activeUnitOption: ServingUnitOption = useMemo(() => {
     if (servingUnits.length === 0) {
-      return { unit: 'serving', label: '1 Serving', multiplier: 1, isDefault: true }
+      return {
+        unit: 'serving',
+        label: '1 Serving',
+        shortLabel: 'serving',
+        multiplier: 1,
+        isDefault: true,
+      }
     }
     return servingUnits.find(u => u.unit === selectedUnit) || servingUnits[0]
   }, [servingUnits, selectedUnit])
 
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const handleSelectFood = (food: FoodSearchResult) => {
     setSelectedFood(food)
+    setSaveError(null)
     const units = getFoodServingUnits(food)
     const def = units.find(u => u.isDefault) || units[0]
-    setSelectedUnit(def?.unit || 'serving')
-    if (def?.unit === 'g' || def?.unit === 'ml') {
-      setServingQuantity(100)
+    const unitKey = def?.unit || 'serving'
+    setSelectedUnit(unitKey)
+
+    // Set sensible default amount
+    const nameLower = food.name.toLowerCase()
+    if (unitKey === 'g') {
+      if (nameLower.includes('banana')) setServingQuantity(118)
+      else if (nameLower.includes('rice')) setServingQuantity(150)
+      else if (nameLower.includes('oats')) setServingQuantity(50)
+      else if (nameLower.includes('chicken') || nameLower.includes('fish') || nameLower.includes('paneer')) setServingQuantity(100)
+      else if (food.serving_size && food.serving_size > 0 && food.serving_unit.toLowerCase() === 'g') setServingQuantity(food.serving_size)
+      else setServingQuantity(100)
+    } else if (unitKey === 'ml') {
+      setServingQuantity(250)
     } else {
       setServingQuantity(1)
     }
+  }
+
+  const handleUnitChange = (newUnit: string) => {
+    const nextOption = servingUnits.find(u => u.unit === newUnit)
+    if (!nextOption) return
+    const converted = convertUnitQuantity(activeUnitOption, nextOption, servingQuantity)
+    setSelectedUnit(newUnit)
+    setServingQuantity(converted)
   }
 
   const scaledSearchNutrients = useMemo(() => {
@@ -118,9 +148,17 @@ export function AddFoodModal({
         carbs: 0,
         fat: 0,
         fiber: 0,
+        saturatedFat: null,
+        sugar: null,
+        sodiumMg: null,
         quantity: 1,
+        unit: 'serving',
         unitLabel: 'serving',
+        shortLabel: 'serving',
         portionSummary: '',
+        householdEquivalence: '',
+        isApproximateEquivalence: false,
+        totalMultiplier: 1,
       }
     }
     return calculateScaledNutrients(selectedFood, activeUnitOption, servingQuantity)
@@ -129,7 +167,9 @@ export function AddFoodModal({
   const handleConfirmSearchAdd = async () => {
     if (!selectedFood || isAdding) return
     setIsAdding(true)
+    setSaveError(null)
     try {
+      const isMetric = activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml'
       await onAddEntry({
         user_id: userId,
         date: dateStr,
@@ -137,16 +177,25 @@ export function AddFoodModal({
         food_name: selectedFood.name,
         brand: selectedFood.brand,
         serving_size: scaledSearchNutrients.quantity,
-        serving_unit: scaledSearchNutrients.unitLabel,
-        servings_logged: scaledSearchNutrients.quantity,
+        serving_unit: activeUnitOption.shortLabel || activeUnitOption.label,
+        servings_logged: isMetric ? 1 : scaledSearchNutrients.quantity,
         calories: scaledSearchNutrients.calories,
         protein: scaledSearchNutrients.protein,
         carbs: scaledSearchNutrients.carbs,
         fat: scaledSearchNutrients.fat,
         fiber: scaledSearchNutrients.fiber,
+        saturated_fat: scaledSearchNutrients.saturatedFat,
+        sugar: scaledSearchNutrients.sugar,
+        sodium_mg: scaledSearchNutrients.sodiumMg,
         logged_at: new Date().toISOString(),
       })
+      emitGymtrackEvent('gymtrack:food_logged', { date: dateStr, calories: scaledSearchNutrients.calories })
+      window.dispatchEvent(new CustomEvent('gymtrack:food_logged', { detail: { date: dateStr } }))
+      setSelectedFood(null)
       onOpenChange(false)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save food log entry. Please check your connection and try again.'
+      setSaveError(msg)
     } finally {
       setIsAdding(false)
     }
@@ -481,71 +530,151 @@ export function AddFoodModal({
                         </span>
                       </div>
 
-                      {/* Portion & Quantity Controls */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-surface-200">
-                        <div>
-                          <label className="block text-xs font-bold text-surface-700 mb-1">
-                            Unit / Portion
-                          </label>
-                          <select
-                            value={selectedUnit}
-                            onChange={e => setSelectedUnit(e.target.value)}
-                            className="input-base text-sm py-1.5 px-3 bg-white"
-                          >
-                            {servingUnits.map(u => (
-                              <option key={u.unit} value={u.unit}>
-                                {u.label}
-                              </option>
-                            ))}
-                          </select>
+                      {/* 1. Unified Amount & Unit Control */}
+                      <div className="space-y-2 mt-4 pt-4 border-t border-surface-200">
+                        <label className="block text-xs font-bold text-surface-700" htmlFor="food-quantity-input">
+                          Amount
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              id="food-quantity-input"
+                              type="number"
+                              min="0.1"
+                              step={activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? '1' : '0.1'}
+                              value={servingQuantity || ''}
+                              onChange={e => {
+                                const val = parseFloat(e.target.value)
+                                setServingQuantity(isNaN(val) ? 0 : Math.max(0.01, val))
+                              }}
+                              className="input-base text-base sm:text-sm font-bold min-h-[44px] px-3.5 w-full bg-white shadow-2xs"
+                              placeholder="e.g. 118"
+                              aria-label="Food amount"
+                            />
+                          </div>
+                          <div className="w-[145px] sm:w-[180px] flex-shrink-0">
+                            <select
+                              id="food-unit-select"
+                              value={selectedUnit}
+                              onChange={e => handleUnitChange(e.target.value)}
+                              className="input-base text-xs sm:text-sm font-bold min-h-[44px] px-2.5 bg-white cursor-pointer w-full shadow-2xs"
+                              aria-label="Unit of measure"
+                            >
+                              {servingUnits.map(u => (
+                                <option key={u.unit} value={u.unit}>
+                                  {u.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="block text-xs font-bold text-surface-700 mb-1">
-                            Quantity
-                          </label>
-                          <input
-                            type="number"
-                            min="0.1"
-                            step={activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? '10' : '0.5'}
-                            value={servingQuantity}
-                            onChange={e =>
-                              setServingQuantity(Math.max(0.1, parseFloat(e.target.value) || 1))
-                            }
-                            className="input-base text-sm py-1.5 px-3"
-                          />
-                        </div>
+                        {/* Equivalent Household Measure Line */}
+                        {scaledSearchNutrients.householdEquivalence && (
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50/90 px-3 py-1.5 rounded-lg border border-emerald-200/80 shadow-2xs">
+                            <Info size={14} className="flex-shrink-0 text-emerald-600" />
+                            <span className="truncate">{scaledSearchNutrients.householdEquivalence}</span>
+                            {scaledSearchNutrients.isApproximateEquivalence && (
+                              <span className="text-[10px] text-emerald-600 font-normal ml-auto flex-shrink-0">
+                                (approximate)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
-                      {/* Recalculated Macros Bar */}
-                      <div className="grid grid-cols-4 gap-2 mt-4 p-3 rounded-xl bg-white border border-surface-200 text-center">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-surface-400">Calories</span>
-                          <p className="text-base font-black text-surface-900">{scaledSearchNutrients.calories}</p>
+                      {/* 2. Live Recalculated Nutrition Breakdown */}
+                      <div className="mt-4 space-y-2">
+                        {/* Primary Macronutrient Cards */}
+                        <div className="grid grid-cols-5 gap-1.5 sm:gap-2 p-3 rounded-xl bg-white border border-surface-200 text-center shadow-2xs">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-surface-500 block">Calories</span>
+                            <p className="text-sm sm:text-base font-black text-surface-900">{scaledSearchNutrients.calories}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-blue-600 block">Protein</span>
+                            <p className="text-sm sm:text-base font-black text-surface-900">{scaledSearchNutrients.protein}g</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-amber-700 block">Carbs</span>
+                            <p className="text-sm sm:text-base font-black text-surface-900">{scaledSearchNutrients.carbs}g</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-rose-600 block">Fat</span>
+                            <p className="text-sm sm:text-base font-black text-surface-900">{scaledSearchNutrients.fat}g</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-emerald-600 block">Fiber</span>
+                            <p className="text-sm sm:text-base font-black text-surface-900">{scaledSearchNutrients.fiber}g</p>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-blue-600">Protein</span>
-                          <p className="text-base font-black text-surface-900">{scaledSearchNutrients.protein}g</p>
+
+                        {/* Secondary Nutrient Details (Sat Fat, Sugar, Sodium) */}
+                        <div className="flex items-center justify-around py-1.5 px-3 bg-surface-100/70 rounded-lg text-[11px] font-medium text-surface-600 flex-wrap gap-x-3 gap-y-1">
+                          <span>
+                            Sat Fat:{' '}
+                            <strong className="text-surface-800">
+                              {scaledSearchNutrients.saturatedFat != null ? `${scaledSearchNutrients.saturatedFat}g` : '—'}
+                            </strong>
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Sugar:{' '}
+                            <strong className="text-surface-800">
+                              {scaledSearchNutrients.sugar != null ? `${scaledSearchNutrients.sugar}g` : '—'}
+                            </strong>
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Sodium:{' '}
+                            <strong className="text-surface-800">
+                              {scaledSearchNutrients.sodiumMg != null ? `${scaledSearchNutrients.sodiumMg}mg` : '—'}
+                            </strong>
+                          </span>
                         </div>
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-amber-700">Carbs</span>
-                          <p className="text-base font-black text-surface-900">{scaledSearchNutrients.carbs}g</p>
-                        </div>
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-rose-600">Fat</span>
-                          <p className="text-base font-black text-surface-900">{scaledSearchNutrients.fat}g</p>
+                        <p className="text-[10px] text-surface-400 text-center font-medium">
+                          Values with '—' denote unverified/unavailable nutrient data from reference.
+                        </p>
+                      </div>
+
+                      {/* 3. Meal Selector */}
+                      <div className="mt-4 pt-3 border-t border-surface-200 flex flex-col gap-1.5">
+                        <span className="text-xs font-bold text-surface-700">Meal Destination:</span>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(meal => (
+                            <button
+                              key={meal}
+                              type="button"
+                              onClick={() => setSelectedMeal(meal)}
+                              className={`py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
+                                selectedMeal === meal
+                                  ? 'bg-brand-600 text-white shadow-xs'
+                                  : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-100'
+                              }`}
+                            >
+                              {meal}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     </div>
 
+                    {/* Error Banner */}
+                    {saveError && (
+                      <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700 flex items-center gap-2">
+                        <AlertTriangle size={15} className="flex-shrink-0" />
+                        <span>{saveError}</span>
+                      </div>
+                    )}
+
                     <button
                       onClick={handleConfirmSearchAdd}
-                      disabled={isAdding}
+                      disabled={isAdding || servingQuantity <= 0}
                       id="confirm-add-food-btn"
-                      className="btn-primary w-full py-3 text-sm font-bold flex items-center justify-center gap-2"
+                      className="btn-primary w-full py-3 text-sm font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 min-h-[44px]"
                     >
                       {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                      <span>Add to {selectedMeal.toUpperCase()}</span>
+                      <span>Log Food to {selectedMeal.toUpperCase()}</span>
                     </button>
                   </div>
                 ) : (

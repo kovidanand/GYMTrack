@@ -6,7 +6,7 @@ import { ExerciseCard, FilterChips } from '@/components/exercise/ExerciseCompone
 import { ExerciseSkeleton } from '@/components/exercise/ExerciseSkeleton'
 import { ExerciseLogModal } from '@/components/exercise/ExerciseLogModal'
 import { useExercises, type SortOption } from '@/hooks/useExercises'
-import { useToast } from '@/components/shared/Toast'
+import { useExerciseDemo } from '@/context/ExerciseDemoContext'
 import type { Exercise } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -62,7 +62,7 @@ export default function Exercises() {
     resetFilters, activeFilterCount, toggleFavorite
   } = useExercises()
 
-  const toast = useToast()
+  const { demoGender, setDemoGender } = useExerciseDemo()
   const [showFilters, setShowFilters] = useState(false)
   const [loggingExercise, setLoggingExercise] = useState<Exercise | null>(null)
 
@@ -79,7 +79,7 @@ export default function Exercises() {
         </div>
       )}
 
-      {/* ── Search + Filter Toggle ── */}
+      {/* ── Search + Filter + Demo Variant Toggle ── */}
       <div className="flex flex-col sm:flex-row gap-3">
         <SearchInput
           id="exercise-search"
@@ -89,10 +89,42 @@ export default function Exercises() {
           className="flex-1"
         />
         
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Demonstration Gender Variant Switch */}
+          <div className="flex items-center bg-surface-100 p-0.5 rounded-xl border border-surface-200 shadow-2xs" role="group" aria-label="Exercise demonstration variant">
+            <button
+              type="button"
+              onClick={() => setDemoGender('male')}
+              id="library-demo-male-btn"
+              className={cn(
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+                demoGender === 'male'
+                  ? "bg-white text-surface-900 shadow-xs border border-surface-200/80 font-black"
+                  : "text-surface-600 hover:text-surface-900"
+              )}
+              aria-label="Show male demonstrations"
+            >
+              Male
+            </button>
+            <button
+              type="button"
+              onClick={() => setDemoGender('female')}
+              id="library-demo-female-btn"
+              className={cn(
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+                demoGender === 'female'
+                  ? "bg-white text-surface-900 shadow-xs border border-surface-200/80 font-black"
+                  : "text-surface-600 hover:text-surface-900"
+              )}
+              aria-label="Show female demonstrations"
+            >
+              Female
+            </button>
+          </div>
+
           {/* Sort Dropdown */}
           <select 
-            className="input-base py-2 pl-3 pr-8 w-full sm:w-40 text-sm bg-white"
+            className="input-base py-2 pl-3 pr-8 flex-1 sm:w-36 text-sm bg-white"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
             aria-label="Sort exercises"

@@ -4,6 +4,7 @@ import { Lightbulb, AlertTriangle, Check, ExternalLink, Plus, Dumbbell } from 'l
 import type { StructuredExerciseGuidance, StructuredWorkoutRecommendation } from '@/types'
 import { ExerciseVideoPlayer } from '@/components/exercise/ExerciseVideoPlayer'
 import { resolveExerciseMedia } from '@/lib/exerciseMedia'
+import { useExerciseDemo } from '@/context/ExerciseDemoContext'
 import { useToast } from '@/components/shared/Toast'
 import { queueExerciseForTodayWorkout } from '@/lib/offline/db'
 import { DEFAULT_EXERCISES } from '@/data/exercisesData'
@@ -161,14 +162,17 @@ function CompactAiExerciseCard({
 }) {
   const navigate = useNavigate()
   const toast = useToast()
-  const media = resolveExerciseMedia(slug)
+  const { resolveDemoVideo } = useExerciseDemo()
+  const rawMedia = resolveExerciseMedia(slug)
+  const resolved = resolveDemoVideo(rawMedia)
+  const videoUrl = resolved.videoUrl
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isVisible, setIsVisible] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = cardRef.current
-    if (!el || !media?.videoUrl) return
+    if (!el || !videoUrl) return
 
     const observer = new IntersectionObserver(([entry]) => {
       setIsVisible(entry.isIntersecting)
@@ -176,7 +180,7 @@ function CompactAiExerciseCard({
 
     observer.observe(el)
     return () => observer.disconnect()
-  }, [media?.videoUrl])
+  }, [videoUrl])
 
   useEffect(() => {
     const video = videoRef.current
@@ -241,20 +245,20 @@ function CompactAiExerciseCard({
     >
       {/* Video Thumbnail */}
       <div className="w-16 h-14 rounded-lg overflow-hidden bg-surface-900 flex-shrink-0 relative">
-        {media?.videoUrl ? (
+        {videoUrl ? (
           <video
             ref={videoRef}
-            src={media.videoUrl}
-            poster={media.posterUrl || media.thumbnailUrl}
+            src={videoUrl}
+            poster={resolved.posterUrl || rawMedia?.posterUrl || rawMedia?.thumbnailUrl}
             muted
             loop
             playsInline
             preload="none"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
           />
-        ) : media?.thumbnailUrl ? (
+        ) : rawMedia?.thumbnailUrl ? (
           <img
-            src={media.thumbnailUrl}
+            src={rawMedia.thumbnailUrl}
             alt={name}
             className="w-full h-full object-cover"
           />

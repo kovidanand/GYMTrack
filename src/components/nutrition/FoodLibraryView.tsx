@@ -7,12 +7,14 @@ import {
   Loader2,
   BookmarkPlus,
   UtensilsCrossed,
+  AlertCircle,
 } from 'lucide-react'
 import type { FoodSearchResult, MealType, FoodEntry } from '@/types/nutrition'
 import {
   getFoodCatalog,
   getFoodServingUnits,
   calculateScaledNutrients,
+  convertUnitQuantity,
   type ServingUnitOption,
 } from '@/lib/nutritionService'
 
@@ -53,6 +55,7 @@ export function FoodLibraryView({
   const [quantity, setQuantity] = useState<number>(1)
   const [targetMeal, setTargetMeal] = useState<MealType>('breakfast')
   const [isLogging, setIsLogging] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [successToast, setSuccessToast] = useState<string | null>(null)
 
   // Fetch foods for category and search
@@ -83,7 +86,13 @@ export function FoodLibraryView({
   // Current active unit option
   const activeUnitOption: ServingUnitOption = useMemo(() => {
     if (servingUnits.length === 0) {
-      return { unit: 'serving', label: '1 Serving', multiplier: 1.0, isDefault: true }
+      return {
+        unit: 'serving',
+        label: '1 Serving',
+        shortLabel: 'serving',
+        multiplier: 1.0,
+        isDefault: true,
+      }
     }
     return servingUnits.find(u => u.unit === selectedUnit) || servingUnits[0]
   }, [servingUnits, selectedUnit])
@@ -91,16 +100,26 @@ export function FoodLibraryView({
   // Open modal handler with clean default unit & quantity initialization
   const handleOpenFoodModal = (food: FoodSearchResult) => {
     setSelectedFood(food)
+    setSaveError(null)
     const units = getFoodServingUnits(food)
     const def = units.find(u => u.isDefault) || units[0]
     setSelectedUnit(def?.unit || 'serving')
 
     // If default unit is grams/ml, set sensible default quantity (e.g. 100)
     if (def?.unit === 'g' || def?.unit === 'ml') {
-      setQuantity(100)
+      setQuantity(food.serving_size && food.serving_size > 1 ? food.serving_size : 100)
     } else {
       setQuantity(1)
     }
+  }
+
+  // Smart unit switching preserving exact total quantity
+  const handleUnitChange = (newUnit: string) => {
+    const nextOption = servingUnits.find(u => u.unit === newUnit)
+    if (!nextOption) return
+    const converted = convertUnitQuantity(activeUnitOption, nextOption, quantity)
+    setSelectedUnit(newUnit)
+    setQuantity(converted)
   }
 
   // Live centralized scaled calculation
@@ -112,10 +131,16 @@ export function FoodLibraryView({
         carbs: 0,
         fat: 0,
         fiber: 0,
+        saturatedFat: null,
+        sugar: null,
+        sodiumMg: null,
         quantity: 1,
         unit: 'serving',
         unitLabel: '1 Serving',
+        shortLabel: 'serving',
         portionSummary: '1 serving',
+        householdEquivalence: '',
+        isApproximateEquivalence: false,
         totalMultiplier: 1,
       }
     }
@@ -126,28 +151,46 @@ export function FoodLibraryView({
   const handleConfirmLog = async () => {
     if (!selectedFood || isLogging) return
     setIsLogging(true)
+    setSaveError(null)
 
     try {
+      const isMetricTotal =
+        calculatedNutrition.unit === 'g' ||
+        calculatedNutrition.unit === 'ml' ||
+        activeUnitOption.gramsEquivalent != null
+
+      const servingSize = isMetricTotal ? calculatedNutrition.quantity : 1
+      const servingsLogged = isMetricTotal ? 1 : calculatedNutrition.quantity
+      const servingUnit = calculatedNutrition.unitLabel
+
       await onLogFood({
         user_id: userId,
         date: selectedDate,
         meal_type: targetMeal,
         food_name: selectedFood.name,
         brand: selectedFood.brand,
-        serving_size: calculatedNutrition.quantity,
-        serving_unit: calculatedNutrition.unitLabel,
-        servings_logged: calculatedNutrition.quantity,
+        serving_size: servingSize,
+        serving_unit: servingUnit,
+        servings_logged: servingsLogged,
         calories: calculatedNutrition.calories,
         protein: calculatedNutrition.protein,
         carbs: calculatedNutrition.carbs,
         fat: calculatedNutrition.fat,
         fiber: calculatedNutrition.fiber,
+        saturated_fat: calculatedNutrition.saturatedFat ?? undefined,
+        sugar: calculatedNutrition.sugar ?? undefined,
+        sodium_mg: calculatedNutrition.sodiumMg ?? undefined,
         logged_at: new Date().toISOString(),
       })
 
       setSuccessToast(`Logged "${selectedFood.name}" to ${targetMeal.toUpperCase()}`)
       setSelectedFood(null)
       setTimeout(() => setSuccessToast(null), 3000)
+    } catch (err: unknown) {
+      console.error('Failed to log food from library:', err)
+      setSaveError(
+        err instanceof Error ? err.message : 'Failed to log food. Please try again.'
+      )
     } finally {
       setIsLogging(false)
     }
@@ -320,7 +363,7 @@ export function FoodLibraryView({
               <div className="space-y-4 pt-4">
                 {/* 1. Meal Category Selector */}
                 <div>
-                  <label className="block text-xs font-bold text-surface-700 mb-1">
+                  <label className="block text-xs font-bold text-surface-700 mb-1.5">
                     Log To Meal
                   </label>
                   <div className="grid grid-cols-4 gap-1.5">
@@ -329,7 +372,7 @@ export function FoodLibraryView({
                         key={m}
                         type="button"
                         onClick={() => setTargetMeal(m)}
-                        className={`py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
+                        className={`py-2 rounded-xl text-xs font-bold capitalize transition-all ${
                           targetMeal === m
                             ? 'bg-emerald-600 text-white shadow-xs'
                             : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
@@ -341,141 +384,142 @@ export function FoodLibraryView({
                   </div>
                 </div>
 
-                {/* 2. Serving Unit Selector Dropdown */}
-                <div>
-                  <label className="block text-xs font-bold text-surface-700 mb-1">
-                    Serving Unit
-                  </label>
-                  <select
-                    value={activeUnitOption.unit}
-                    onChange={e => {
-                      setSelectedUnit(e.target.value)
-                      if (e.target.value === 'g' || e.target.value === 'ml') {
-                        setQuantity(100)
-                      } else {
-                        setQuantity(1)
-                      }
-                    }}
-                    className="w-full input-base text-xs py-2 bg-white cursor-pointer font-bold"
-                  >
-                    {servingUnits.map(opt => (
-                      <option key={opt.unit} value={opt.unit}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 3. Quantity Controls */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
+                {/* 2. Unified Quantity + Unit Input */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-surface-700">
-                      Quantity
+                      Amount
                     </label>
                     <span className="text-[11px] font-semibold text-emerald-800">
                       {calculatedNutrition.portionSummary}
                     </span>
                   </div>
 
-                  {/* Preset Multipliers */}
-                  {activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? (
-                    <div className="grid grid-cols-4 gap-1.5 mb-2">
-                      {[50, 100, 150, 200].map(preset => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setQuantity(preset)}
-                          className={`py-1 rounded-lg text-xs font-bold border transition-all ${
-                            quantity === preset
-                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                              : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
-                          }`}
-                        >
-                          {preset} {activeUnitOption.unit}
-                        </button>
-                      ))}
+                  <div className="grid grid-cols-12 gap-2">
+                    <div className="col-span-5 sm:col-span-5 relative">
+                      <input
+                        type="number"
+                        min="0.01"
+                        step={activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? '1' : '0.1'}
+                        value={quantity}
+                        onChange={e => {
+                          const val = parseFloat(e.target.value)
+                          setQuantity(isNaN(val) ? 1 : Math.max(0.01, val))
+                        }}
+                        className="w-full input-base text-base font-bold py-2 px-3 text-surface-900 border-surface-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl"
+                        placeholder="1"
+                      />
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-4 gap-1.5 mb-2">
-                      {[0.5, 1, 1.5, 2].map(preset => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setQuantity(preset)}
-                          className={`py-1 rounded-lg text-xs font-bold border transition-all ${
-                            quantity === preset
-                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                              : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
-                          }`}
-                        >
-                          {preset}x
-                        </button>
-                      ))}
+                    <div className="col-span-7 sm:col-span-7 relative">
+                      <select
+                        value={activeUnitOption.unit}
+                        onChange={e => handleUnitChange(e.target.value)}
+                        className="w-full input-base text-xs font-bold py-2.5 pl-3 pr-8 bg-white border-surface-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl cursor-pointer truncate"
+                      >
+                        {servingUnits.map(opt => (
+                          <option key={opt.unit} value={opt.unit}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  )}
-
-                  {/* Direct Number Input */}
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0.1"
-                      step={activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? '1' : '0.1'}
-                      value={quantity}
-                      onChange={e => {
-                        const val = parseFloat(e.target.value)
-                        setQuantity(isNaN(val) ? 1 : Math.max(0.1, val))
-                      }}
-                      className="input-base text-sm py-2 font-bold"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-surface-400">
-                      {activeUnitOption.unit === 'g'
-                        ? 'grams'
-                        : activeUnitOption.unit === 'ml'
-                        ? 'ml'
-                        : 'servings'}
-                    </span>
                   </div>
+
+                  {/* Equivalent household measure */}
+                  {calculatedNutrition.householdEquivalence && (
+                    <p className="text-[11px] text-surface-500 font-medium flex items-center gap-1.5 pt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span>
+                        {calculatedNutrition.isApproximateEquivalence ? '≈ ' : ''}
+                        {calculatedNutrition.householdEquivalence}
+                      </span>
+                    </p>
+                  )}
                 </div>
 
-                {/* 4. Live Recalculated Nutritional Breakdown */}
-                <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50/60 to-teal-50/40 border border-emerald-200/80 text-center">
-                  <div className="grid grid-cols-4 gap-2">
+                {/* 3. Live Recalculated Nutritional Breakdown */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50/60 to-teal-50/40 border border-emerald-200/80">
+                  <div className="grid grid-cols-5 gap-1.5 text-center">
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-surface-500 block">
+                      <span className="text-[10px] font-bold uppercase text-surface-500 block truncate">
                         Calories
                       </span>
-                      <p className="text-base font-black text-surface-900">
+                      <p className="text-sm sm:text-base font-black text-surface-900">
                         {calculatedNutrition.calories}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-blue-600 block">
+                      <span className="text-[10px] font-bold uppercase text-blue-600 block truncate">
                         Protein
                       </span>
-                      <p className="text-base font-black text-surface-900">
+                      <p className="text-sm sm:text-base font-black text-surface-900">
                         {calculatedNutrition.protein}g
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-amber-700 block">
+                      <span className="text-[10px] font-bold uppercase text-amber-700 block truncate">
                         Carbs
                       </span>
-                      <p className="text-base font-black text-surface-900">
+                      <p className="text-sm sm:text-base font-black text-surface-900">
                         {calculatedNutrition.carbs}g
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase text-rose-600 block">
+                      <span className="text-[10px] font-bold uppercase text-rose-600 block truncate">
                         Fat
                       </span>
-                      <p className="text-base font-black text-surface-900">
+                      <p className="text-sm sm:text-base font-black text-surface-900">
                         {calculatedNutrition.fat}g
                       </p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-emerald-700 block truncate">
+                        Fiber
+                      </span>
+                      <p className="text-sm sm:text-base font-black text-surface-900">
+                        {calculatedNutrition.fiber}g
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Secondary Nutrients when available (or '—' when unavailable) */}
+                  <div className="mt-2.5 pt-2 border-t border-emerald-200/60 grid grid-cols-3 gap-2 text-[11px] text-surface-600">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-surface-500">Sat Fat:</span>
+                      <span className="font-semibold text-surface-800">
+                        {calculatedNutrition.saturatedFat !== null
+                          ? `${calculatedNutrition.saturatedFat}g`
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-surface-500">Sugar:</span>
+                      <span className="font-semibold text-surface-800">
+                        {calculatedNutrition.sugar !== null
+                          ? `${calculatedNutrition.sugar}g`
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-surface-500">Sodium:</span>
+                      <span className="font-semibold text-surface-800">
+                        {calculatedNutrition.sodiumMg !== null
+                          ? `${calculatedNutrition.sodiumMg}mg`
+                          : '—'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* 5. Primary Action Button */}
+                {/* Save Error Alert */}
+                {saveError && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                    <span>{saveError}</span>
+                  </div>
+                )}
+
+                {/* 4. Primary Action Button */}
                 <button
                   type="button"
                   onClick={handleConfirmLog}

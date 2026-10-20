@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
-import { X, Check, Trash2, Loader2 } from 'lucide-react'
+import { X, Check, Trash2, Loader2, AlertCircle } from 'lucide-react'
 import type { FoodEntry, MealType } from '@/types/nutrition'
 
 interface EditFoodModalProps {
@@ -20,24 +20,59 @@ export function EditFoodModal({
 }: EditFoodModalProps) {
   const [mealType, setMealType] = useState<MealType>('breakfast')
   const [foodName, setFoodName] = useState('')
-  const [servingSize, setServingSize] = useState<number>(100)
-  const [servingUnit, setServingUnit] = useState('g')
-  const [servingsLogged, setServingsLogged] = useState<number>(1)
+  const [quantity, setQuantity] = useState<number>(1)
+  const [unitLabel, setUnitLabel] = useState<string>('g')
+  const [isMetricTotal, setIsMetricTotal] = useState<boolean>(true)
+  const [perUnitRates, setPerUnitRates] = useState<{
+    calories: number
+    protein: number
+    carbs: number
+    fat: number
+    fiber: number
+  }>({ calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 })
   const [calories, setCalories] = useState<number>(0)
   const [protein, setProtein] = useState<number>(0)
   const [carbs, setCarbs] = useState<number>(0)
   const [fat, setFat] = useState<number>(0)
   const [fiber, setFiber] = useState<number>(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Load entry data when modal opens
   useEffect(() => {
     if (entry) {
       setMealType(entry.meal_type)
       setFoodName(entry.food_name)
-      setServingSize(entry.serving_size || 100)
-      setServingUnit(entry.serving_unit || 'g')
-      setServingsLogged(entry.servings_logged || 1)
+      setSaveError(null)
+
+      const rawUnit = entry.serving_unit || 'g'
+      setUnitLabel(rawUnit)
+
+      // Determine if entry was logged as a total metric amount (g / ml) or item count
+      const isMetric =
+        rawUnit.toLowerCase() === 'g' ||
+        rawUnit.toLowerCase() === 'grams' ||
+        rawUnit.toLowerCase() === 'ml' ||
+        (entry.serving_size > 1 && entry.servings_logged === 1)
+
+      setIsMetricTotal(isMetric)
+
+      const activeAmount = isMetric
+        ? entry.serving_size || 100
+        : entry.servings_logged || 1
+
+      setQuantity(activeAmount)
+
+      // Store base rates per 1 unit of quantity for live recalculation
+      const safeAmount = Math.max(0.01, activeAmount)
+      setPerUnitRates({
+        calories: (entry.calories || 0) / safeAmount,
+        protein: (entry.protein || 0) / safeAmount,
+        carbs: (entry.carbs || 0) / safeAmount,
+        fat: (entry.fat || 0) / safeAmount,
+        fiber: (entry.fiber || 0) / safeAmount,
+      })
+
       setCalories(entry.calories || 0)
       setProtein(entry.protein || 0)
       setCarbs(entry.carbs || 0)
@@ -48,29 +83,33 @@ export function EditFoodModal({
 
   if (!entry) return null
 
-  // Proportionally adjust calories & macros if servings change
-  const handleServingsChange = (newServings: number) => {
-    const valid = Math.max(0.1, newServings)
-    const ratio = valid / (servingsLogged || 1)
-    setServingsLogged(valid)
-    setCalories(Math.round(calories * ratio))
-    setProtein(Math.round(protein * ratio * 10) / 10)
-    setCarbs(Math.round(carbs * ratio * 10) / 10)
-    setFat(Math.round(fat * ratio * 10) / 10)
-    setFiber(Math.round(fiber * ratio * 10) / 10)
+  // Live recalculation when quantity changes
+  const handleQuantityChange = (newQty: number) => {
+    const valid = Math.max(0.01, newQty)
+    setQuantity(valid)
+    setCalories(Math.round(perUnitRates.calories * valid))
+    setProtein(Math.round(perUnitRates.protein * valid * 10) / 10)
+    setCarbs(Math.round(perUnitRates.carbs * valid * 10) / 10)
+    setFat(Math.round(perUnitRates.fat * valid * 10) / 10)
+    setFiber(Math.round(perUnitRates.fiber * valid * 10) / 10)
   }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting) return
+    if (isSubmitting || !entry) return
     setIsSubmitting(true)
+    setSaveError(null)
+
     try {
+      const finalServingSize = isMetricTotal ? quantity : entry.serving_size || 1
+      const finalServingsLogged = isMetricTotal ? 1 : quantity
+
       await onUpdateEntry(entry.id, {
         meal_type: mealType,
         food_name: foodName.trim(),
-        serving_size: servingSize,
-        serving_unit: servingUnit,
-        servings_logged: servingsLogged,
+        serving_size: finalServingSize,
+        serving_unit: unitLabel,
+        servings_logged: finalServingsLogged,
         calories,
         protein,
         carbs,
@@ -78,13 +117,18 @@ export function EditFoodModal({
         fiber,
       })
       onOpenChange(false)
+    } catch (err: unknown) {
+      console.error('Failed to update food entry:', err)
+      setSaveError(
+        err instanceof Error ? err.message : 'Failed to update entry. Please try again.'
+      )
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleDelete = async () => {
-    if (isSubmitting) return
+    if (isSubmitting || !entry) return
     if (!window.confirm(`Delete "${entry.food_name}" from your diary?`)) return
     setIsSubmitting(true)
     try {
@@ -109,7 +153,7 @@ export function EditFoodModal({
                 Edit Food Entry
               </RadixDialog.Title>
               <p id="edit-food-description" className="text-xs text-surface-400">
-                Adjust serving size, meal category, or nutrition values.
+                Adjust amount, meal category, or nutrition values.
               </p>
             </div>
             <RadixDialog.Close asChild>
@@ -120,6 +164,7 @@ export function EditFoodModal({
           </div>
 
           <form onSubmit={handleSave} className="space-y-4 pt-4">
+            {/* Meal Category */}
             <div>
               <label className="block text-xs font-bold text-surface-700 mb-1">
                 Meal Category
@@ -132,7 +177,7 @@ export function EditFoodModal({
                     onClick={() => setMealType(m)}
                     className={`py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
                       mealType === m
-                        ? 'bg-brand-600 text-white shadow-xs'
+                        ? 'bg-emerald-600 text-white shadow-xs'
                         : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
                     }`}
                   >
@@ -142,6 +187,7 @@ export function EditFoodModal({
               </div>
             </div>
 
+            {/* Food Name */}
             <div>
               <label className="block text-xs font-bold text-surface-700 mb-1">
                 Food Name
@@ -151,38 +197,32 @@ export function EditFoodModal({
                 required
                 value={foodName}
                 onChange={e => setFoodName(e.target.value)}
-                className="input-base text-sm"
+                className="input-base text-sm font-semibold"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-surface-700 mb-1">
-                  Servings Count
-                </label>
+            {/* Amount input */}
+            <div>
+              <label className="block text-xs font-bold text-surface-700 mb-1">
+                Amount
+              </label>
+              <div className="relative flex items-center">
                 <input
                   type="number"
-                  step="0.1"
-                  min="0.1"
-                  value={servingsLogged}
-                  onChange={e => handleServingsChange(parseFloat(e.target.value) || 1)}
-                  className="input-base text-sm"
+                  min="0.01"
+                  step={isMetricTotal ? '1' : '0.1'}
+                  value={quantity}
+                  onChange={e => handleQuantityChange(parseFloat(e.target.value) || 1)}
+                  className="w-full input-base text-base font-bold py-2 px-3 pr-20 text-surface-900 border-surface-200 focus:border-emerald-500 rounded-xl"
+                  id="edit-entry-quantity-input"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-surface-700 mb-1">
-                  Serving Size ({servingUnit})
-                </label>
-                <input
-                  type="number"
-                  value={servingSize}
-                  onChange={e => setServingSize(parseFloat(e.target.value) || 100)}
-                  className="input-base text-sm"
-                />
+                <span className="absolute right-3 text-xs font-bold text-surface-500 pointer-events-none truncate max-w-[90px]">
+                  {unitLabel}
+                </span>
               </div>
             </div>
 
+            {/* Nutritional Breakdown with direct-edit capability */}
             <div className="grid grid-cols-4 gap-2">
               <div>
                 <label className="block text-[10px] font-bold text-surface-500 mb-1">
@@ -236,6 +276,14 @@ export function EditFoodModal({
               </div>
             </div>
 
+            {/* Error banner */}
+            {saveError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>{saveError}</span>
+              </div>
+            )}
+
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="button"
@@ -252,9 +300,13 @@ export function EditFoodModal({
                 type="submit"
                 disabled={isSubmitting}
                 id="save-edit-entry-btn"
-                className="btn-primary flex-1 py-2 text-xs font-bold flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50"
               >
-                {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                {isSubmitting ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Check size={14} />
+                )}
                 <span>Save Changes</span>
               </button>
             </div>

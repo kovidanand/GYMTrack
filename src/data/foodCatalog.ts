@@ -19,6 +19,9 @@ export interface CatalogFoodItem {
   carbs: number
   fat: number
   fiber: number
+  saturated_fat?: number | null
+  sugar?: number | null
+  sodium_mg?: number | null
   aliases: string[]
 }
 
@@ -35,6 +38,9 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
     carbs: 25.1,
     fat: 0.3,
     fiber: 4.4,
+    saturated_fat: 0.1,
+    sugar: 19.0,
+    sodium_mg: 2,
     aliases: ['seb', 'red apple', 'green apple'],
   },
   {
@@ -48,6 +54,9 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
     carbs: 27.0,
     fat: 0.4,
     fiber: 3.1,
+    saturated_fat: 0.1,
+    sugar: 14.4,
+    sodium_mg: 1,
     aliases: ['kela', 'ripe banana'],
   },
   {

@@ -23,11 +23,13 @@ import History from '@/pages/History'
 import SessionDetail from '@/pages/SessionDetail'
 import AiCoach from '@/pages/AiCoach'
 import Nutrition from '@/pages/Nutrition'
+import { ExerciseDemoProvider } from '@/context/ExerciseDemoContext'
 
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <ExerciseDemoProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public routes */}
           <Route path="/"                element={<Landing />} />
@@ -69,6 +71,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </ExerciseDemoProvider>
     </AuthProvider>
   )
 }

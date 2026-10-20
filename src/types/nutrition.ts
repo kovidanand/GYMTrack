@@ -27,6 +27,9 @@ export interface CustomFood {
   carbs: number
   fat: number
   fiber: number
+  saturated_fat?: number | null
+  sugar?: number | null
+  sodium_mg?: number | null
   barcode?: string | null
   created_at?: string
   updated_at?: string
@@ -47,6 +50,9 @@ export interface FoodEntry {
   carbs: number
   fat: number
   fiber: number
+  saturated_fat?: number | null
+  sugar?: number | null
+  sodium_mg?: number | null
   logged_at: string
   created_at?: string
   updated_at?: string
@@ -72,6 +78,9 @@ export interface FoodSearchResult {
   carbs: number
   fat: number
   fiber: number
+  saturated_fat?: number | null
+  sugar?: number | null
+  sodium_mg?: number | null
   isCustom?: boolean
   imageUrl?: string
   rawSource?: 'openfoodfacts' | 'custom' | 'quick'

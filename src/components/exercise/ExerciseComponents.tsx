@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { cn, getDifficultyColor, getEquipmentLabel, getMuscleGroupLabel, formatTagLabel } from '@/lib/utils'
+import { cn, getDifficultyColor, formatTagLabel } from '@/lib/utils'
 import type { Exercise } from '@/types'
 import { MuscleGroupBadge } from '@/components/shared'
 import { Dumbbell, Heart } from 'lucide-react'
 import { getExerciseVisual, resolveExerciseMedia } from '@/lib/exerciseMedia'
+import { useExerciseDemo, type DemoGender } from '@/context/ExerciseDemoContext'
 
 // ─── Muscle Group Visual ────────────────────────────────────────────────────────
 
@@ -41,12 +42,15 @@ interface ExerciseMediaProps {
   exercise: Exercise
   variant?: 'card' | 'detail' | 'thumbnail'
   className?: string
+  preferredGender?: DemoGender
 }
 
-export function ExerciseMedia({ exercise, variant = 'card', className }: ExerciseMediaProps) {
+export function ExerciseMedia({ exercise, variant = 'card', className, preferredGender }: ExerciseMediaProps) {
+  const { demoGender, resolveDemoVideo } = useExerciseDemo()
   const media = resolveExerciseMedia(exercise)
-  const videoUrl = media?.videoUrl || media?.maleVideoUrl || media?.femaleVideoUrl
-  const posterUrl = media?.posterUrl || media?.thumbnailUrl || getExerciseVisual(exercise.slug, exercise.image_url)
+  const resolved = resolveDemoVideo(media, preferredGender || demoGender)
+  const videoUrl = resolved.videoUrl
+  const posterUrl = resolved.posterUrl || getExerciseVisual(exercise.slug, exercise.image_url)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -54,6 +58,12 @@ export function ExerciseMedia({ exercise, variant = 'card', className }: Exercis
   const [isHovered, setIsHovered] = useState(false)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [videoError, setVideoError] = useState(false)
+
+  // Reset video load state when video URL updates
+  useEffect(() => {
+    setVideoLoaded(false)
+    setVideoError(false)
+  }, [videoUrl])
 
   // IntersectionObserver — only play when in viewport (card/thumbnail mode) or always (detail mode)
   useEffect(() => {
@@ -75,9 +85,7 @@ export function ExerciseMedia({ exercise, variant = 'card', className }: Exercis
   useEffect(() => {
     const video = videoRef.current
     if (!video || videoError) return
-    
-    let isSubscribed = true
-    
+
     if (isVisible || isHovered) {
       const playPromise = video.play()
       if (playPromise !== undefined) {
@@ -87,10 +95,6 @@ export function ExerciseMedia({ exercise, variant = 'card', className }: Exercis
       }
     } else {
       video.pause()
-    }
-    
-    return () => {
-      isSubscribed = false
     }
   }, [isVisible, isHovered, videoError])
 
@@ -120,6 +124,7 @@ export function ExerciseMedia({ exercise, variant = 'card', className }: Exercis
       {videoUrl && !videoError ? (
         <video
           ref={videoRef}
+          key={videoUrl}
           src={videoUrl}
           poster={posterUrl || undefined}
           muted
