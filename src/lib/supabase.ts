@@ -1,8 +1,10 @@
 /// <reference types="vite/client" />
 import { createClient } from '@supabase/supabase-js'
 
-const rawUrl  = import.meta.env.VITE_SUPABASE_URL  as string | undefined
-const rawKey  = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any).env : undefined
+const globalProcess = typeof globalThis !== 'undefined' ? (globalThis as any).process : undefined
+const rawUrl  = (metaEnv?.VITE_SUPABASE_URL || globalProcess?.env?.VITE_SUPABASE_URL) as string | undefined
+const rawKey  = (metaEnv?.VITE_SUPABASE_ANON_KEY || globalProcess?.env?.VITE_SUPABASE_ANON_KEY) as string | undefined
 
 function cleanSupabaseUrl(urlStr: string | undefined): string | undefined {
   if (!urlStr) return undefined

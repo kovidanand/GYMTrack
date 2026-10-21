@@ -13,8 +13,8 @@ const corsHeaders = {
 };
 
 /**
- * Resilient Gemini caller prioritizing Google Gemini 1.5 Flash Vision.
- * Handles timeouts, rate limits, and fallback models seamlessly.
+ * Resilient Gemini caller prioritizing verified Google Gemini multimodal vision models.
+ * Handles timeouts, high-demand 503 overloads, rate limits, and fallback models seamlessly.
  */
 async function callGemini(
   contents: any[],
@@ -25,73 +25,108 @@ async function callGemini(
     ...(configuredModel ? [configuredModel] : []),
     "gemini-1.5-flash",
     "gemini-2.0-flash",
-    "gemini-2.0-flash-exp",
     "gemini-1.5-flash-8b",
     "gemini-1.5-pro",
-    "gemini-flash-latest",
   ];
 
   // Deduplicate candidate models
   const uniqueModels = Array.from(new Set(candidateModels));
 
-  let lastErr = "";
+  let lastRawErr = "";
+  let lastParsedMessage = "";
   let lastStatus = 500;
   let isRateLimited = false;
+  let isOverloaded = false;
   let isTimeout = false;
 
   for (const model of uniqueModels) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 28000);
+    // Up to 2 attempts per model (initial + 1 retry with exponential backoff & jitter)
+    const maxAttempts = 2;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 16000);
 
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents,
-            ...options,
-          }),
-          signal: controller.signal,
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents,
+              ...options,
+            }),
+            signal: controller.signal,
+          }
+        );
+        clearTimeout(timeoutId);
+
+        if (resp.ok) {
+          return await resp.json();
         }
-      );
-      clearTimeout(timeoutId);
 
-      if (resp.ok) {
-        return await resp.json();
-      }
+        lastStatus = resp.status;
+        lastRawErr = await resp.text();
 
-      lastStatus = resp.status;
-      lastErr = await resp.text();
-      console.warn(`Gemini model [${model}] failed (${resp.status}): ${lastErr}`);
+        // Safely parse Google's structured JSON error message
+        try {
+          const parsed = JSON.parse(lastRawErr);
+          if (parsed?.error?.message) {
+            lastParsedMessage = parsed.error.message;
+          } else {
+            lastParsedMessage = lastRawErr;
+          }
+        } catch {
+          lastParsedMessage = lastRawErr;
+        }
 
-      if (resp.status === 429) {
-        isRateLimited = true;
-        // Brief pause before trying fallback model to allow per-second rate limits to clear
-        await new Promise((r) => setTimeout(r, 750));
-      }
+        console.warn(`Gemini model [${model}] attempt ${attempt} failed (${resp.status}): ${lastParsedMessage}`);
 
-      // If model not found (404), overloaded (503), rate limited (429), or unsupported param (400), try next candidate
-      if (resp.status === 404 || resp.status === 503 || resp.status === 429 || resp.status === 400) {
-        continue;
+        if (resp.status === 429) {
+          isRateLimited = true;
+        } else if (resp.status === 503 || lastParsedMessage.toLowerCase().includes("high demand") || lastParsedMessage.toLowerCase().includes("overloaded") || lastParsedMessage.includes("UNAVAILABLE")) {
+          isOverloaded = true;
+        }
+
+        // For transient errors (503 high demand or 429 rate limit), pause with exponential backoff + jitter before retrying
+        if ((resp.status === 503 || resp.status === 429) && attempt < maxAttempts) {
+          const baseDelay = resp.status === 429 ? 1000 : 800;
+          const jitter = Math.random() * 400;
+          await new Promise((r) => setTimeout(r, baseDelay * attempt + jitter));
+          continue;
+        }
+
+        // If 404, 400, or retry exhausted for 503/429, break to next candidate model
+        if (resp.status === 404 || resp.status === 503 || resp.status === 429 || resp.status === 400) {
+          break;
+        }
+        break;
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          isTimeout = true;
+          lastStatus = 504;
+          lastParsedMessage = 'Upstream Google AI API request timed out';
+          break; // Move to next model if timed out
+        }
+        lastParsedMessage = err.message || 'Unknown network error';
       }
-      break;
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        isTimeout = true;
-        lastStatus = 504;
-        lastErr = 'Upstream Google AI API request timed out';
-        continue;
-      }
-      lastErr = err.message;
     }
   }
 
-  const errorObj = new Error(lastErr || `Google AI API error (${lastStatus})`);
+  const cleanMessage = isOverloaded || lastStatus === 503
+    ? "AI service is currently experiencing high demand. Please try again in a moment."
+    : isRateLimited || lastStatus === 429
+    ? "AI service request limit reached. Please wait a few seconds before retrying."
+    : isTimeout || lastStatus === 504
+    ? "AI analysis request timed out. Please retry with a compressed image."
+    : lastParsedMessage || `Google AI API error (${lastStatus})`;
+
+  const errorObj = new Error(cleanMessage);
   (errorObj as any).status = lastStatus;
   (errorObj as any).isRateLimited = isRateLimited;
+  (errorObj as any).isOverloaded = isOverloaded || lastStatus === 503;
   (errorObj as any).isTimeout = isTimeout;
+  (errorObj as any).rawError = lastRawErr;
   throw errorObj;
 }
 
@@ -199,41 +234,47 @@ serve(async (req) => {
         );
       }
 
-      const visionPrompt = `You are an expert clinical nutrition AI specialized in visual dietary assessment.
+      const visionPrompt = `You are an expert clinical nutrition AI specialized in visual dietary assessment and meal recognition.
 Carefully examine the meal photograph provided.
 
-TASKS:
-1. Determine if this image actually contains food or beverage. If NOT food or completely unrecognizable, set "is_food": false and provide an explanation in "message".
-2. If it is a meal or food, detect all distinct food items visible.
-   - For mixed plates (such as Indian thalis, bowls, combo plates), break down distinct components separately (e.g., Cooked Rice, Dal, Paneer Gravy, Roti, Salad).
-   - Estimate realistic portion sizes based on visible clues (standard dinner plate ~26cm, katori/bowl ~150ml, glass ~250ml, hands/utensils).
-   - Estimate realistic nutritional values (calories, protein, carbs, fat, fiber).
-   - Accurately categorize Indian meals (e.g. Yellow Dal Tadka, Paneer Butter Masala, Roti, Chole, Rajma, Idli, Dosa, Poha) as well as international foods (Chicken Breast, Salmon, Pasta, Oats, Salad, Eggs).
-3. Be transparent about estimation uncertainty:
+CORE INSTRUCTIONS:
+1. Determine if this image actually contains food or beverage. If NOT food or completely unrecognizable, set "is_food": false and provide a friendly explanation in "message".
+2. MULTI-FOOD IDENTIFICATION (Break down plates into separate components):
+   - Never combine an entire meal or combo plate into a single generic item.
+   - For example, an Indian thali typically contains separate items: Cooked Rice, Whole Wheat Chapati/Roti, Dal (e.g. Yellow Dal Tadka), Paneer Curry (e.g. Paneer Butter Masala), Vegetable Sabzi (e.g. Aloo Gobi or Mixed Veg), Curd/Dahi or Raita, Salad/Chutney.
+   - For bowls, salads, or combo plates, separate the primary components (e.g., Grilled Chicken, Brown Rice, Steamed Broccoli).
+3. ESTIMATE REALISTIC PORTIONS & NUTRITIONAL MACROS:
+   - Use visible plate and utensil scale cues (standard plate ~25-27cm, katori/bowl ~150ml, glass ~250ml).
+   - Estimate portion size, unit (g, pieces, bowl, cup), and estimated weight in grams.
+   - Calculate realistic calories, protein, carbohydrates, total fat, and dietary fiber (all in grams).
+4. ESTIMATION TRANSPARENCY:
    - Provide "confidence": "high" | "medium" | "low".
-   - Include brief visual notes (e.g., "Portion estimated from standard bowl; oil content appears moderate").
+   - Include recognized alternative or regional names (e.g. ["Roti", "Chapati", "Phulka"] or ["Yellow Dal", "Dal Tadka"]).
+   - Note any visual uncertainty (e.g., "Portion estimated from standard katori; hidden oil or ghee may vary").
 
 OUTPUT FORMAT:
-Return PURE JSON adhering to this exact schema (no markdown, no backticks):
+Return PURE JSON adhering to this exact schema (no markdown formatting, no backticks):
 {
   "is_food": true,
   "items": [
     {
       "name": "Food item name",
-      "portion": "e.g. 1 medium katori (150g) or 2 rotis (80g)",
+      "alternative_names": ["Common Alias 1", "Common Alias 2"],
+      "portion": "e.g. 1 medium katori (150g) or 2 rotis (70g)",
       "servingSize": 150,
       "servingUnit": "g",
+      "weight_g": 150,
       "quantity": 1,
       "calories": 180,
-      "protein": 4.5,
-      "carbs": 35.0,
-      "fat": 2.0,
-      "fiber": 1.5,
-      "confidence": "medium",
-      "notes": "Visual portion estimation"
+      "protein": 5.0,
+      "carbs": 32.0,
+      "fat": 3.0,
+      "fiber": 2.5,
+      "confidence": "high",
+      "uncertainty_notes": "Visual portion estimation"
     }
   ],
-  "overall_notes": "All nutritional values are visual estimates. Please review and adjust portions before confirming."
+  "overall_notes": "Nutritional estimates generated from image analysis. Review and adjust portions before confirming."
 }`;
 
       const data = await callGemini(
@@ -270,7 +311,7 @@ Return PURE JSON adhering to this exact schema (no markdown, no backticks):
         .replace(/\s*```$/i, "")
         .trim();
 
-      let parsedResult;
+      let parsedResult: any;
       try {
         parsedResult = JSON.parse(sanitizedJson);
       } catch (e) {
@@ -286,6 +327,37 @@ Return PURE JSON adhering to this exact schema (no markdown, no backticks):
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
+      }
+
+      // Sanitize parsed items to guarantee safe, valid numbers and schema
+      if (parsedResult && parsedResult.is_food !== false && Array.isArray(parsedResult.items)) {
+        parsedResult.items = parsedResult.items.map((it: any, idx: number) => {
+          const rawServing = Math.max(1, Number(it.servingSize || it.weight_g) || 100);
+          const rawQty = Math.max(0.1, Number(it.quantity) || 1);
+          const rawCal = Math.max(0, Math.round(Number(it.calories) || 0));
+          const rawP = Math.max(0, Math.round((Number(it.protein) || 0) * 10) / 10);
+          const rawC = Math.max(0, Math.round((Number(it.carbs) || 0) * 10) / 10);
+          const rawF = Math.max(0, Math.round((Number(it.fat) || 0) * 10) / 10);
+          const rawFib = Math.max(0, Math.round((Number(it.fiber) || 0) * 10) / 10);
+          const name = typeof it.name === "string" && it.name.trim() ? it.name.trim() : `Food Item ${idx + 1}`;
+
+          return {
+            name,
+            alternative_names: Array.isArray(it.alternative_names) ? it.alternative_names.filter((a: any) => typeof a === "string") : [],
+            portion: typeof it.portion === "string" && it.portion.trim() ? it.portion.trim() : `${rawServing}g`,
+            servingSize: rawServing,
+            servingUnit: typeof it.servingUnit === "string" && it.servingUnit.trim() ? it.servingUnit.trim() : "g",
+            weight_g: Number(it.weight_g) || rawServing,
+            quantity: rawQty,
+            calories: rawCal,
+            protein: rawP,
+            carbs: rawC,
+            fat: rawF,
+            fiber: rawFib,
+            confidence: it.confidence === "high" || it.confidence === "low" ? it.confidence : "medium",
+            notes: typeof it.notes === "string" ? it.notes : typeof it.uncertainty_notes === "string" ? it.uncertainty_notes : "Visual portion estimation",
+          };
+        });
       }
 
       return new Response(JSON.stringify(parsedResult), {
@@ -514,20 +586,38 @@ ${JSON.stringify(context, null, 2)}`;
     }
 
     const status = typeof error.status === 'number' && error.status >= 400 && error.status < 600 ? error.status : 500;
+    const isOverloaded = error.isOverloaded || status === 503;
     const isRateLimit = error.isRateLimited || status === 429;
     const isTimeout = error.isTimeout || status === 504;
+    const isAuthOrQuota = status === 401 || status === 403;
 
-    const userMessage = isRateLimit
-      ? "AI service is currently experiencing high demand. Please retry in a few seconds."
+    const userMessage = isOverloaded
+      ? "AI Vision model is currently experiencing high demand. Please try again in a moment."
+      : isRateLimit
+      ? "AI service is currently handling high request volume. Please retry in a few seconds."
       : isTimeout
       ? "AI analysis request timed out. Please retry with a compressed image."
+      : isAuthOrQuota
+      ? "AI service authentication or quota limit reached. Please check server configuration."
       : error.message || "AI service is temporarily unavailable. Please try again.";
+
+    const errorCode = isOverloaded
+      ? "HIGH_DEMAND"
+      : isRateLimit
+      ? "RATE_LIMIT"
+      : isTimeout
+      ? "TIMEOUT"
+      : isAuthOrQuota
+      ? "AUTH_OR_QUOTA"
+      : status === 400
+      ? "BAD_REQUEST"
+      : "INTERNAL_ERROR";
 
     return new Response(
       JSON.stringify({
         error: userMessage,
-        code: isRateLimit ? "RATE_LIMIT" : isTimeout ? "TIMEOUT" : "INTERNAL_ERROR",
-        retryable: isRateLimit || isTimeout || status >= 500,
+        code: errorCode,
+        retryable: isOverloaded || isRateLimit || isTimeout || status >= 500,
       }),
       {
         status,

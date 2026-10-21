@@ -14,8 +14,8 @@ import {
   Edit2,
   Search,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
+  BookOpen,
+  Info,
 } from 'lucide-react'
 import type { FoodEntry, MealType } from '@/types/nutrition'
 import {
@@ -23,7 +23,7 @@ import {
   processFoodImage,
   type DetectedFoodAnalysisItem,
 } from '@/lib/nutritionService'
-import { FOOD_CATALOG } from '@/data/foodCatalog'
+import { FOOD_CATALOG, type CatalogFoodItem } from '@/data/foodCatalog'
 
 interface FoodCameraModalProps {
   open: boolean
@@ -76,7 +76,9 @@ export function FoodCameraModal({
   const [detectedItems, setDetectedItems] = useState<EnrichedAnalysisItem[]>([])
   const [hasAnalyzed, setHasAnalyzed] = useState(false)
   const [showAddMenu, setShowAddMenu] = useState(false)
-  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
+  const [replacingItemId, setReplacingItemId] = useState<string | null>(null)
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState('')
+  const [showCatalogAddModal, setShowCatalogAddModal] = useState(false)
 
   // Default meal type based on current time
   const defaultMealType = useMemo<MealType>(() => {
@@ -89,6 +91,7 @@ export function FoodCameraModal({
 
   const [selectedMeal, setSelectedMeal] = useState<MealType>(defaultMealType)
   const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const uploadInputRef = useRef<HTMLInputElement>(null)
@@ -105,8 +108,11 @@ export function FoodCameraModal({
     setDetectedItems([])
     setHasAnalyzed(false)
     setIsSaving(false)
+    setSaveSuccess(false)
     setShowAddMenu(false)
-    setExpandedItemId(null)
+    setReplacingItemId(null)
+    setCatalogSearchQuery('')
+    setShowCatalogAddModal(false)
   }
 
   // Auto-focus camera or file dialog if requested on open
@@ -151,14 +157,14 @@ export function FoodCameraModal({
     }
   }
 
-  // Real Multi-Food AI Vision analysis with progressive stage messaging
+  // Real Multi-Food AI Vision analysis with progressive stage feedback
   const runAnalysis = async () => {
     if (!imageBase64 || isAnalyzing) return
     setIsAnalyzing(true)
     setAnalysisError(null)
     setAnalysisStage('Examining meal photograph...')
 
-    const t1 = setTimeout(() => setAnalysisStage('Identifying food items on plate...'), 1200)
+    const t1 = setTimeout(() => setAnalysisStage('Identifying distinct food items on plate...'), 1200)
     const t2 = setTimeout(() => setAnalysisStage('Estimating portions and nutritional macros...'), 2600)
 
     try {
@@ -183,7 +189,7 @@ export function FoodCameraModal({
           baseProtein: item.protein / qty,
           baseCarbs: item.carbs / qty,
           baseFat: item.fat / qty,
-          baseFiber: item.fiber / qty,
+          baseFiber: (item.fiber || 0) / qty,
         }
       })
 
@@ -191,9 +197,8 @@ export function FoodCameraModal({
       setOverallNotes(result.overallNotes)
       setHasAnalyzed(true)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'AI Vision analysis failed.'
+      const message = err instanceof Error ? err.message : 'Meal analysis is temporarily unavailable.'
       setAnalysisError(message)
-      setDetectedItems([])
       setHasAnalyzed(false)
     } finally {
       clearTimeout(t1)
@@ -203,7 +208,7 @@ export function FoodCameraModal({
     }
   }
 
-  // Edit item properties with precise nutrient scaling
+  // Edit item properties with precise nutrient recalculation
   const handleUpdateItem = (
     id: string,
     updates: Partial<EnrichedAnalysisItem>
@@ -214,7 +219,7 @@ export function FoodCameraModal({
         const updated = { ...it, ...updates }
 
         if (updates.quantity !== undefined) {
-          const q = Math.max(0.1, Number(updates.quantity) || 1)
+          const q = Math.max(0.05, Number(updates.quantity) || 1)
           updated.quantity = q
           updated.calories = Math.max(0, Math.round(it.baseCalories * q))
           updated.protein = Math.max(0, Math.round(it.baseProtein * q * 10) / 10)
@@ -229,6 +234,40 @@ export function FoodCameraModal({
 
   const handleDeleteItem = (id: string) => {
     setDetectedItems(prev => prev.filter(it => it.id !== id))
+  }
+
+  // Replace a detected item with a verified item from the Food Catalog
+  const handleReplaceItemWithCatalog = (itemId: string, catalogFood: CatalogFoodItem) => {
+    setDetectedItems(prev =>
+      prev.map(it => {
+        if (it.id !== itemId) return it
+        const qty = it.quantity || 1
+        return {
+          ...it,
+          name: catalogFood.name,
+          portion: `${catalogFood.serving_size} ${catalogFood.serving_unit}`,
+          servingSize: catalogFood.serving_size,
+          servingUnit: catalogFood.serving_unit,
+          isCatalogMatch: true,
+          catalogId: catalogFood.id,
+          notes: 'Matched to verified food database record.',
+          uncertaintyNotes: undefined,
+          baseCalories: catalogFood.calories,
+          baseProtein: catalogFood.protein,
+          baseCarbs: catalogFood.carbs,
+          baseFat: catalogFood.fat,
+          baseFiber: catalogFood.fiber || 0,
+          calories: Math.max(0, Math.round(catalogFood.calories * qty)),
+          protein: Math.max(0, Math.round(catalogFood.protein * qty * 10) / 10),
+          carbs: Math.max(0, Math.round(catalogFood.carbs * qty * 10) / 10),
+          fat: Math.max(0, Math.round(catalogFood.fat * qty * 10) / 10),
+          fiber: Math.max(0, Math.round((catalogFood.fiber || 0) * qty * 10) / 10),
+          confidence: 'high' as const,
+        }
+      })
+    )
+    setReplacingItemId(null)
+    setCatalogSearchQuery('')
   }
 
   const handleAddPresetItem = (preset: typeof COMMON_ADDITIONS[0]) => {
@@ -255,6 +294,35 @@ export function FoodCameraModal({
     }
     setDetectedItems(prev => [...prev, newItem])
     setShowAddMenu(false)
+  }
+
+  const handleAddCatalogItem = (catalogFood: CatalogFoodItem) => {
+    const newItem: EnrichedAnalysisItem = {
+      id: `catalog_${Date.now()}`,
+      name: catalogFood.name,
+      portion: `${catalogFood.serving_size} ${catalogFood.serving_unit}`,
+      servingSize: catalogFood.serving_size,
+      servingUnit: catalogFood.serving_unit,
+      quantity: 1,
+      calories: catalogFood.calories,
+      protein: catalogFood.protein,
+      carbs: catalogFood.carbs,
+      fat: catalogFood.fat,
+      fiber: catalogFood.fiber || 0,
+      confidence: 'high',
+      notes: 'Added from verified food database.',
+      isCatalogMatch: true,
+      catalogId: catalogFood.id,
+      baseCalories: catalogFood.calories,
+      baseProtein: catalogFood.protein,
+      baseCarbs: catalogFood.carbs,
+      baseFat: catalogFood.fat,
+      baseFiber: catalogFood.fiber || 0,
+    }
+    setDetectedItems(prev => [...prev, newItem])
+    setShowCatalogAddModal(false)
+    setShowAddMenu(false)
+    setCatalogSearchQuery('')
   }
 
   const handleAddCustomItem = () => {
@@ -308,7 +376,19 @@ export function FoodCameraModal({
     }
   }, [detectedItems])
 
-  // Confirm and log all items to Supabase
+  // Filter catalog items for searching
+  const filteredCatalogItems = useMemo(() => {
+    if (!catalogSearchQuery.trim()) return FOOD_CATALOG.slice(0, 20)
+    const q = catalogSearchQuery.toLowerCase().trim()
+    return FOOD_CATALOG.filter(
+      item =>
+        item.name.toLowerCase().includes(q) ||
+        item.aliases.some(a => a.toLowerCase().includes(q)) ||
+        item.category.toLowerCase().includes(q)
+    ).slice(0, 25)
+  }, [catalogSearchQuery])
+
+  // Confirm and log all items to Supabase with double-click guard
   const handleConfirmAndLog = async () => {
     if (detectedItems.length === 0 || isSaving) return
     setIsSaving(true)
@@ -332,8 +412,14 @@ export function FoodCameraModal({
       }))
 
       await onLogMealItems(entriesToLog)
-      onOpenChange(false)
-      resetState()
+      // Broadcast event so progress cards, history, and AI coach update
+      window.dispatchEvent(new CustomEvent('gymtrack:food_logged'))
+
+      setSaveSuccess(true)
+      setTimeout(() => {
+        onOpenChange(false)
+        resetState()
+      }, 700)
     } finally {
       setIsSaving(false)
     }
@@ -447,24 +533,24 @@ export function FoodCameraModal({
               </div>
             )}
 
-            {/* Error Banner */}
+            {/* Error Banner - Keeps photo preserved and offers actionable alternatives */}
             {analysisError && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-2">
-                <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-rose-600 flex-shrink-0 mt-0.5" />
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2.5 animate-fade-in">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 font-medium leading-relaxed">
-                    <span className="font-bold block text-rose-900">Analysis Notice</span>
+                    <span className="font-bold block text-amber-950 mb-0.5">Meal Analysis Notice</span>
                     {analysisError}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-1 pl-6">
+                <div className="flex flex-wrap items-center gap-2 pt-1 pl-7">
                   {imagePreview && (
                     <button
                       type="button"
                       onClick={runAnalysis}
                       disabled={isAnalyzing}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-rose-800 border border-rose-300 hover:bg-rose-100 shadow-2xs min-h-[36px]"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 active:scale-95 shadow-2xs min-h-[36px] disabled:opacity-60"
                     >
                       <RotateCcw size={13} />
                       <span>Retry Analysis</span>
@@ -484,6 +570,19 @@ export function FoodCameraModal({
                       <span>Search Food Library</span>
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleAddCustomItem()
+                      setAnalysisError(null)
+                      setHasAnalyzed(true)
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-surface-700 border border-surface-200 hover:bg-surface-50 shadow-2xs min-h-[36px]"
+                  >
+                    <Plus size={13} />
+                    <span>Log Foods Manually</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -557,7 +656,7 @@ export function FoodCameraModal({
               </div>
             )}
 
-            {/* Step 3: Analysis Review Screen */}
+            {/* Step 3: Analysis Review Screen (Multi-Food Items) */}
             {hasAnalyzed && detectedItems.length > 0 && (
               <div className="space-y-4 animate-fade-in">
                 {/* Photo thumbnail & quick retake bar */}
@@ -626,15 +725,26 @@ export function FoodCameraModal({
                         className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-700 p-1 rounded-lg"
                       >
                         <Plus size={14} />
-                        <span>Add Item</span>
+                        <span>Add Food</span>
                       </button>
 
                       {showAddMenu && (
                         <div className="absolute right-0 top-7 z-20 w-64 bg-white rounded-2xl shadow-xl border border-surface-200 p-2 space-y-1 text-xs animate-scale-in">
-                          <span className="text-[10px] font-bold text-surface-400 uppercase tracking-wider px-2 py-1 block">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCatalogAddModal(true)
+                              setShowAddMenu(false)
+                            }}
+                            className="w-full text-left px-2.5 py-2 rounded-xl text-brand-700 font-bold bg-brand-50 hover:bg-brand-100 flex items-center gap-1.5"
+                          >
+                            <BookOpen size={13} />
+                            <span>Search Food Library</span>
+                          </button>
+                          <span className="text-[10px] font-bold text-surface-400 uppercase tracking-wider px-2 pt-1.5 block">
                             Quick Add Common Foods
                           </span>
-                          <div className="max-h-48 overflow-y-auto space-y-0.5">
+                          <div className="max-h-44 overflow-y-auto space-y-0.5">
                             {COMMON_ADDITIONS.map(ca => (
                               <button
                                 key={ca.name}
@@ -651,7 +761,7 @@ export function FoodCameraModal({
                             <button
                               type="button"
                               onClick={handleAddCustomItem}
-                              className="w-full text-left px-2 py-1.5 rounded-lg text-brand-600 font-bold hover:bg-brand-50"
+                              className="w-full text-left px-2 py-1.5 rounded-lg text-surface-700 font-bold hover:bg-surface-50"
                             >
                               + Custom Food Item
                             </button>
@@ -680,7 +790,7 @@ export function FoodCameraModal({
                             <Edit2 size={12} className="text-surface-400 shrink-0" />
                           </div>
 
-                          <div className="flex items-center gap-2 mt-0.5 px-1 flex-wrap">
+                          <div className="flex items-center gap-1.5 mt-1 px-1 flex-wrap">
                             <span className="text-[11px] text-surface-500">
                               Portion: {item.portion}
                             </span>
@@ -690,10 +800,24 @@ export function FoodCameraModal({
                                 <span>Verified Match</span>
                               </span>
                             ) : (
-                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-surface-100 text-surface-600 border border-surface-200">
-                                AI Estimate
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-surface-100 text-surface-600 border border-surface-200 flex items-center gap-1">
+                                <Info size={10} />
+                                <span>AI Estimate ({item.confidence || 'Medium'})</span>
                               </span>
                             )}
+
+                            {/* Button to replace with verified catalog item */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setReplacingItemId(item.id)
+                                setCatalogSearchQuery(item.name)
+                              }}
+                              className="text-[10px] font-bold text-brand-600 hover:text-brand-800 underline ml-1 inline-flex items-center gap-0.5"
+                            >
+                              <Search size={10} />
+                              <span>Match Database</span>
+                            </button>
                           </div>
                         </div>
 
@@ -708,16 +832,41 @@ export function FoodCameraModal({
                         </button>
                       </div>
 
-                      {/* Portion Multipliers & Macros */}
+                      {/* Portion Multipliers, Stepper & Calculated Macros */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-surface-100">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-[10px] font-bold text-surface-400">Serving:</span>
+                          <div className="flex items-center border border-surface-200 rounded-lg overflow-hidden bg-surface-50">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateItem(item.id, { quantity: Math.max(0.1, Math.round((item.quantity - 0.25) * 100) / 100) })}
+                              className="px-2 py-1 text-xs font-bold text-surface-600 hover:bg-surface-200"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0.1"
+                              value={item.quantity}
+                              onChange={e => handleUpdateItem(item.id, { quantity: parseFloat(e.target.value) || 1 })}
+                              className="w-12 text-center text-xs font-bold bg-white text-surface-900 border-x border-surface-200 py-1"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateItem(item.id, { quantity: Math.round((item.quantity + 0.25) * 100) / 100 })}
+                              className="px-2 py-1 text-xs font-bold text-surface-600 hover:bg-surface-200"
+                            >
+                              +
+                            </button>
+                          </div>
+
                           {[0.5, 1, 1.5, 2].map(preset => (
                             <button
                               key={preset}
                               type="button"
                               onClick={() => handleUpdateItem(item.id, { quantity: preset })}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all min-h-[30px] ${
+                              className={`px-2 py-1 rounded-lg text-xs font-bold border transition-all ${
                                 item.quantity === preset
                                   ? 'bg-brand-50 border-brand-300 text-brand-700'
                                   : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50'
@@ -728,7 +877,7 @@ export function FoodCameraModal({
                           ))}
                         </div>
 
-                        {/* Nutrient Summary */}
+                        {/* Nutrient Summary (Real calculated numbers, never literal "estimated") */}
                         <div className="flex items-center gap-2 text-xs font-semibold text-surface-700 flex-wrap">
                           <span className="font-bold text-surface-900">{item.calories} kcal</span>
                           <span className="text-emerald-700 font-bold">{item.protein}g P</span>
@@ -802,14 +951,19 @@ export function FoodCameraModal({
                 <button
                   type="button"
                   onClick={handleConfirmAndLog}
-                  disabled={isSaving || detectedItems.length === 0}
+                  disabled={isSaving || saveSuccess || detectedItems.length === 0}
                   id="confirm-and-log-meal-btn"
                   className="w-full py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50 min-h-[44px]"
                 >
                   {isSaving ? (
                     <>
                       <Loader2 size={16} className="animate-spin" />
-                      <span>Logging Meal...</span>
+                      <span>Logging Meal to Diary...</span>
+                    </>
+                  ) : saveSuccess ? (
+                    <>
+                      <Check size={16} />
+                      <span>Logged Successfully!</span>
                     </>
                   ) : (
                     <>
@@ -823,6 +977,79 @@ export function FoodCameraModal({
               </div>
             )}
           </div>
+
+          {/* Sub-Dialog: Replace or Add Item from Verified Food Catalog */}
+          {(replacingItemId || showCatalogAddModal) && (
+            <div className="fixed inset-0 z-[110] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in">
+                <div className="p-4 border-b border-surface-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookOpen size={16} className="text-brand-600" />
+                    <span className="text-sm font-bold text-surface-900">
+                      {replacingItemId ? 'Match with Food Library' : 'Add Food from Library'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplacingItemId(null)
+                      setShowCatalogAddModal(false)
+                    }}
+                    className="p-1 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-100"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="p-3 border-b border-surface-100">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={catalogSearchQuery}
+                      onChange={e => setCatalogSearchQuery(e.target.value)}
+                      placeholder="Search food database (e.g. Rice, Dal, Roti, Paneer)..."
+                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-surface-200 bg-surface-50 focus:bg-white focus:border-brand-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-2 divide-y divide-surface-100">
+                  {filteredCatalogItems.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-surface-400">
+                      No matching verified foods found. Try a different search term.
+                    </div>
+                  ) : (
+                    filteredCatalogItems.map(food => (
+                      <button
+                        key={food.id}
+                        type="button"
+                        onClick={() => {
+                          if (replacingItemId) {
+                            handleReplaceItemWithCatalog(replacingItemId, food)
+                          } else {
+                            handleAddCatalogItem(food)
+                          }
+                        }}
+                        className="w-full text-left p-2.5 rounded-xl hover:bg-surface-50 transition-colors flex items-center justify-between group"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-bold text-surface-900 block truncate group-hover:text-brand-700">
+                            {food.name}
+                          </span>
+                          <span className="text-[10px] text-surface-400 block mt-0.5">
+                            {food.serving_size} {food.serving_unit} • {food.calories} kcal • {food.protein}g P
+                          </span>
+                        </div>
+                        <CheckCircle2 size={16} className="text-surface-300 group-hover:text-brand-600 shrink-0 ml-2" />
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>

@@ -309,9 +309,12 @@ export function AddFoodModal({
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
-  const [scanResult, setScanResult] = useState<{
+  interface ScannedMealItem {
+    id: string
     name: string
     portion: string
+    servingSize: number
+    servingUnit: string
     quantity: number
     calories: number
     protein: number
@@ -320,7 +323,14 @@ export function AddFoodModal({
     fiber: number
     confidence: 'high' | 'medium' | 'low'
     notes: string
-  } | null>(null)
+    baseCalories: number
+    baseProtein: number
+    baseCarbs: number
+    baseFat: number
+    baseFiber: number
+    isCatalogMatch?: boolean
+  }
+  const [scanItems, setScanItems] = useState<ScannedMealItem[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -328,7 +338,7 @@ export function AddFoodModal({
     if (!file) return
     setImageFile(file)
     setScanError(null)
-    setScanResult(null)
+    setScanItems([])
 
     const reader = new FileReader()
     reader.onload = () => {
@@ -354,50 +364,112 @@ export function AddFoodModal({
         return
       }
 
-      const primary = res.items[0]
-      setScanResult({
-        name: primary.name,
-        portion: `${primary.servingSize} ${primary.servingUnit}`,
-        quantity: primary.quantity || 1,
-        calories: primary.calories,
-        protein: primary.protein,
-        carbs: primary.carbs,
-        fat: primary.fat,
-        fiber: primary.fiber,
-        confidence: primary.confidence,
-        notes: primary.notes || res.overallNotes || 'Portion estimated from visual analysis.',
+      const validated: ScannedMealItem[] = res.items.map((it, idx) => {
+        const qty = it.quantity || 1
+        return {
+          id: it.id || `scanned_${idx}`,
+          name: it.name,
+          portion: it.portion || `${it.servingSize} ${it.servingUnit}`,
+          servingSize: it.servingSize || 100,
+          servingUnit: it.servingUnit || 'g',
+          quantity: qty,
+          calories: it.calories,
+          protein: it.protein,
+          carbs: it.carbs,
+          fat: it.fat,
+          fiber: it.fiber || 0,
+          confidence: it.confidence || 'medium',
+          notes: it.notes || res.overallNotes || 'Portion estimated from visual analysis.',
+          baseCalories: it.calories / qty,
+          baseProtein: it.protein / qty,
+          baseCarbs: it.carbs / qty,
+          baseFat: it.fat / qty,
+          baseFiber: (it.fiber || 0) / qty,
+          isCatalogMatch: it.isCatalogMatch,
+        }
       })
+
+      setScanItems(validated)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Food photo analysis failed'
+      const msg = err instanceof Error ? err.message : 'Meal analysis is temporarily unavailable.'
       setScanError(msg)
     } finally {
       setIsScanning(false)
     }
   }
 
+  const handleUpdateScanItem = (id: string, updates: Partial<ScannedMealItem>) => {
+    setScanItems(prev =>
+      prev.map(it => {
+        if (it.id !== id) return it
+        const updated = { ...it, ...updates }
+        if (updates.quantity !== undefined) {
+          const q = Math.max(0.1, Number(updates.quantity) || 1)
+          updated.quantity = q
+          updated.calories = Math.max(0, Math.round(it.baseCalories * q))
+          updated.protein = Math.max(0, Math.round(it.baseProtein * q * 10) / 10)
+          updated.carbs = Math.max(0, Math.round(it.baseCarbs * q * 10) / 10)
+          updated.fat = Math.max(0, Math.round(it.baseFat * q * 10) / 10)
+          updated.fiber = Math.max(0, Math.round(it.baseFiber * q * 10) / 10)
+        }
+        return updated
+      })
+    )
+  }
+
+  const handleDeleteScanItem = (id: string) => {
+    setScanItems(prev => prev.filter(it => it.id !== id))
+  }
+
+  const scanMealTotals = useMemo(() => {
+    let calories = 0
+    let protein = 0
+    let carbs = 0
+    let fat = 0
+    let fiber = 0
+    for (const it of scanItems) {
+      calories += it.calories || 0
+      protein += it.protein || 0
+      carbs += it.carbs || 0
+      fat += it.fat || 0
+      fiber += it.fiber || 0
+    }
+    return {
+      calories: Math.round(calories),
+      protein: Math.round(protein * 10) / 10,
+      carbs: Math.round(carbs * 10) / 10,
+      fat: Math.round(fat * 10) / 10,
+      fiber: Math.round(fiber * 10) / 10,
+    }
+  }, [scanItems])
+
   const handleConfirmAiAdd = async () => {
-    if (!scanResult || isAdding) return
+    if (scanItems.length === 0 || isAdding) return
     setIsAdding(true)
     try {
-      await onAddEntry({
-        user_id: userId,
-        date: dateStr,
-        meal_type: selectedMeal,
-        food_name: scanResult.name,
-        brand: 'AI Vision Estimate',
-        serving_size: 1,
-        serving_unit: scanResult.portion,
-        servings_logged: scanResult.quantity,
-        calories: scanResult.calories,
-        protein: scanResult.protein,
-        carbs: scanResult.carbs,
-        fat: scanResult.fat,
-        fiber: scanResult.fiber,
-        logged_at: new Date().toISOString(),
-      })
+      const now = new Date().toISOString()
+      for (const item of scanItems) {
+        await onAddEntry({
+          user_id: userId,
+          date: dateStr,
+          meal_type: selectedMeal,
+          food_name: item.name,
+          brand: item.isCatalogMatch ? 'Verified Database' : 'AI Vision Estimate',
+          serving_size: item.servingSize,
+          serving_unit: item.portion || item.servingUnit,
+          servings_logged: item.quantity,
+          calories: item.calories,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+          fiber: item.fiber,
+          logged_at: now,
+        })
+      }
+      window.dispatchEvent(new CustomEvent('gymtrack:food_logged'))
       setImageFile(null)
       setImagePreview(null)
-      setScanResult(null)
+      setScanItems([])
       onOpenChange(false)
     } finally {
       setIsAdding(false)
@@ -1067,7 +1139,9 @@ export function AddFoodModal({
                       <button
                         onClick={() => {
                           setImagePreview(null)
-                          setScanResult(null)
+                          setImageFile(null)
+                          setScanItems([])
+                          setScanError(null)
                         }}
                         className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/80"
                         title="Remove image"
@@ -1076,25 +1150,45 @@ export function AddFoodModal({
                       </button>
                     </div>
 
-                    {/* Error Banner if analysis failed */}
+                    {/* Error Banner if analysis failed - preserves photo & offers alternatives */}
                     {scanError && (
-                      <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-start gap-2.5 animate-fade-in">
-                        <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                          <p className="font-bold text-red-900">Analysis Failed</p>
-                          <p className="mt-0.5 text-red-700 leading-relaxed">{scanError}</p>
+                      <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-col gap-2.5 animate-fade-in">
+                        <div className="flex items-start gap-2.5">
+                          <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-bold text-amber-950">Meal Analysis Notice</p>
+                            <p className="mt-0.5 text-amber-800 leading-relaxed">{scanError}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1 pl-6">
                           <button
                             type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="mt-2 text-xs font-bold text-red-800 underline hover:text-red-950"
+                            onClick={handleRunAiScan}
+                            disabled={isScanning}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 shadow-2xs"
                           >
-                            Upload a different photo
+                            Retry AI Analysis
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('search')}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-surface-700 border border-surface-200 hover:bg-surface-50 shadow-2xs"
+                          >
+                            Search Food Library
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('quick')}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-surface-700 border border-surface-200 hover:bg-surface-50 shadow-2xs"
+                          >
+                            Quick Add
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {!scanResult ? (
+                    {scanItems.length === 0 ? (
                       <button
                         onClick={handleRunAiScan}
                         disabled={isScanning}
@@ -1114,119 +1208,85 @@ export function AddFoodModal({
                         )}
                       </button>
                     ) : (
-                      /* Scan Results Editor */
-                      <div className="p-4 rounded-xl border border-surface-200 bg-surface-50/60 space-y-3 animate-scale-in">
+                      /* Multi-Food Scan Results Review */
+                      <div className="space-y-3 animate-scale-in">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full">
-                            AI Estimated Nutrition
+                          <span className="text-xs font-bold uppercase tracking-wider text-brand-700">
+                            Identified {scanItems.length} Food {scanItems.length === 1 ? 'Item' : 'Items'}
                           </span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              scanResult.confidence === 'high'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }`}
-                          >
-                            Confidence: {scanResult.confidence}
+                          <span className="text-[10px] text-surface-400 font-medium">
+                            Review & edit items before logging
                           </span>
                         </div>
 
-                        <div>
-                          <label className="block text-xs font-bold text-surface-700 mb-1">
-                            Estimated Food Name
-                          </label>
-                          <input
-                            type="text"
-                            value={scanResult.name}
-                            onChange={e =>
-                              setScanResult({ ...scanResult, name: e.target.value })
-                            }
-                            className="input-base text-sm"
-                          />
+                        {/* List of detected items */}
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                          {scanItems.map(item => (
+                            <div
+                              key={item.id}
+                              className="p-3 rounded-xl border border-surface-200 bg-white shadow-2xs space-y-2"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={e => handleUpdateScanItem(item.id, { name: e.target.value })}
+                                  className="font-bold text-xs text-surface-900 bg-transparent border-b border-transparent hover:border-surface-300 focus:border-brand-500 px-1 py-0.5 rounded flex-1 truncate"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteScanItem(item.id)}
+                                  className="text-surface-400 hover:text-rose-600 p-1 rounded-lg"
+                                  title="Remove item"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] text-surface-400 font-bold">Qty:</span>
+                                  <input
+                                    type="number"
+                                    min="0.1"
+                                    step="0.1"
+                                    value={item.quantity}
+                                    onChange={e => handleUpdateScanItem(item.id, { quantity: parseFloat(e.target.value) || 1 })}
+                                    className="w-14 px-1.5 py-0.5 text-center text-xs font-bold rounded border border-surface-200 bg-surface-50"
+                                  />
+                                  <span className="text-[11px] text-surface-500">{item.portion}</span>
+                                </div>
+
+                                <div className="flex items-center gap-2 font-semibold">
+                                  <span className="font-bold text-surface-900">{item.calories} kcal</span>
+                                  <span className="text-blue-600">{item.protein}g P</span>
+                                  <span className="text-amber-700">{item.carbs}g C</span>
+                                  <span className="text-rose-600">{item.fat}g F</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
 
-                        <div className="grid grid-cols-4 gap-2">
-                          <div>
-                            <label className="block text-[10px] font-bold text-surface-500 mb-1">
-                              Calories
-                            </label>
-                            <input
-                              type="number"
-                              value={scanResult.calories}
-                              onChange={e =>
-                                setScanResult({
-                                  ...scanResult,
-                                  calories: Math.max(0, parseInt(e.target.value) || 0),
-                                })
-                              }
-                              className="input-base text-xs font-bold text-center"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold text-blue-600 mb-1">
-                              Protein (g)
-                            </label>
-                            <input
-                              type="number"
-                              value={scanResult.protein}
-                              onChange={e =>
-                                setScanResult({
-                                  ...scanResult,
-                                  protein: Math.max(0, parseFloat(e.target.value) || 0),
-                                })
-                              }
-                              className="input-base text-xs font-bold text-center"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold text-amber-700 mb-1">
-                              Carbs (g)
-                            </label>
-                            <input
-                              type="number"
-                              value={scanResult.carbs}
-                              onChange={e =>
-                                setScanResult({
-                                  ...scanResult,
-                                  carbs: Math.max(0, parseFloat(e.target.value) || 0),
-                                })
-                              }
-                              className="input-base text-xs font-bold text-center"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold text-rose-600 mb-1">
-                              Fat (g)
-                            </label>
-                            <input
-                              type="number"
-                              value={scanResult.fat}
-                              onChange={e =>
-                                setScanResult({
-                                  ...scanResult,
-                                  fat: Math.max(0, parseFloat(e.target.value) || 0),
-                                })
-                              }
-                              className="input-base text-xs font-bold text-center"
-                            />
+                        {/* Combined meal totals */}
+                        <div className="p-3 rounded-xl bg-brand-50/60 border border-brand-200 flex items-center justify-between text-xs">
+                          <span className="font-bold text-brand-950">Total Meal:</span>
+                          <div className="flex items-center gap-2.5 font-bold">
+                            <span className="text-surface-900">{scanMealTotals.calories} kcal</span>
+                            <span className="text-blue-700">{scanMealTotals.protein}g P</span>
+                            <span className="text-amber-700">{scanMealTotals.carbs}g C</span>
+                            <span className="text-rose-700">{scanMealTotals.fat}g F</span>
                           </div>
                         </div>
-
-                        <p className="text-[11px] text-surface-400 italic">
-                          {scanResult.notes}
-                        </p>
 
                         <button
                           onClick={handleConfirmAiAdd}
-                          disabled={isAdding}
+                          disabled={isAdding || scanItems.length === 0}
                           id="confirm-ai-food-btn"
-                          className="btn-primary w-full py-2.5 text-sm font-bold flex items-center justify-center gap-2 mt-2"
+                          className="btn-primary w-full py-2.5 text-sm font-bold flex items-center justify-center gap-2"
                         >
                           {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                          <span>Confirm & Log to {selectedMeal.toUpperCase()}</span>
+                          <span>Confirm & Log {scanItems.length} {scanItems.length === 1 ? 'Food' : 'Foods'} to {selectedMeal.toUpperCase()}</span>
                         </button>
                       </div>
                     )}

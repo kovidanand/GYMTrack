@@ -1421,6 +1421,10 @@ export interface DetectedFoodAnalysisItem {
   notes?: string
   isCatalogMatch?: boolean
   catalogId?: string
+  alternativeNames?: string[]
+  weightGrams?: number
+  uncertaintyNotes?: string
+  isEstimate?: boolean
 }
 
 export interface MealPhotoAnalysisResult {
@@ -1430,7 +1434,8 @@ export interface MealPhotoAnalysisResult {
 }
 
 /**
- * Searches the verified FOOD_CATALOG for items matching the AI-detected food name
+ * Searches the verified FOOD_CATALOG for items matching the AI-detected food name.
+ * Uses strict matching and stopword-aware token comparison to prevent false substitutions.
  */
 export function matchDetectedFoodToCatalog(foodName: string) {
   if (!foodName || typeof foodName !== 'string') return null
@@ -1444,34 +1449,52 @@ export function matchDetectedFoodToCatalog(foodName: string) {
   const alias = FOOD_CATALOG.find(f => f.aliases.some(a => a.toLowerCase() === clean))
   if (alias) return alias
 
-  // 3. Substring matching: e.g. "Cooked Rice" matches "White Rice (Cooked)"
-  const words = clean.split(/[\s,–—-]+/).filter(w => w.length > 2)
+  // 3. Full name containment (e.g. "Yellow Dal" in "Yellow Dal Tadka")
+  const containment = FOOD_CATALOG.find(f => {
+    const fName = f.name.toLowerCase()
+    return clean.includes(fName) || fName.includes(clean)
+  })
+  if (containment) return containment
+
+  // 4. Multi-token match excluding common food descriptor stopwords
+  const stopwords = new Set([
+    'and', 'with', 'the', 'fresh', 'cooked', 'steamed', 'fried',
+    'plain', 'bowl', 'plate', 'serving', 'cup', 'katori', 'homemade'
+  ])
+  const words = clean
+    .split(/[\s,–—/-]+/)
+    .map(w => w.trim())
+    .filter(w => w.length > 2 && !stopwords.has(w))
+
   if (words.length > 0) {
-    const match = FOOD_CATALOG.find(f => {
-      const fName = f.name.toLowerCase()
-      const matchesAll = words.every(w => fName.includes(w) || f.aliases.some(a => a.toLowerCase().includes(w)))
-      if (matchesAll) return true
-      return words.some(w => fName.includes(w))
+    const tokenMatch = FOOD_CATALOG.find(f => {
+      const fTokens = f.name
+        .toLowerCase()
+        .split(/[\s,–—/-]+/)
+        .filter(w => w.length > 2 && !stopwords.has(w))
+      // All meaningful query words must match
+      return words.every(w => fTokens.includes(w) || f.aliases.some(a => a.toLowerCase().includes(w)))
     })
-    if (match) return match
+    if (tokenMatch) return tokenMatch
   }
 
   return null
 }
 
+// In-flight request concurrency lock to prevent duplicate concurrent AI calls
+let activeAnalysisFingerprint: string | null = null
+let activeAnalysisPromise: Promise<MealPhotoAnalysisResult> | null = null
+
 /**
- * Genuinely analyzes an uploaded meal photo using Google Gemini 1.5 Flash Vision.
+ * Genuinely analyzes an uploaded meal photo using Google Gemini Multimodal Vision.
  * Handles multi-item plate breakdown, portions, and macro estimation.
- * Gracefully handles rate limits and network errors without generic status codes.
+ * Features bounded retries with exponential backoff & jitter for 503/429 errors.
  */
 export async function analyzeMealPhoto(
   base64Data: string,
   mimeType = 'image/jpeg',
   attempt = 1
 ): Promise<MealPhotoAnalysisResult> {
-  let remoteError: string | null = null
-  let isRateLimited = false
-
   // Ensure pure base64 without data URI prefix
   let cleanBase64 = base64Data.trim()
   let cleanMime = mimeType
@@ -1481,126 +1504,186 @@ export async function analyzeMealPhoto(
     cleanBase64 = cleanBase64.replace(/^data:[^;]+;base64,/i, '').trim()
   }
 
-  // Primary path: Supabase Edge Function (Server-side Gemini Vision)
-  try {
-    const anonKey =
-      (import.meta as unknown as { env?: Record<string, string> }).env
-        ?.VITE_SUPABASE_ANON_KEY || ''
-    const { data, error } = await supabase.functions.invoke('ai-coach', {
-      headers: anonKey ? { apikey: anonKey } : undefined,
-      body: {
-        task: 'food_multi_item_vision',
-        image_base64: cleanBase64,
-        mime_type: cleanMime,
-      },
-    })
+  // Generate lightweight deduplication key (first 64 chars + length)
+  const fingerprint = `${cleanBase64.slice(0, 64)}_${cleanBase64.length}`
+  if (attempt === 1 && activeAnalysisPromise && activeAnalysisFingerprint === fingerprint) {
+    return activeAnalysisPromise
+  }
 
-    if (!error && data) {
-      if (data.is_food === false) {
-        return {
-          isFood: false,
-          items: [],
-          overallNotes:
-            typeof data.message === 'string'
-              ? data.message
-              : 'No recognizable food or meal was detected in this photo. Please upload a clear photo of your food.',
+  const runRequest = async (): Promise<MealPhotoAnalysisResult> => {
+    let remoteError: string | null = null
+    let responseStatus = 200
+    let errorCode = ''
+    let isRetryable = false
+    let retryAfterSeconds: number | null = null
+
+    try {
+      const anonKey =
+        (import.meta as unknown as { env?: Record<string, string> }).env
+          ?.VITE_SUPABASE_ANON_KEY || ''
+      const { data, error } = await supabase.functions.invoke('ai-coach', {
+        headers: anonKey ? { apikey: anonKey } : undefined,
+        body: {
+          task: 'food_multi_item_vision',
+          image_base64: cleanBase64,
+          mime_type: cleanMime,
+        },
+      })
+
+      if (!error && data) {
+        if (data.is_food === false) {
+          return {
+            isFood: false,
+            items: [],
+            overallNotes:
+              typeof data.message === 'string'
+                ? data.message
+                : 'No recognizable food or meal was detected in this photo. Please upload a clear photo of your food.',
+          }
+        }
+
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          const validated: DetectedFoodAnalysisItem[] = data.items.map(
+            (it: Record<string, unknown>, idx: number) => {
+              const rawServing = Math.max(1, Number(it.servingSize || it.weight_g) || 100)
+              const rawQty = Math.max(0.1, Number(it.quantity) || 1)
+              const rawCal = Math.max(0, Math.round(Number(it.calories) || 0))
+              const rawP = Math.max(0, Math.round((Number(it.protein) || 0) * 10) / 10)
+              const rawC = Math.max(0, Math.round((Number(it.carbs) || 0) * 10) / 10)
+              const rawF = Math.max(0, Math.round((Number(it.fat) || 0) * 10) / 10)
+              const rawFib = Math.max(0, Math.round((Number(it.fiber) || 0) * 10) / 10)
+              const foodName = typeof it.name === 'string' && it.name.trim() ? it.name.trim() : `Food Item ${idx + 1}`
+
+              // Match against verified local food catalog
+              const catalogMatch = matchDetectedFoodToCatalog(foodName)
+              const aliases = Array.isArray(it.alternative_names)
+                ? (it.alternative_names as unknown[]).filter((a): a is string => typeof a === 'string')
+                : []
+
+              return {
+                id: `detected_${Date.now()}_${idx}`,
+                name: foodName,
+                portion: typeof it.portion === 'string' && it.portion.trim() ? it.portion.trim() : `${rawServing}g`,
+                servingSize: rawServing,
+                servingUnit: typeof it.servingUnit === 'string' && it.servingUnit.trim() ? it.servingUnit.trim() : 'g',
+                quantity: rawQty,
+                calories: rawCal,
+                protein: rawP,
+                carbs: rawC,
+                fat: rawF,
+                fiber: rawFib,
+                confidence:
+                  it.confidence === 'high' || it.confidence === 'low'
+                    ? it.confidence
+                    : 'medium',
+                notes: typeof it.notes === 'string' ? it.notes : undefined,
+                uncertaintyNotes: typeof it.notes === 'string' ? it.notes : undefined,
+                alternativeNames: aliases,
+                weightGrams: Number(it.weight_g) || rawServing,
+                isCatalogMatch: Boolean(catalogMatch),
+                catalogId: catalogMatch?.id,
+                isEstimate: !catalogMatch,
+              }
+            }
+          )
+
+          return {
+            isFood: true,
+            items: validated,
+            overallNotes:
+              typeof data.overall_notes === 'string'
+                ? data.overall_notes
+                : 'Nutritional estimates generated from image analysis. Review and adjust portions before saving.',
+          }
         }
       }
 
-      if (Array.isArray(data.items) && data.items.length > 0) {
-        const validated: DetectedFoodAnalysisItem[] = data.items.map(
-          (it: Record<string, unknown>, idx: number) => {
-            const rawServing = Number(it.servingSize) || 100
-            const rawQty = Math.max(0.1, Number(it.quantity) || 1)
-            const rawCal = Math.max(0, Math.round(Number(it.calories) || 0))
-            const rawP = Math.max(0, Math.round((Number(it.protein) || 0) * 10) / 10)
-            const rawC = Math.max(0, Math.round((Number(it.carbs) || 0) * 10) / 10)
-            const rawF = Math.max(0, Math.round((Number(it.fat) || 0) * 10) / 10)
-            const rawFib = Math.max(0, Math.round((Number(it.fiber) || 0) * 10) / 10)
-            const foodName = typeof it.name === 'string' && it.name.trim() ? it.name.trim() : 'Food Item'
-
-            // Check if detected item matches verified local food catalog
-            const catalogMatch = matchDetectedFoodToCatalog(foodName)
-
-            return {
-              id: `detected_${Date.now()}_${idx}`,
-              name: foodName,
-              portion: typeof it.portion === 'string' ? it.portion : `${rawServing}g`,
-              servingSize: rawServing,
-              servingUnit: typeof it.servingUnit === 'string' ? it.servingUnit : 'g',
-              quantity: rawQty,
-              calories: rawCal,
-              protein: rawP,
-              carbs: rawC,
-              fat: rawF,
-              fiber: rawFib,
-              confidence:
-                it.confidence === 'high' || it.confidence === 'medium' || it.confidence === 'low'
-                  ? it.confidence
-                  : 'medium',
-              notes: typeof it.notes === 'string' ? it.notes : undefined,
-              isCatalogMatch: Boolean(catalogMatch),
-              catalogId: catalogMatch?.id,
+      if (error) {
+        try {
+          if ('context' in error && error.context) {
+            const ctx = error.context as Response
+            responseStatus = ctx.status || 500
+            const retryHeader = ctx.headers?.get?.('Retry-After')
+            if (retryHeader) {
+              const sec = parseInt(retryHeader, 10)
+              if (!isNaN(sec) && sec > 0) retryAfterSeconds = Math.min(5, sec)
+            }
+            const cloned = ctx.clone ? ctx.clone() : ctx
+            const json = await cloned.json().catch(() => null)
+            if (json && typeof json === 'object') {
+              remoteError = json.error || json.message || ''
+              errorCode = json.code || ''
+              if (json.retryable !== undefined) isRetryable = Boolean(json.retryable)
             }
           }
-        )
+        } catch {
+          // ignore context parsing error
+        }
 
-        return {
-          isFood: true,
-          items: validated,
-          overallNotes:
-            typeof data.overall_notes === 'string'
-              ? data.overall_notes
-              : 'Nutritional estimates generated from image analysis. Review and adjust portions before saving.',
+        if (!remoteError) {
+          remoteError = error.message || ''
         }
       }
+    } catch (err: unknown) {
+      remoteError = err instanceof Error ? err.message : 'Network error communicating with AI service'
+      responseStatus = 500
+      isRetryable = true
     }
 
-    if (error) {
-      let detail = ''
-      try {
-        if ('context' in error && error.context) {
-          const ctx = error.context as Response
-          if (ctx.status === 429) {
-            isRateLimited = true
-          }
-          const cloned = ctx.clone ? ctx.clone() : ctx
-          const json = await cloned.json().catch(() => null)
-          if (json && typeof json === 'object') {
-            detail = json.error || json.message || ''
-            if (json.code === 'RATE_LIMIT') isRateLimited = true
-          }
-        }
-      } catch {
-        // ignore
-      }
+    // Determine if failure is transient and eligible for safe bounded retry
+    const is503 = responseStatus === 503 || errorCode === 'HIGH_DEMAND' || remoteError?.includes('503') || remoteError?.toLowerCase().includes('high demand')
+    const is429 = responseStatus === 429 || errorCode === 'RATE_LIMIT' || remoteError?.includes('429') || remoteError?.toLowerCase().includes('rate')
+    const isTransient = is503 || is429 || isRetryable || responseStatus === 504
 
-      remoteError = detail || error.message || ''
+    const maxAttempts = 3
+    if (isTransient && attempt < maxAttempts) {
+      // Exponential backoff with random jitter (Attempt 1->2: ~1.5s, Attempt 2->3: ~3.0s)
+      const baseDelay = retryAfterSeconds ? retryAfterSeconds * 1000 : (attempt === 1 ? 1500 : 3000)
+      const jitter = Math.random() * 500
+      await new Promise(r => setTimeout(r, baseDelay + jitter))
+      return analyzeMealPhoto(base64Data, mimeType, attempt + 1)
     }
-  } catch (err: unknown) {
-    remoteError = err instanceof Error ? err.message : 'Network error communicating with AI service'
+
+    // User-friendly, actionable error messages (never exposing raw upstream JSON or stack traces)
+    if (is503) {
+      throw new Error('Meal analysis is temporarily unavailable. Your photo is still available. You can retry or log foods manually.')
+    }
+
+    if (is429) {
+      throw new Error('AI Vision is currently handling high demand. Please wait a moment and tap Retry, or select from the Food Library.')
+    }
+
+    if (remoteError?.includes('GEMINI_API_KEY')) {
+      throw new Error('AI Vision requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets.')
+    }
+
+    if (responseStatus === 504 || errorCode === 'TIMEOUT') {
+      throw new Error('Image analysis request timed out. Your photo is preserved. Please tap Retry or choose a smaller photo.')
+    }
+
+    if (responseStatus === 400 || errorCode === 'BAD_REQUEST' || errorCode === 'INVALID_IMAGE') {
+      throw new Error('Unable to analyze this image format. Please select a valid JPEG, PNG, or WebP photo.')
+    }
+
+    if (!remoteError || remoteError.includes('non-2xx status code')) {
+      throw new Error('Meal analysis is temporarily unavailable. Your photo is still available. You can retry or log foods manually.')
+    }
+
+    // Clean any residual JSON wrapping from error string
+    const cleaned = remoteError.replace(/^[{\s"']+error["':\s]+/, '').replace(/[}"'\s]+$/, '').trim()
+    throw new Error(cleaned || 'Meal analysis is temporarily unavailable. Your photo is still available. You can retry or log foods manually.')
   }
 
-  // Automatic retry on transient rate limiting (once after 2s)
-  if (isRateLimited && attempt < 2) {
-    await new Promise(r => setTimeout(r, 2000))
-    return analyzeMealPhoto(base64Data, mimeType, attempt + 1)
+  if (attempt === 1) {
+    activeAnalysisFingerprint = fingerprint
+    activeAnalysisPromise = runRequest().finally(() => {
+      activeAnalysisFingerprint = null
+      activeAnalysisPromise = null
+    })
+    return activeAnalysisPromise
   }
 
-  // Friendly error mapping to prevent exposing raw stack traces or "Edge Function returned a non-2xx status code"
-  if (isRateLimited || remoteError?.toLowerCase().includes('rate') || remoteError?.includes('429')) {
-    throw new Error('AI Vision is currently handling high demand. Please wait a moment and tap Retry, or select from the Food Library.')
-  }
-
-  if (remoteError?.includes('GEMINI_API_KEY')) {
-    throw new Error('AI Vision requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets.')
-  }
-
-  if (!remoteError || remoteError === 'Edge Function returned a non-2xx status code') {
-    throw new Error('AI Vision service is temporarily unavailable. Please retry in a few moments, or log foods manually from the Food Library.')
-  }
-
-  throw new Error(remoteError)
+  return runRequest()
 }
 
 // ─── Nutrition AI Assistant Context Resolver ──────────────────────────────────
