@@ -355,7 +355,9 @@ export async function deleteUserPlan(planId: string, userId: string): Promise<{ 
             const list = JSON.parse(raw).filter((p: any) => p.id !== planId)
             localStorage.setItem(key, JSON.stringify(list))
           }
-        } catch {}
+        } catch {
+          /* ignore cache entry removal error */
+        }
       }
     }
 

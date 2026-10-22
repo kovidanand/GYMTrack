@@ -158,7 +158,9 @@ export function useProgress() {
             setLoading(false)
           }
         }
-      } catch {}
+      } catch {
+        /* ignore localStorage parsing error */
+      }
     }
   }, [userId])
 
@@ -197,7 +199,9 @@ export function useProgress() {
           if (raw) {
             setHistory(JSON.parse(raw))
           }
-        } catch {}
+        } catch {
+          /* ignore cache read error */
+        }
       }
     }
 

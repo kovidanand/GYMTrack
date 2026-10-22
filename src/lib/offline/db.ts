@@ -293,6 +293,8 @@ export function getQueuedExercisesForTodayWorkout(): WorkoutExercise[] {
 export function clearQueuedExercisesForTodayWorkout(): void {
   try {
     localStorage.removeItem(QUEUED_EXERCISES_KEY)
-  } catch {}
+  } catch {
+    /* ignore storage access error */
+  }
 }
 

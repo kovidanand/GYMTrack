@@ -68,7 +68,9 @@ function purgeUserStorageCache() {
   try {
     clearQueuedExercisesForTodayWorkout()
     clearAllActiveSessions().catch(() => {})
-  } catch {}
+  } catch {
+    /* ignore session clear errors */
+  }
 
   try {
     const keysToRemove: string[] = []
@@ -97,7 +99,9 @@ function purgeUserStorageCache() {
 
   try {
     sessionStorage.clear()
-  } catch {}
+  } catch {
+    /* ignore storage access restrictions */
+  }
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -190,7 +194,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Purge any stale demo flags
     try {
       localStorage.removeItem('gymtrack:demo_mode')
-    } catch {}
+    } catch {
+      /* ignore storage access error */
+    }
 
     // Subscribe to auth state changes:
     // INITIAL_SESSION, SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED, PASSWORD_RECOVERY

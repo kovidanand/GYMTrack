@@ -406,3 +406,72 @@ function formatDisplayQty(val: number): string {
   if (Number.isInteger(val)) return String(val)
   return String(Math.round(val * 10) / 10)
 }
+
+/**
+ * Canonical portion string formatter for daily diary, meal sections, and logs.
+ * Resolves legacy or new entry shapes into clean, intuitive human labels:
+ * e.g. "150 g", "2 rotis", "1 medium apple", "1 cup (150g)"
+ * Completely prevents double-multiplication bugs (e.g. "118 x 118 g" or "2 x 2 roti").
+ */
+export function formatFoodEntryPortion(entry: {
+  serving_size: number
+  serving_unit: string
+  servings_logged?: number
+}): string {
+  const size = Number(entry.serving_size) || 1
+  const rawUnit = (entry.serving_unit || 'g').trim()
+  const servings = Number(entry.servings_logged) || 1
+  const lowerUnit = rawUnit.toLowerCase()
+
+  const isMetric = lowerUnit === 'g' || lowerUnit === 'grams' || lowerUnit === 'ml' || lowerUnit === 'millilitres'
+
+  if (isMetric) {
+    const totalAmount = (servings > 1 && servings !== size) ? Math.round(size * servings) : size
+    const unitText = (lowerUnit === 'grams' || lowerUnit === 'g') ? 'g' : 'ml'
+    return `${formatDisplayQty(totalAmount)} ${unitText}`
+  }
+
+  // If unit already contains the exact formatted count and weight, e.g. "2 pieces (70g)" or "1 bowl (150g)"
+  if (servings === 1 && (lowerUnit.startsWith(String(size)) || lowerUnit.includes(`${size}g`))) {
+    return rawUnit
+  }
+
+  // Clean unit string (strip leading "1 ", "1x ", etc.)
+  const cleanUnit = rawUnit.replace(/^1\s+/i, '').replace(/^1x\s+/i, '').trim()
+
+  // Calculate clean count
+  let count = servings
+  if (servings === 1 && size > 1 && !lowerUnit.includes('g') && !lowerUnit.includes('ml')) {
+    count = size
+  } else if (servings === size && servings > 1) {
+    count = servings
+  } else if (servings > 1 && size > 1) {
+    count = servings
+  }
+
+  const displayCount = formatDisplayQty(count)
+
+  // Pluralize clean unit if count > 1
+  let displayUnit = cleanUnit
+  if (count > 1) {
+    if (cleanUnit.toLowerCase() === 'roti' || cleanUnit.toLowerCase() === 'chapati') displayUnit = `${cleanUnit}s`
+    else if (cleanUnit.toLowerCase() === 'egg') displayUnit = 'eggs'
+    else if (cleanUnit.toLowerCase() === 'egg white') displayUnit = 'egg whites'
+    else if (cleanUnit.toLowerCase() === 'slice') displayUnit = 'slices'
+    else if (cleanUnit.toLowerCase() === 'scoop') displayUnit = 'scoops'
+    else if (cleanUnit.toLowerCase() === 'medium apple') displayUnit = 'medium apples'
+    else if (cleanUnit.toLowerCase() === 'small apple') displayUnit = 'small apples'
+    else if (cleanUnit.toLowerCase() === 'large apple') displayUnit = 'large apples'
+    else if (cleanUnit.toLowerCase() === 'banana') displayUnit = 'bananas'
+    else if (cleanUnit.toLowerCase() === 'medium banana') displayUnit = 'medium bananas'
+    else if (cleanUnit.toLowerCase() === 'small banana') displayUnit = 'small bananas'
+    else if (cleanUnit.toLowerCase() === 'large banana') displayUnit = 'large bananas'
+    else if (cleanUnit.toLowerCase() === 'katori') displayUnit = 'katoris'
+    else if (cleanUnit.toLowerCase() === 'bowl') displayUnit = 'bowls'
+    else if (cleanUnit.toLowerCase() === 'cup') displayUnit = 'cups'
+    else if (cleanUnit.toLowerCase() === 'serving') displayUnit = 'servings'
+    else if (!cleanUnit.toLowerCase().endsWith('s')) displayUnit = `${cleanUnit}s`
+  }
+
+  return `${displayCount} ${displayUnit}`
+}

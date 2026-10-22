@@ -20,7 +20,7 @@ interface AiResponseRendererProps {
 
 // ── Sanitization ───────────────────────────────────────────────────────────
 
-const DECORATIVE_SYMBOLS = /[★☆✦✧✨⭐🌟💪🏋️‍♂️🏋️‍♀️🔥💥⚡🎯🏆🥇🥈🥉✅❌⚠️🔴🟢🟡🔵📊📈📉🎉🎊💯🙌👏🤝💡📌📍🔑]/g
+const DECORATIVE_SYMBOLS = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}★☆✦✧]|\uFE0F|\u200D/gu
 
 export function stripDecorative(text: string): string {
   return text.replace(DECORATIVE_SYMBOLS, '').trim()

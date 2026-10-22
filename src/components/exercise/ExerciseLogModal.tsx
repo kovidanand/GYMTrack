@@ -35,6 +35,26 @@ export function ExerciseLogModal({
   const [showOptionalFields, setShowOptionalFields] = useState<boolean>(false)
   const [isSaving, setIsSaving] = useState<boolean>(false)
 
+  const isCardio = useMemo(() => {
+    if (!exercise) return false
+    return exercise.exercise_type === 'cardio'
+  }, [exercise])
+
+  const isTimed = useMemo(() => {
+    if (!exercise) return false
+    const nameLower = exercise.name.toLowerCase()
+    const slugLower = exercise.slug.toLowerCase()
+    return (
+      isCardio ||
+      exercise.exercise_type === 'mobility' ||
+      exercise.exercise_type === 'stretching' ||
+      nameLower.includes('plank') ||
+      slugLower.includes('plank') ||
+      nameLower.includes('hold') ||
+      nameLower.includes('hang')
+    )
+  }, [exercise, isCardio])
+
   const isBodyweight = useMemo(() => {
     if (!exercise) return false
     const eq = exercise.equipment || []
@@ -46,19 +66,24 @@ export function ExerciseLogModal({
     if (isOpen && exercise) {
       setStep('input')
       setSets(3)
-      setReps(10)
       setNotes('')
-      setDurationMinutes(0)
       setShowOptionalFields(false)
 
-      if (isBodyweight) {
+      if (isTimed || isCardio) {
+        setDurationMinutes(5)
+        setReps(0)
+        setWeight(0)
+      } else if (isBodyweight) {
+        setDurationMinutes(0)
+        setReps(10)
         setWeight(0)
       } else {
-        // Default weighted baseline
+        setDurationMinutes(0)
+        setReps(10)
         setWeight(50)
       }
     }
-  }, [isOpen, exercise, isBodyweight])
+  }, [isOpen, exercise, isBodyweight, isTimed, isCardio])
 
   if (!isOpen || !exercise) return null
 
@@ -67,9 +92,20 @@ export function ExerciseLogModal({
 
   const handleReview = (e: React.FormEvent) => {
     e.preventDefault()
-    if (sets <= 0 || reps <= 0) {
-      toast.error('Please enter at least 1 set and 1 rep.')
-      return
+    if (isTimed || isCardio) {
+      if (durationMinutes <= 0 && reps <= 0) {
+        toast.error('Please enter duration or repetitions.')
+        return
+      }
+      if (sets <= 0) {
+        toast.error('Please enter at least 1 set or round.')
+        return
+      }
+    } else {
+      if (sets <= 0 || reps <= 0) {
+        toast.error('Please enter at least 1 set and 1 rep.')
+        return
+      }
     }
     setStep('review')
   }
@@ -86,7 +122,7 @@ export function ExerciseLogModal({
       const setInputs = Array.from({ length: sets }, (_, idx) => ({
         setNumber: idx + 1,
         weight: Number(weight) || 0,
-        reps: Number(reps) || 0,
+        reps: reps > 0 ? Number(reps) : (durationMinutes > 0 ? Math.round(durationMinutes * 60) : 1),
         completed: true
       }))
 
@@ -171,53 +207,97 @@ export function ExerciseLogModal({
         <div className="p-5 overflow-y-auto space-y-4">
           {step === 'input' ? (
             <form id="exercise-log-form" onSubmit={handleReview} className="space-y-4">
-              {/* Weight Input */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="log-weight-input" className="text-xs font-bold text-surface-700 uppercase tracking-wider">
-                    Weight (kg)
-                  </label>
-                  {isBodyweight && (
-                    <span className="text-[11px] text-surface-400 font-medium">Bodyweight movement</span>
-                  )}
+              {/* Dynamic Field: Duration for Timed/Cardio or Weight for Strength */}
+              {(isTimed || isCardio) ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="log-duration-primary" className="text-xs font-bold text-surface-700 uppercase tracking-wider">
+                      Duration (Minutes)
+                    </label>
+                    <span className="text-[11px] text-surface-400 font-medium">Timed / Cardio Exercise</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDurationMinutes(d => Math.max(1, d - 1))}
+                      className="w-11 h-11 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
+                      aria-label="Decrease duration"
+                    >
+                      -
+                    </button>
+                    <div className="relative flex-1">
+                      <input
+                        id="log-duration-primary"
+                        type="number"
+                        min="1"
+                        max="300"
+                        value={durationMinutes || ''}
+                        onChange={e => setDurationMinutes(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                        placeholder="5"
+                        className="input w-full text-center text-lg font-black text-surface-900 pr-12"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-surface-400">
+                        min
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDurationMinutes(d => Math.min(300, d + 1))}
+                      className="w-11 h-11 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
+                      aria-label="Increase duration"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setWeight(w => Math.max(0, w - (w >= 20 ? 5 : 2.5)))}
-                    className="w-11 h-11 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
-                    aria-label="Decrease weight"
-                  >
-                    -
-                  </button>
-
-                  <div className="relative flex-1">
-                    <input
-                      id="log-weight-input"
-                      type="number"
-                      step="any"
-                      min="0"
-                      value={weight === 0 && isBodyweight ? '' : weight}
-                      onChange={e => setWeight(Math.max(0, parseFloat(e.target.value) || 0))}
-                      placeholder={isBodyweight ? '0 (Bodyweight)' : '50'}
-                      className="input w-full text-center text-lg font-black text-surface-900 pr-9"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-surface-400">
-                      kg
-                    </span>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="log-weight-input" className="text-xs font-bold text-surface-700 uppercase tracking-wider">
+                      Weight (kg)
+                    </label>
+                    {isBodyweight && (
+                      <span className="text-[11px] text-surface-400 font-medium">0 = Bodyweight (add weight for vest/belt)</span>
+                    )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setWeight(w => w + (w >= 20 ? 5 : 2.5))}
-                    className="w-11 h-11 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
-                    aria-label="Increase weight"
-                  >
-                    +
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setWeight(w => Math.max(0, w - (w >= 20 ? 5 : 2.5)))}
+                      className="w-11 h-11 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
+                      aria-label="Decrease weight"
+                    >
+                      -
+                    </button>
+
+                    <div className="relative flex-1">
+                      <input
+                        id="log-weight-input"
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={weight === 0 && isBodyweight ? '' : weight}
+                        onChange={e => setWeight(Math.max(0, parseFloat(e.target.value) || 0))}
+                        placeholder={isBodyweight ? '0 (Bodyweight)' : '50'}
+                        className="input w-full text-center text-lg font-black text-surface-900 pr-9"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-surface-400">
+                        kg
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setWeight(w => w + (w >= 20 ? 5 : 2.5))}
+                      className="w-11 h-11 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-800 font-black text-base flex items-center justify-center transition-colors"
+                      aria-label="Increase weight"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Sets & Reps Inputs */}
               <div className="grid grid-cols-2 gap-3">

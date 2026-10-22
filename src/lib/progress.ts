@@ -129,7 +129,9 @@ export async function getWorkoutHistory(userId: string): Promise<{ data: Workout
         if (s.id) sessionMap.set(s.id, s)
       })
     }
-  } catch {}
+  } catch {
+    /* ignore cached history parsing error */
+  }
 
   // 4. Remote sessions overlay (and take precedence for finalized server data)
   remoteSessions.forEach(s => {
@@ -149,7 +151,9 @@ export async function getWorkoutHistory(userId: string): Promise<{ data: Workout
   if (merged.length > 0) {
     try {
       localStorage.setItem(CACHED_HISTORY_PREFIX + userId, JSON.stringify(merged))
-    } catch {}
+    } catch {
+      /* ignore storage quota notice */
+    }
   }
 
   return { data: merged, error: null }
@@ -176,7 +180,9 @@ export async function getWorkoutSessionById(sessionId: string): Promise<{ data: 
       }
       return { data, error: null }
     }
-  } catch {}
+  } catch {
+    /* fallback to local pending operations if network fails */
+  }
 
   // 2. Check local pending operations or cached history
   try {
@@ -189,7 +195,9 @@ export async function getWorkoutSessionById(sessionId: string): Promise<{ data: 
       } as unknown as WorkoutSession
       return { data: localSession, error: null }
     }
-  } catch {}
+  } catch {
+    /* ignore local lookup notice */
+  }
 
   return { data: null, error: 'Session not found.' }
 }

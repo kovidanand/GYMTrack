@@ -11,6 +11,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import type { FoodEntry, MealType } from '@/types/nutrition'
+import { formatFoodEntryPortion } from '@/lib/nutritionCalculator'
 
 import { getDashboardDateHeadings, toLocalISODate } from '@/lib/dateUtils'
 
@@ -146,10 +147,7 @@ export function RecentFoodLog({
 
                     <div className="flex items-center gap-2 text-xs text-surface-500 mt-0.5">
                       <span className="font-semibold text-surface-700">
-                        {entry.serving_size} {entry.serving_unit}
-                        {entry.servings_logged && entry.servings_logged !== 1 && entry.servings_logged !== entry.serving_size && (
-                          <span className="text-surface-400"> (×{entry.servings_logged})</span>
-                        )}
+                        {formatFoodEntryPortion(entry)}
                       </span>
                       <span>·</span>
                       <span className="text-emerald-700 font-semibold">{entry.protein}g P</span>

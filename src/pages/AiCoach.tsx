@@ -12,7 +12,8 @@ import {
   HelpCircle,
   TrendingUp,
   ChevronRight,
-  CheckCircle2
+  CheckCircle2,
+  Utensils
 } from 'lucide-react'
 import { PageHeader, EmptyState } from '@/components/shared'
 import { useAiCoach } from '@/hooks/useAiCoach'
@@ -32,6 +33,8 @@ export default function AiCoach() {
     ask, 
     confirmPendingLog,
     cancelPendingLog,
+    confirmPendingFoodLog,
+    cancelPendingFoodLog,
     clearChat, 
     refresh 
   } = useAiCoach()
@@ -40,10 +43,12 @@ export default function AiCoach() {
   const [inputQuery, setInputQuery] = useState('')
 
   const suggestedQuestions = [
+    'What should I eat today?',
+    'How much protein do I still need?',
     'What should I train today?',
+    'Suggest a meal to hit my macros',
     'How did I progress this week?',
     'How do I do a bench press?',
-    'What weight did I use last time?',
     "What's my best Bench Press?"
   ]
 
@@ -350,6 +355,47 @@ export default function AiCoach() {
                           >
                             <CheckCircle2 size={13} />
                             <span>Confirm & Log</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Meal / Food Logging Confirmation Card */}
+                    {msg.pendingFoodLog && !msg.pendingFoodLog.logged && (
+                      <div className="p-3 bg-emerald-50/90 border border-emerald-200 rounded-xl space-y-2 text-left">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <Utensils size={14} className="text-emerald-700" />
+                            <span className="text-xs font-bold text-surface-900">{msg.pendingFoodLog.foodName}</span>
+                          </div>
+                          <span className="text-[11px] font-medium text-emerald-800 capitalize">
+                            {msg.pendingFoodLog.mealType} • {msg.pendingFoodLog.servingSize} {msg.pendingFoodLog.servingUnit}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs font-mono font-medium text-surface-700">
+                          <span className="font-bold text-surface-900">{Math.round(msg.pendingFoodLog.calories)} kcal</span>
+                          <span>·</span>
+                          <span className="font-bold text-blue-700">{Math.round(msg.pendingFoodLog.protein)}g P</span>
+                          <span>·</span>
+                          <span className="font-bold text-amber-700">{Math.round(msg.pendingFoodLog.carbs)}g C</span>
+                          <span>·</span>
+                          <span className="font-bold text-rose-700">{Math.round(msg.pendingFoodLog.fat)}g F</span>
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => cancelPendingFoodLog(msg.id)}
+                            className="flex-1 py-1.5 px-3 bg-white border border-surface-200 hover:bg-surface-100 text-surface-700 rounded-lg text-xs font-bold transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => confirmPendingFoodLog(msg.id)}
+                            className="flex-1 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center justify-center gap-1"
+                          >
+                            <CheckCircle2 size={13} />
+                            <span>Confirm & Log Food</span>
                           </button>
                         </div>
                       </div>

@@ -129,7 +129,9 @@ export async function initPlanInstance(
           instances: remoteProg.instances || {}
         }
       }
-    } catch {}
+    } catch {
+      /* ignore remote progress parsing notice */
+    }
   }
 
   const now = new Date().toISOString()

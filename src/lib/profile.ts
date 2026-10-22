@@ -95,10 +95,10 @@ export async function createProfile(profile: ProfileInsert): Promise<Profile | n
   // Retain client-stored preferences
   if (profile.id) {
     if ('sex' in profile && profile.sex) {
-      try { localStorage.setItem(`gymtrack_sex_${profile.id}`, String(profile.sex)) } catch {}
+      try { localStorage.setItem(`gymtrack_sex_${profile.id}`, String(profile.sex)) } catch { /* ignore storage error */ }
     }
     if ('session_duration' in profile && profile.session_duration) {
-      try { localStorage.setItem(`gymtrack_session_duration_${profile.id}`, String(profile.session_duration)) } catch {}
+      try { localStorage.setItem(`gymtrack_session_duration_${profile.id}`, String(profile.session_duration)) } catch { /* ignore storage error */ }
     }
   }
 
@@ -130,10 +130,10 @@ export async function updateProfile(
 
   // Persist locally tracked preferences
   if ('sex' in updates && updates.sex) {
-    try { localStorage.setItem(`gymtrack_sex_${userId}`, String(updates.sex)) } catch {}
+    try { localStorage.setItem(`gymtrack_sex_${userId}`, String(updates.sex)) } catch { /* ignore storage error */ }
   }
   if ('session_duration' in updates && updates.session_duration != null) {
-    try { localStorage.setItem(`gymtrack_session_duration_${userId}`, String(updates.session_duration)) } catch {}
+    try { localStorage.setItem(`gymtrack_session_duration_${userId}`, String(updates.session_duration)) } catch { /* ignore storage error */ }
   }
 
   // Filter out non-existent database columns to avoid PGRST204 schema cache errors

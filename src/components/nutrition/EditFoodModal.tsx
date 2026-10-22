@@ -101,7 +101,7 @@ export function EditFoodModal({
     setSaveError(null)
 
     try {
-      const finalServingSize = isMetricTotal ? quantity : entry.serving_size || 1
+      const finalServingSize = isMetricTotal ? quantity : 1
       const finalServingsLogged = isMetricTotal ? 1 : quantity
 
       await onUpdateEntry(entry.id, {

@@ -176,7 +176,7 @@ export function AddFoodModal({
         meal_type: selectedMeal,
         food_name: selectedFood.name,
         brand: selectedFood.brand,
-        serving_size: scaledSearchNutrients.quantity,
+        serving_size: isMetric ? scaledSearchNutrients.quantity : 1,
         serving_unit: activeUnitOption.shortLabel || activeUnitOption.label,
         servings_logged: isMetric ? 1 : scaledSearchNutrients.quantity,
         calories: scaledSearchNutrients.calories,

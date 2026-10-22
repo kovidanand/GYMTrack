@@ -395,21 +395,24 @@ export function FoodCameraModal({
 
     try {
       const now = new Date().toISOString()
-      const entriesToLog: Omit<FoodEntry, 'id' | 'created_at' | 'updated_at'>[] = detectedItems.map(it => ({
-        user_id: userId,
-        date: selectedDate,
-        meal_type: selectedMeal,
-        food_name: it.name,
-        serving_size: it.servingSize,
-        serving_unit: it.portion || it.servingUnit,
-        servings_logged: it.quantity,
-        calories: it.calories,
-        protein: it.protein,
-        carbs: it.carbs,
-        fat: it.fat,
-        fiber: it.fiber,
-        logged_at: now,
-      }))
+      const entriesToLog: Omit<FoodEntry, 'id' | 'created_at' | 'updated_at'>[] = detectedItems.map(it => {
+        const isMetric = (it.servingUnit || '').toLowerCase() === 'g' || (it.servingUnit || '').toLowerCase() === 'ml'
+        return {
+          user_id: userId,
+          date: selectedDate,
+          meal_type: selectedMeal,
+          food_name: it.name,
+          serving_size: isMetric ? Math.round(it.servingSize * (it.quantity || 1)) : 1,
+          serving_unit: it.servingUnit || it.portion || 'serving',
+          servings_logged: isMetric ? 1 : (it.quantity || 1),
+          calories: it.calories,
+          protein: it.protein,
+          carbs: it.carbs,
+          fat: it.fat,
+          fiber: it.fiber,
+          logged_at: now,
+        }
+      })
 
       await onLogMealItems(entriesToLog)
       // Broadcast event so progress cards, history, and AI coach update

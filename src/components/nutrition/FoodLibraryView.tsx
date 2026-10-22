@@ -154,14 +154,10 @@ export function FoodLibraryView({
     setSaveError(null)
 
     try {
-      const isMetricTotal =
-        calculatedNutrition.unit === 'g' ||
-        calculatedNutrition.unit === 'ml' ||
-        activeUnitOption.gramsEquivalent != null
-
-      const servingSize = isMetricTotal ? calculatedNutrition.quantity : 1
-      const servingsLogged = isMetricTotal ? 1 : calculatedNutrition.quantity
-      const servingUnit = calculatedNutrition.unitLabel
+      const isMetric = activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml'
+      const servingSize = isMetric ? calculatedNutrition.quantity : 1
+      const servingsLogged = isMetric ? 1 : calculatedNutrition.quantity
+      const servingUnit = activeUnitOption.shortLabel || calculatedNutrition.shortLabel || activeUnitOption.unit
 
       await onLogFood({
         user_id: userId,

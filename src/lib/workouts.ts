@@ -158,7 +158,9 @@ export async function deleteWorkoutPlan(id: string): Promise<boolean> {
           const list = JSON.parse(raw).filter((p: any) => p.id !== id)
           localStorage.setItem(key, JSON.stringify(list))
         }
-      } catch {}
+      } catch {
+        /* ignore cache removal notice */
+      }
     }
   }
 
@@ -790,7 +792,9 @@ export async function getPlanDayCompletions(
   try {
     const raw = localStorage.getItem(localKey)
     if (raw) localComps = JSON.parse(raw)
-  } catch {}
+  } catch {
+    /* ignore local plan completions read notice */
+  }
 
   try {
     const { data, error } = await supabase
@@ -834,7 +838,9 @@ export async function markPlanDayCompleted(
   try {
     const raw = localStorage.getItem(localKey)
     if (raw) localComps = JSON.parse(raw)
-  } catch {}
+  } catch {
+    /* ignore local plan completions read notice */
+  }
 
   const existingIdx = localComps.findIndex(c => c.week_number === weekNumber && c.day_number === dayNumber)
   const newComp = {
@@ -856,7 +862,9 @@ export async function markPlanDayCompleted(
   }
   try {
     localStorage.setItem(localKey, JSON.stringify(localComps))
-  } catch {}
+  } catch {
+    /* ignore localStorage quota notice */
+  }
 
   // 2. Supabase update
   try {

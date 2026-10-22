@@ -1,6 +1,7 @@
 import React from 'react'
 import { Plus, Trash2, Edit2, Coffee, Utensils, Moon, Apple } from 'lucide-react'
 import type { FoodEntry, MealType } from '@/types/nutrition'
+import { formatFoodEntryPortion } from '@/lib/nutritionCalculator'
 
 interface MealSectionProps {
   mealType: MealType
@@ -126,28 +127,7 @@ export function MealSection({
 
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-surface-500 mt-0.5">
                   <span className="font-medium text-surface-600">
-                    {(() => {
-                      const size = entry.serving_size
-                      const unit = (entry.serving_unit || '').trim()
-                      const servings = entry.servings_logged ?? 1
-
-                      // Prevent legacy double multiplication bug where both were set to total grams (e.g. 118 x 118 g)
-                      if (servings === size && servings > 1) {
-                        return `${size} ${unit}`
-                      }
-
-                      if (servings === 1) {
-                        if (
-                          unit.toLowerCase().startsWith(String(size)) ||
-                          unit.toLowerCase().includes(`${size}g`)
-                        ) {
-                          return unit
-                        }
-                        return `${size} ${unit}`
-                      }
-
-                      return `${servings} × ${size} ${unit}`
-                    })()}
+                    {formatFoodEntryPortion(entry)}
                   </span>
                   <span>·</span>
                   <span className="font-bold text-surface-800">
