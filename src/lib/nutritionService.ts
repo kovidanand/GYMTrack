@@ -1630,48 +1630,74 @@ export async function analyzeMealPhoto(
       isRetryable = true
     }
 
-    // Determine if failure is transient and eligible for safe bounded retry
-    const is503 = responseStatus === 503 || errorCode === 'HIGH_DEMAND' || remoteError?.includes('503') || remoteError?.toLowerCase().includes('high demand')
-    const is429 = responseStatus === 429 || errorCode === 'RATE_LIMIT' || remoteError?.includes('429') || remoteError?.toLowerCase().includes('rate')
-    const isTransient = is503 || is429 || isRetryable || responseStatus === 504
+    // Determine if failure is a persistent quota limit vs a transient recoverable spike
+    const isQuota =
+      errorCode === 'QUOTA_EXHAUSTED' ||
+      errorCode === 'AUTH_OR_QUOTA' ||
+      remoteError?.toLowerCase().includes('quota') ||
+      remoteError?.toLowerCase().includes('exceeded your current quota')
+
+    const is503 =
+      responseStatus === 503 ||
+      errorCode === 'HIGH_DEMAND' ||
+      remoteError?.includes('503') ||
+      remoteError?.toLowerCase().includes('high demand') ||
+      remoteError?.toLowerCase().includes('overloaded')
+
+    const is429 =
+      responseStatus === 429 ||
+      errorCode === 'RATE_LIMIT' ||
+      remoteError?.includes('429') ||
+      remoteError?.toLowerCase().includes('rate limit')
+
+    const isTimeout =
+      responseStatus === 504 ||
+      errorCode === 'TIMEOUT' ||
+      remoteError?.toLowerCase().includes('timed out')
+
+    const isTransient = !isQuota && (is503 || is429 || isRetryable || isTimeout)
 
     const maxAttempts = 3
     if (isTransient && attempt < maxAttempts) {
-      // Exponential backoff with random jitter (Attempt 1->2: ~1.5s, Attempt 2->3: ~3.0s)
-      const baseDelay = retryAfterSeconds ? retryAfterSeconds * 1000 : (attempt === 1 ? 1500 : 3000)
-      const jitter = Math.random() * 500
+      // Exponential backoff with random jitter (Attempt 1->2: ~1.2s, Attempt 2->3: ~2.5s)
+      const baseDelay = retryAfterSeconds ? retryAfterSeconds * 1000 : (attempt === 1 ? 1200 : 2500)
+      const jitter = Math.random() * 400
       await new Promise(r => setTimeout(r, baseDelay + jitter))
       return analyzeMealPhoto(base64Data, mimeType, attempt + 1)
     }
 
     // User-friendly, actionable error messages (never exposing raw upstream JSON or stack traces)
+    if (isQuota) {
+      throw new Error('Meal analysis is temporarily unavailable due to a service limit. Your photo is preserved. Please retry later or select from the Food Library.')
+    }
+
     if (is503) {
-      throw new Error('Meal analysis is temporarily unavailable. Your photo is still available. You can retry or log foods manually.')
+      throw new Error('Meal analysis is temporarily unavailable. Your photo is preserved. Please try again.')
     }
 
     if (is429) {
-      throw new Error('AI Vision is currently handling high demand. Please wait a moment and tap Retry, or select from the Food Library.')
+      throw new Error('AI Vision is currently handling high demand. Your photo is preserved. Please wait a moment and tap Retry, or select from the Food Library.')
     }
 
-    if (remoteError?.includes('GEMINI_API_KEY')) {
-      throw new Error('AI Vision requires GEMINI_API_KEY to be configured in Supabase Edge Function secrets.')
+    if (remoteError?.includes('GEMINI_API_KEY') || errorCode === 'MISSING_SERVER_CONFIG') {
+      throw new Error('AI Vision requires server configuration. Your photo is preserved. Please log foods manually.')
     }
 
-    if (responseStatus === 504 || errorCode === 'TIMEOUT') {
+    if (isTimeout) {
       throw new Error('Image analysis request timed out. Your photo is preserved. Please tap Retry or choose a smaller photo.')
     }
 
     if (responseStatus === 400 || errorCode === 'BAD_REQUEST' || errorCode === 'INVALID_IMAGE') {
-      throw new Error('Unable to analyze this image format. Please select a valid JPEG, PNG, or WebP photo.')
+      throw new Error('This image format is not supported. Please choose a JPEG or PNG image.')
     }
 
     if (!remoteError || remoteError.includes('non-2xx status code')) {
-      throw new Error('Meal analysis is temporarily unavailable. Your photo is still available. You can retry or log foods manually.')
+      throw new Error('Meal analysis is temporarily unavailable. Your photo is preserved. Please try again.')
     }
 
     // Clean any residual JSON wrapping from error string
     const cleaned = remoteError.replace(/^[{\s"']+error["':\s]+/, '').replace(/[}"'\s]+$/, '').trim()
-    throw new Error(cleaned || 'Meal analysis is temporarily unavailable. Your photo is still available. You can retry or log foods manually.')
+    throw new Error(cleaned || 'Meal analysis is temporarily unavailable. Your photo is preserved. Please try again.')
   }
 
   if (attempt === 1) {

@@ -115,7 +115,7 @@ export function FoodCameraModal({
     setShowCatalogAddModal(false)
   }
 
-  // Auto-focus camera or file dialog if requested on open
+  // Auto-focus camera or file dialog if requested on open, reset state on close
   useEffect(() => {
     if (open && !imagePreview && !hasAnalyzed) {
       const timer = setTimeout(() => {
@@ -126,6 +126,8 @@ export function FoodCameraModal({
         }
       }, 150)
       return () => clearTimeout(timer)
+    } else if (!open) {
+      resetState()
     }
   }, [open, defaultMode, imagePreview, hasAnalyzed])
 
@@ -138,7 +140,7 @@ export function FoodCameraModal({
     setAnalysisError(null)
 
     try {
-      const processed = await processFoodImage(file, 1280, 0.85)
+      const processed = await processFoodImage(file, 960, 0.78)
       setImagePreview(processed.dataUrl)
       setImageBase64(processed.base64)
       setImageMime(processed.mimeType)

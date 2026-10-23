@@ -23,10 +23,10 @@ async function callGemini(
   const configuredModel = Deno.env.get("GEMINI_MODEL")?.trim();
   const candidateModels = [
     ...(configuredModel ? [configuredModel] : []),
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-pro",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3.8-flash",
   ];
 
   // Deduplicate candidate models
@@ -40,76 +40,67 @@ async function callGemini(
   let isTimeout = false;
 
   for (const model of uniqueModels) {
-    // Up to 2 attempts per model (initial + 1 retry with exponential backoff & jitter)
-    const maxAttempts = 2;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 16000);
+    // 1 fast attempt per model for instant failover across the model pool
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 9000);
 
-        const resp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents,
-              ...options,
-            }),
-            signal: controller.signal,
-          }
-        );
-        clearTimeout(timeoutId);
-
-        if (resp.ok) {
-          return await resp.json();
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents,
+            ...options,
+          }),
+          signal: controller.signal,
         }
+      );
+      clearTimeout(timeoutId);
 
-        lastStatus = resp.status;
-        lastRawErr = await resp.text();
+      if (resp.ok) {
+        return await resp.json();
+      }
 
-        // Safely parse Google's structured JSON error message
-        try {
-          const parsed = JSON.parse(lastRawErr);
-          if (parsed?.error?.message) {
-            lastParsedMessage = parsed.error.message;
-          } else {
-            lastParsedMessage = lastRawErr;
-          }
-        } catch {
+      lastStatus = resp.status;
+      lastRawErr = await resp.text();
+
+      // Safely parse Google's structured JSON error message
+      try {
+        const parsed = JSON.parse(lastRawErr);
+        if (parsed?.error?.message) {
+          lastParsedMessage = parsed.error.message;
+        } else {
           lastParsedMessage = lastRawErr;
         }
-
-        console.warn(`Gemini model [${model}] attempt ${attempt} failed (${resp.status}): ${lastParsedMessage}`);
-
-        if (resp.status === 429) {
-          isRateLimited = true;
-        } else if (resp.status === 503 || lastParsedMessage.toLowerCase().includes("high demand") || lastParsedMessage.toLowerCase().includes("overloaded") || lastParsedMessage.includes("UNAVAILABLE")) {
-          isOverloaded = true;
-        }
-
-        // For transient errors (503 high demand or 429 rate limit), pause with exponential backoff + jitter before retrying
-        if ((resp.status === 503 || resp.status === 429) && attempt < maxAttempts) {
-          const baseDelay = resp.status === 429 ? 1000 : 800;
-          const jitter = Math.random() * 400;
-          await new Promise((r) => setTimeout(r, baseDelay * attempt + jitter));
-          continue;
-        }
-
-        // If 404, 400, or retry exhausted for 503/429, break to next candidate model
-        if (resp.status === 404 || resp.status === 503 || resp.status === 429 || resp.status === 400) {
-          break;
-        }
-        break;
-      } catch (err: any) {
-        if (err.name === 'AbortError') {
-          isTimeout = true;
-          lastStatus = 504;
-          lastParsedMessage = 'Upstream Google AI API request timed out';
-          break; // Move to next model if timed out
-        }
-        lastParsedMessage = err.message || 'Unknown network error';
+      } catch {
+        lastParsedMessage = lastRawErr;
       }
+
+      console.warn(`Gemini model [${model}] failed (${resp.status}): ${lastParsedMessage}`);
+
+      if (resp.status === 429) {
+        isRateLimited = true;
+      } else if (
+        resp.status === 503 ||
+        lastParsedMessage.toLowerCase().includes("high demand") ||
+        lastParsedMessage.toLowerCase().includes("overloaded") ||
+        lastParsedMessage.includes("UNAVAILABLE")
+      ) {
+        isOverloaded = true;
+      }
+
+      // Immediately continue to next model in pool without pausing
+      continue;
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        isTimeout = true;
+        lastStatus = 504;
+        lastParsedMessage = `Upstream Google AI API request timed out on [${model}]`;
+        continue;
+      }
+      lastParsedMessage = err.message || "Unknown network error";
     }
   }
 
@@ -186,6 +177,13 @@ serve(async (req) => {
     if (!isAuthenticated) {
       return new Response(JSON.stringify({ error: "Please log in to your GYMTrack account to use AI features." }), {
         status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Lightweight health ping for service checks
+    if (task === "health_check" || task === "ping") {
+      return new Response(JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -586,29 +584,35 @@ ${JSON.stringify(context, null, 2)}`;
     }
 
     const status = typeof error.status === 'number' && error.status >= 400 && error.status < 600 ? error.status : 500;
+    const rawLower = String(error.rawError || error.message || "").toLowerCase();
+    const isQuota = rawLower.includes("quota") || rawLower.includes("exceeded your current quota");
     const isOverloaded = error.isOverloaded || status === 503;
-    const isRateLimit = error.isRateLimited || status === 429;
+    const isRateLimit = !isQuota && (error.isRateLimited || status === 429);
     const isTimeout = error.isTimeout || status === 504;
-    const isAuthOrQuota = status === 401 || status === 403;
+    const isAuth = status === 401 || status === 403;
 
-    const userMessage = isOverloaded
+    const userMessage = isQuota
+      ? "AI service is temporarily unavailable due to a service limit. Please retry later or select from the Food Library."
+      : isOverloaded
       ? "AI Vision model is currently experiencing high demand. Please try again in a moment."
       : isRateLimit
       ? "AI service is currently handling high request volume. Please retry in a few seconds."
       : isTimeout
       ? "AI analysis request timed out. Please retry with a compressed image."
-      : isAuthOrQuota
-      ? "AI service authentication or quota limit reached. Please check server configuration."
+      : isAuth
+      ? "AI service authentication error. Please check server configuration."
       : error.message || "AI service is temporarily unavailable. Please try again.";
 
-    const errorCode = isOverloaded
+    const errorCode = isQuota
+      ? "QUOTA_EXHAUSTED"
+      : isOverloaded
       ? "HIGH_DEMAND"
       : isRateLimit
       ? "RATE_LIMIT"
       : isTimeout
       ? "TIMEOUT"
-      : isAuthOrQuota
-      ? "AUTH_OR_QUOTA"
+      : isAuth
+      ? "AUTH_ERROR"
       : status === 400
       ? "BAD_REQUEST"
       : "INTERNAL_ERROR";
@@ -617,7 +621,7 @@ ${JSON.stringify(context, null, 2)}`;
       JSON.stringify({
         error: userMessage,
         code: errorCode,
-        retryable: isOverloaded || isRateLimit || isTimeout || status >= 500,
+        retryable: !isQuota && (isOverloaded || isRateLimit || isTimeout || status >= 500),
       }),
       {
         status,

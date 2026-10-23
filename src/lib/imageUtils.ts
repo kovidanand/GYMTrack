@@ -11,15 +11,15 @@ export interface ProcessedFoodImage {
 /**
  * Validates and safely resizes meal photos to prevent huge base64 payload transfers
  * over mobile networks and adhere to Supabase Edge Function size constraints.
- * Preserves visual clarity and aspect ratio for Google Gemini 1.5 Flash Vision.
+ * Preserves visual clarity and aspect ratio for Google Gemini multimodal vision.
  */
 export async function processFoodImage(
   file: File,
-  maxDimension = 1280,
-  quality = 0.85
+  maxDimension = 960,
+  quality = 0.78
 ): Promise<ProcessedFoodImage> {
   if (!file.type.startsWith('image/')) {
-    throw new Error('Please select a valid image file (JPEG, PNG, or WebP).')
+    throw new Error('This image format is not supported. Please choose a JPEG or PNG image.')
   }
 
   // Max 20MB raw file limit

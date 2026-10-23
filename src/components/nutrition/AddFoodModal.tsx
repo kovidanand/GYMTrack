@@ -48,13 +48,18 @@ export function AddFoodModal({
   const [activeTab, setActiveTab] = useState<TabType>('search')
   const [selectedMeal, setSelectedMeal] = useState<MealType>(initialMealType)
 
-  // Sync initial meal type when modal opens
+  // Sync initial meal type and reset scanner state when modal opens
   useEffect(() => {
     if (open) {
       setSelectedMeal(initialMealType)
       setActiveTab('search')
       setSelectedFood(null)
       setSearchQuery('')
+      setImageFile(null)
+      setImagePreview(null)
+      setCachedBase64(null)
+      setScanItems([])
+      setScanError(null)
     }
   }, [open, initialMealType])
 
@@ -331,6 +336,8 @@ export function AddFoodModal({
     isCatalogMatch?: boolean
   }
   const [scanItems, setScanItems] = useState<ScannedMealItem[]>([])
+  const [cachedBase64, setCachedBase64] = useState<string | null>(null)
+  const [cachedMime, setCachedMime] = useState<string>('image/jpeg')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -339,12 +346,24 @@ export function AddFoodModal({
     setImageFile(file)
     setScanError(null)
     setScanItems([])
+    setCachedBase64(null)
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      setImagePreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
+    // Preprocess image immediately in background with optimized dimensions
+    processFoodImage(file, 960, 0.78)
+      .then(p => {
+        setImagePreview(p.dataUrl)
+        setCachedBase64(p.base64)
+        setCachedMime(p.mimeType)
+      })
+      .catch(err => {
+        // Fallback to simple preview if canvas fails
+        const reader = new FileReader()
+        reader.onload = () => {
+          setImagePreview(reader.result as string)
+        }
+        reader.readAsDataURL(file)
+        setScanError(err instanceof Error ? err.message : 'Failed to process image.')
+      })
   }
 
   const handleRunAiScan = async () => {
@@ -353,7 +372,16 @@ export function AddFoodModal({
     setScanError(null)
 
     try {
-      const { base64, mimeType } = await processFoodImage(imageFile)
+      let base64 = cachedBase64
+      let mimeType = cachedMime
+      if (!base64) {
+        const processed = await processFoodImage(imageFile, 960, 0.78)
+        base64 = processed.base64
+        mimeType = processed.mimeType
+        setCachedBase64(base64)
+        setCachedMime(mimeType)
+        setImagePreview(processed.dataUrl)
+      }
       const res = await analyzeMealPhoto(base64, mimeType)
 
       if (!res.isFood || !res.items || res.items.length === 0) {
