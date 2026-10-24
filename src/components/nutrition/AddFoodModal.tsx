@@ -25,6 +25,7 @@ import {
   type ServingUnitOption,
 } from '@/lib/nutritionService'
 import { emitGymtrackEvent } from '@/lib/events'
+import { FoodQuantityInput } from './FoodQuantityInput'
 
 interface AddFoodModalProps {
   open: boolean
@@ -70,6 +71,7 @@ export function AddFoodModal({
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null)
   const [selectedUnit, setSelectedUnit] = useState<string>('')
   const [servingQuantity, setServingQuantity] = useState<number>(1)
+  const [isQuantityValid, setIsQuantityValid] = useState<boolean>(true)
   const [isAdding, setIsAdding] = useState(false)
 
   // Debounced search
@@ -116,6 +118,7 @@ export function AddFoodModal({
   const handleSelectFood = (food: FoodSearchResult) => {
     setSelectedFood(food)
     setSaveError(null)
+    setIsQuantityValid(true)
     const units = getFoodServingUnits(food)
     const def = units.find(u => u.isDefault) || units[0]
     const unitKey = def?.unit || 'serving'
@@ -613,7 +616,8 @@ export function AddFoodModal({
                       ← Back to search results
                     </button>
 
-                    <div className="p-4 rounded-xl border border-surface-200 bg-surface-50/60">
+                    <div className="p-4 rounded-xl border border-surface-200 bg-surface-50/60 space-y-4">
+                      {/* Food Title & Badge */}
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h4 className="text-base font-black text-surface-900 leading-tight">
@@ -625,39 +629,67 @@ export function AddFoodModal({
                             </p>
                           )}
                         </div>
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-surface-200 text-surface-700">
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-surface-200 text-surface-700 shrink-0">
                           {selectedFood.isCustom ? 'My Food' : 'Verified'}
                         </span>
                       </div>
 
-                      {/* 1. Unified Amount & Unit Control */}
-                      <div className="space-y-2 mt-4 pt-4 border-t border-surface-200">
-                        <label className="block text-xs font-bold text-surface-700" htmlFor="food-quantity-input">
-                          Amount
+                      {/* ── 1. Select the Meal ── */}
+                      <div className="pt-2 border-t border-surface-200/80 space-y-1.5">
+                        <label className="block text-xs font-bold text-surface-700">
+                          1. Select Meal
                         </label>
-                        <div className="flex items-center gap-2">
-                          <div className="relative flex-1">
-                            <input
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(meal => (
+                            <button
+                              key={meal}
+                              type="button"
+                              onClick={() => setSelectedMeal(meal)}
+                              className={`py-1.5 rounded-lg text-xs font-bold capitalize transition-all shadow-2xs ${
+                                selectedMeal === meal
+                                  ? 'bg-brand-600 text-white font-extrabold shadow-xs'
+                                  : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-100'
+                              }`}
+                            >
+                              {meal}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* ── 2. Enter Amount & Select Unit ── */}
+                      <div className="pt-2 border-t border-surface-200/80 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-surface-700" htmlFor="food-quantity-input">
+                            2. Amount & Unit
+                          </label>
+                          {/* Portion display summary (e.g. "4 rotis · approximately 160 g") */}
+                          {scaledSearchNutrients.portionSummary && (
+                            <span className="text-xs font-bold text-brand-700 bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-200">
+                              {scaledSearchNutrients.householdEquivalence
+                                ? `${scaledSearchNutrients.portionSummary} · ${scaledSearchNutrients.householdEquivalence.replace(/^[≈\s]+/, '')}`
+                                : scaledSearchNutrients.portionSummary}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-2">
+                          <div className="col-span-7 sm:col-span-8">
+                            <FoodQuantityInput
                               id="food-quantity-input"
-                              type="number"
-                              min="0.1"
-                              step={activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? '1' : '0.1'}
-                              value={servingQuantity || ''}
-                              onChange={e => {
-                                const val = parseFloat(e.target.value)
-                                setServingQuantity(isNaN(val) ? 0 : Math.max(0.01, val))
-                              }}
-                              className="input-base text-base sm:text-sm font-bold min-h-[44px] px-3.5 w-full bg-white shadow-2xs"
-                              placeholder="e.g. 118"
-                              aria-label="Food amount"
+                              value={servingQuantity}
+                              onChange={setServingQuantity}
+                              unitType={activeUnitOption.unit}
+                              onValidChange={setIsQuantityValid}
+                              className="w-full"
                             />
                           </div>
-                          <div className="w-[145px] sm:w-[180px] flex-shrink-0">
+                          <div className="col-span-5 sm:col-span-4">
                             <select
                               id="food-unit-select"
                               value={selectedUnit}
                               onChange={e => handleUnitChange(e.target.value)}
-                              className="input-base text-xs sm:text-sm font-bold min-h-[44px] px-2.5 bg-white cursor-pointer w-full shadow-2xs"
+                              className="input-base text-xs font-bold min-h-[44px] px-2.5 bg-white cursor-pointer w-full shadow-2xs"
                               aria-label="Unit of measure"
                             >
                               {servingUnits.map(u => (
@@ -668,23 +700,17 @@ export function AddFoodModal({
                             </select>
                           </div>
                         </div>
-
-                        {/* Equivalent Household Measure Line */}
-                        {scaledSearchNutrients.householdEquivalence && (
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50/90 px-3 py-1.5 rounded-lg border border-emerald-200/80 shadow-2xs">
-                            <Info size={14} className="flex-shrink-0 text-emerald-600" />
-                            <span className="truncate">{scaledSearchNutrients.householdEquivalence}</span>
-                            {scaledSearchNutrients.isApproximateEquivalence && (
-                              <span className="text-[10px] text-emerald-600 font-normal ml-auto flex-shrink-0">
-                                (approximate)
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
 
-                      {/* 2. Live Recalculated Nutrition Breakdown */}
-                      <div className="mt-4 space-y-2">
+                      {/* ── 3. Live Total Nutrition Breakdown ── */}
+                      <div className="pt-2 border-t border-surface-200/80 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-surface-700">3. Total Nutrition</span>
+                          <span className="text-sm font-black text-surface-900 bg-surface-200/70 px-2 py-0.5 rounded-md">
+                            Total: ~{scaledSearchNutrients.calories} kcal
+                          </span>
+                        </div>
+
                         {/* Primary Macronutrient Cards */}
                         <div className="grid grid-cols-5 gap-1.5 sm:gap-2 p-3 rounded-xl bg-white border border-surface-200 text-center shadow-2xs">
                           <div>
@@ -732,30 +758,6 @@ export function AddFoodModal({
                             </strong>
                           </span>
                         </div>
-                        <p className="text-[10px] text-surface-400 text-center font-medium">
-                          Values with '—' denote unverified/unavailable nutrient data from reference.
-                        </p>
-                      </div>
-
-                      {/* 3. Meal Selector */}
-                      <div className="mt-4 pt-3 border-t border-surface-200 flex flex-col gap-1.5">
-                        <span className="text-xs font-bold text-surface-700">Meal Destination:</span>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map(meal => (
-                            <button
-                              key={meal}
-                              type="button"
-                              onClick={() => setSelectedMeal(meal)}
-                              className={`py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
-                                selectedMeal === meal
-                                  ? 'bg-brand-600 text-white shadow-xs'
-                                  : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-100'
-                              }`}
-                            >
-                              {meal}
-                            </button>
-                          ))}
-                        </div>
                       </div>
                     </div>
 
@@ -767,14 +769,17 @@ export function AddFoodModal({
                       </div>
                     )}
 
+                    {/* ── 4. Log Food Action Button ── */}
                     <button
                       onClick={handleConfirmSearchAdd}
-                      disabled={isAdding || servingQuantity <= 0}
+                      disabled={isAdding || !isQuantityValid || servingQuantity <= 0 || servingQuantity > 10000}
                       id="confirm-add-food-btn"
                       className="btn-primary w-full py-3 text-sm font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 min-h-[44px]"
                     >
                       {isAdding ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                      <span>Log Food to {selectedMeal.toUpperCase()}</span>
+                      <span>
+                        Log Food to {selectedMeal.toUpperCase()} ({scaledSearchNutrients.calories} kcal)
+                      </span>
                     </button>
                   </div>
                 ) : (

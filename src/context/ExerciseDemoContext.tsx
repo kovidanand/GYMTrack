@@ -11,6 +11,8 @@ export interface ResolvedExerciseDemo {
   isFallback: boolean
   hasAlternative: boolean
   fallbackMessage?: string
+  alternateVideoUrl?: string
+  alternatePosterUrl?: string
 }
 
 export interface ExerciseDemoContextType {
@@ -31,7 +33,7 @@ const OVERRIDE_KEY = 'gymtrack_demo_manual_override'
 const ExerciseDemoContext = createContext<ExerciseDemoContextType | undefined>(undefined)
 
 export function ExerciseDemoProvider({ children }: { children: React.ReactNode }) {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
 
   // Derive profile default gender strictly from Biological / Metabolic Sex
   const profileDefaultGender: DemoGender = useMemo(() => {
@@ -39,8 +41,14 @@ export function ExerciseDemoProvider({ children }: { children: React.ReactNode }
     if (rawSex === 'female') return 'female'
     if (rawSex === 'male') return 'male'
 
-    // If profile sex is not set, check cached preference or fallback to 'male'
+    // Check cached profile sex for this user
     try {
+      const userId = profile?.id || user?.id
+      if (userId) {
+        const storedSex = localStorage.getItem(`gymtrack_sex_${userId}`)
+        if (storedSex?.toLowerCase() === 'female') return 'female'
+        if (storedSex?.toLowerCase() === 'male') return 'male'
+      }
       const cached = localStorage.getItem(STORAGE_KEY)
       if (cached === 'female' || cached === 'male') {
         return cached as DemoGender
@@ -49,7 +57,7 @@ export function ExerciseDemoProvider({ children }: { children: React.ReactNode }
       /* ignore storage errors */
     }
     return 'male'
-  }, [profile?.sex])
+  }, [profile?.sex, profile?.id, user?.id])
 
   // Track session-level manual override
   const [manualOverride, setManualOverride] = useState<DemoGender | null>(() => {
@@ -144,6 +152,8 @@ export function ExerciseDemoProvider({ children }: { children: React.ReactNode }
             activeGender: 'female',
             isFallback: false,
             hasAlternative: hasMale,
+            alternateVideoUrl: hasMale ? media.maleVideoUrl : undefined,
+            alternatePosterUrl: hasMale ? (media.posterUrl || media.thumbnailUrl) : undefined,
           }
         }
         if (hasMale && (media.maleVideoUrl || media.videoUrl)) {
@@ -165,6 +175,8 @@ export function ExerciseDemoProvider({ children }: { children: React.ReactNode }
             activeGender: 'male',
             isFallback: false,
             hasAlternative: hasFemale,
+            alternateVideoUrl: hasFemale ? media.femaleVideoUrl : undefined,
+            alternatePosterUrl: hasFemale ? (media.thumbnailUrl || media.posterUrl) : undefined,
           }
         }
         if (hasFemale && (media.femaleVideoUrl || media.videoUrl)) {

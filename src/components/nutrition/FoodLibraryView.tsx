@@ -17,6 +17,7 @@ import {
   convertUnitQuantity,
   type ServingUnitOption,
 } from '@/lib/nutritionService'
+import { FoodQuantityInput } from './FoodQuantityInput'
 
 interface FoodLibraryViewProps {
   userId: string
@@ -53,6 +54,7 @@ export function FoodLibraryView({
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null)
   const [selectedUnit, setSelectedUnit] = useState<string>('')
   const [quantity, setQuantity] = useState<number>(1)
+  const [isQuantityValid, setIsQuantityValid] = useState<boolean>(true)
   const [targetMeal, setTargetMeal] = useState<MealType>('breakfast')
   const [isLogging, setIsLogging] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -101,6 +103,7 @@ export function FoodLibraryView({
   const handleOpenFoodModal = (food: FoodSearchResult) => {
     setSelectedFood(food)
     setSaveError(null)
+    setIsQuantityValid(true)
     const units = getFoodServingUnits(food)
     const def = units.find(u => u.isDefault) || units[0]
     setSelectedUnit(def?.unit || 'serving')
@@ -381,36 +384,34 @@ export function FoodLibraryView({
                 </div>
 
                 {/* 2. Unified Quantity + Unit Input */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-surface-700">
-                      Amount
+                    <label className="text-xs font-bold text-surface-700" htmlFor="library-food-quantity-input">
+                      Amount & Unit
                     </label>
-                    <span className="text-[11px] font-semibold text-emerald-800">
-                      {calculatedNutrition.portionSummary}
+                    <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      {calculatedNutrition.householdEquivalence
+                        ? `${calculatedNutrition.portionSummary} · ${calculatedNutrition.householdEquivalence.replace(/^[≈\s]+/, '')}`
+                        : calculatedNutrition.portionSummary}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-5 sm:col-span-5 relative">
-                      <input
-                        type="number"
-                        min="0.01"
-                        step={activeUnitOption.unit === 'g' || activeUnitOption.unit === 'ml' ? '1' : '0.1'}
+                    <div className="col-span-7 sm:col-span-7">
+                      <FoodQuantityInput
+                        id="library-food-quantity-input"
                         value={quantity}
-                        onChange={e => {
-                          const val = parseFloat(e.target.value)
-                          setQuantity(isNaN(val) ? 1 : Math.max(0.01, val))
-                        }}
-                        className="w-full input-base text-base font-bold py-2 px-3 text-surface-900 border-surface-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl"
-                        placeholder="1"
+                        onChange={setQuantity}
+                        unitType={activeUnitOption.unit}
+                        onValidChange={setIsQuantityValid}
+                        className="w-full"
                       />
                     </div>
-                    <div className="col-span-7 sm:col-span-7 relative">
+                    <div className="col-span-5 sm:col-span-5">
                       <select
                         value={activeUnitOption.unit}
                         onChange={e => handleUnitChange(e.target.value)}
-                        className="w-full input-base text-xs font-bold py-2.5 pl-3 pr-8 bg-white border-surface-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl cursor-pointer truncate"
+                        className="w-full input-base text-xs font-bold min-h-[44px] px-2.5 bg-white border-surface-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl cursor-pointer shadow-2xs"
                       >
                         {servingUnits.map(opt => (
                           <option key={opt.unit} value={opt.unit}>
@@ -420,17 +421,6 @@ export function FoodLibraryView({
                       </select>
                     </div>
                   </div>
-
-                  {/* Equivalent household measure */}
-                  {calculatedNutrition.householdEquivalence && (
-                    <p className="text-[11px] text-surface-500 font-medium flex items-center gap-1.5 pt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      <span>
-                        {calculatedNutrition.isApproximateEquivalence ? '≈ ' : ''}
-                        {calculatedNutrition.householdEquivalence}
-                      </span>
-                    </p>
-                  )}
                 </div>
 
                 {/* 3. Live Recalculated Nutritional Breakdown */}
@@ -519,7 +509,7 @@ export function FoodLibraryView({
                 <button
                   type="button"
                   onClick={handleConfirmLog}
-                  disabled={isLogging}
+                  disabled={isLogging || !isQuantityValid || quantity <= 0 || quantity > 10000}
                   id="library-log-food-confirm-btn"
                   className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
                 >
@@ -528,7 +518,7 @@ export function FoodLibraryView({
                   ) : (
                     <Plus size={16} />
                   )}
-                  <span>Log Food to {targetMeal.toUpperCase()}</span>
+                  <span>Log Food to {targetMeal.toUpperCase()} ({calculatedNutrition.calories} kcal)</span>
                 </button>
               </div>
             </RadixDialog.Content>

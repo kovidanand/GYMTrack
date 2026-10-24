@@ -54,18 +54,13 @@ export function ExerciseMedia({ exercise, variant = 'card', className, preferred
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const prevSrcRef = useRef<string | undefined>(undefined)
   const [isVisible, setIsVisible] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [videoError, setVideoError] = useState(false)
 
-  // Reset video load state when video URL updates
-  useEffect(() => {
-    setVideoLoaded(false)
-    setVideoError(false)
-  }, [videoUrl])
-
-  // IntersectionObserver — only play when in viewport (card/thumbnail mode) or always (detail mode)
+  // IntersectionObserver — only observe in detail mode or when hovered
   useEffect(() => {
     if (variant === 'detail') {
       setIsVisible(true)
@@ -75,18 +70,45 @@ export function ExerciseMedia({ exercise, variant = 'card', className, preferred
     if (!el || !videoUrl) return
     const observer = new IntersectionObserver(
       ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.2 }
+      { threshold: 0.25 }
     )
     observer.observe(el)
     return () => observer.disconnect()
   }, [videoUrl, variant])
 
-  // Manage video playback
+  // Sync video source stably without remounting DOM node
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !videoUrl) return
+
+    if (prevSrcRef.current !== videoUrl) {
+      prevSrcRef.current = videoUrl
+      setVideoLoaded(false)
+      setVideoError(false)
+      video.src = videoUrl
+    }
+  }, [videoUrl])
+
+  // Clean up media on unmount
+  useEffect(() => {
+    return () => {
+      const video = videoRef.current
+      if (video) {
+        video.pause()
+        video.removeAttribute('src')
+        video.load()
+      }
+    }
+  }, [])
+
+  // Manage playback: detail plays when visible; card/thumbnail plays on hover to avoid network saturation
+  const shouldPlay = variant === 'detail' ? isVisible : isHovered
+
   useEffect(() => {
     const video = videoRef.current
     if (!video || videoError) return
 
-    if (isVisible || isHovered) {
+    if (shouldPlay) {
       const playPromise = video.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -96,7 +118,7 @@ export function ExerciseMedia({ exercise, variant = 'card', className, preferred
     } else {
       video.pause()
     }
-  }, [isVisible, isHovered, videoError])
+  }, [shouldPlay, videoError])
 
   const containerClasses = variant === 'thumbnail'
     ? cn('relative w-full h-full overflow-hidden bg-surface-100 rounded-lg flex-shrink-0', className)
@@ -111,12 +133,13 @@ export function ExerciseMedia({ exercise, variant = 'card', className, preferred
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Loading skeleton while video fetches */}
-      {videoUrl && !videoError && !videoLoaded && posterUrl && (
+      {/* Poster image: visible until video loads data or when video is not active */}
+      {posterUrl && (!videoLoaded || !shouldPlay || videoError) && (
         <img
           src={posterUrl}
           alt={`${exercise.name} demonstration poster`}
           className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
           draggable={false}
         />
       )}
@@ -124,35 +147,27 @@ export function ExerciseMedia({ exercise, variant = 'card', className, preferred
       {videoUrl && !videoError ? (
         <video
           ref={videoRef}
-          key={videoUrl}
-          src={videoUrl}
           poster={posterUrl || undefined}
           muted
           loop
           playsInline
-          preload="none"
+          preload={variant === 'detail' ? 'metadata' : 'none'}
           onLoadedData={() => setVideoLoaded(true)}
+          onCanPlay={() => setVideoLoaded(true)}
           onError={() => setVideoError(true)}
           className={cn(
-            'absolute inset-0 w-full h-full object-cover transition-transform duration-300',
-            (isVisible || isHovered) && 'group-hover:scale-105'
+            'absolute inset-0 w-full h-full object-cover transition-all duration-300',
+            videoLoaded && shouldPlay ? 'opacity-100' : 'opacity-0',
+            shouldPlay && 'group-hover:scale-105'
           )}
           aria-label={`${exercise.name} exercise demonstration`}
         />
-      ) : posterUrl ? (
-        <img
-          src={posterUrl}
-          alt={exercise.name}
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
-          draggable={false}
-        />
-      ) : (
+      ) : !posterUrl ? (
         <ExerciseIllustration
           muscleGroup={exercise.muscle_group}
           className="absolute inset-0 w-full h-full rounded-none"
         />
-      )}
+      ) : null}
     </div>
   )
 }

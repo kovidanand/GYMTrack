@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { X, Check, Trash2, Loader2, AlertCircle } from 'lucide-react'
 import type { FoodEntry, MealType } from '@/types/nutrition'
+import { FoodQuantityInput } from './FoodQuantityInput'
 
 interface EditFoodModalProps {
   open: boolean
@@ -203,23 +204,17 @@ export function EditFoodModal({
 
             {/* Amount input */}
             <div>
-              <label className="block text-xs font-bold text-surface-700 mb-1">
-                Amount
+              <label className="block text-xs font-bold text-surface-700 mb-1" htmlFor="edit-entry-quantity-input">
+                Amount ({unitLabel})
               </label>
-              <div className="relative flex items-center">
-                <input
-                  type="number"
-                  min="0.01"
-                  step={isMetricTotal ? '1' : '0.1'}
-                  value={quantity}
-                  onChange={e => handleQuantityChange(parseFloat(e.target.value) || 1)}
-                  className="w-full input-base text-base font-bold py-2 px-3 pr-20 text-surface-900 border-surface-200 focus:border-emerald-500 rounded-xl"
-                  id="edit-entry-quantity-input"
-                />
-                <span className="absolute right-3 text-xs font-bold text-surface-500 pointer-events-none truncate max-w-[90px]">
-                  {unitLabel}
-                </span>
-              </div>
+              <FoodQuantityInput
+                id="edit-entry-quantity-input"
+                value={quantity}
+                onChange={handleQuantityChange}
+                unitLabel={unitLabel}
+                unitType={isMetricTotal ? 'g' : 'serving'}
+                className="w-full"
+              />
             </div>
 
             {/* Nutritional Breakdown with direct-edit capability */}
