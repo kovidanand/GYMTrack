@@ -253,8 +253,9 @@ console.log('✅ PASS: ExerciseVideoPlayer stable DOM element & retry handler ve
 const componentsPath = path.join(__dirname, '..', 'src', 'components', 'exercise', 'ExerciseComponents.tsx')
 const compCode = fs.readFileSync(componentsPath, 'utf8')
 assert.strictEqual(compCode.includes('key={videoUrl}'), false, 'ExerciseComponents must not destroy video element with key={videoUrl}')
-assert.strictEqual(compCode.includes("preload={variant === 'detail' ? 'metadata' : 'none'}"), true, 'ExerciseComponents uses appropriate preload to avoid network congestion')
-console.log('✅ PASS: ExerciseComponents stable DOM element & mobile network optimization verified')
+assert.strictEqual(compCode.includes("shouldPlay = (variant === 'detail') || (variant === 'card' && isVisible) || isHovered"), true, 'ExerciseComponents plays videos inline for visible cards')
+assert.strictEqual(compCode.includes("preload={hasEnteredViewport ? 'metadata' : 'none'}"), true, 'ExerciseComponents uses appropriate preload to avoid network congestion')
+console.log('✅ PASS: ExerciseComponents stable DOM element, inline card video playback & mobile network optimization verified')
 
 // ─── 3. MOBILE VIEWPORT OVERFLOW CHECK ──────────────────────────────────────
 console.log('\n--- 3. Mobile Viewport Layout & Overflow Checks ---')

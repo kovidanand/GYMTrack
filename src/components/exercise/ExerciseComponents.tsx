@@ -56,40 +56,106 @@ export function ExerciseMedia({ exercise, variant = 'card', className, preferred
   const containerRef = useRef<HTMLDivElement>(null)
   const prevSrcRef = useRef<string | undefined>(undefined)
   const [isVisible, setIsVisible] = useState(false)
+  const [hasEnteredViewport, setHasEnteredViewport] = useState(variant === 'detail')
   const [isHovered, setIsHovered] = useState(false)
   const [videoLoaded, setVideoLoaded] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [videoError, setVideoError] = useState(false)
 
-  // IntersectionObserver — only observe in detail mode or when hovered
+  // IntersectionObserver: detect visibility with rootMargin for smooth preloading
   useEffect(() => {
     if (variant === 'detail') {
       setIsVisible(true)
+      setHasEnteredViewport(true)
       return
     }
     const el = containerRef.current
     if (!el || !videoUrl) return
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
     const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.25 }
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasEnteredViewport(true)
+          if (debounceTimer) clearTimeout(debounceTimer)
+          // 80ms debounce avoids spinning up decoders during rapid fling-scrolls
+          debounceTimer = setTimeout(() => {
+            setIsVisible(true)
+          }, 80)
+        } else {
+          if (debounceTimer) {
+            clearTimeout(debounceTimer)
+            debounceTimer = null
+          }
+          setIsVisible(false)
+        }
+      },
+      {
+        rootMargin: '100px 0px 100px 0px',
+        threshold: 0.2,
+      }
     )
+
     observer.observe(el)
-    return () => observer.disconnect()
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      observer.disconnect()
+    }
   }, [videoUrl, variant])
 
-  // Sync video source stably without remounting DOM node
+  // Sync video source stably without destroying DOM element
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !videoUrl) return
+    if (!video || !videoUrl || !hasEnteredViewport) return
 
     if (prevSrcRef.current !== videoUrl) {
       prevSrcRef.current = videoUrl
       setVideoLoaded(false)
       setVideoError(false)
       video.src = videoUrl
+      video.preload = 'metadata'
+      video.muted = true
+      video.defaultMuted = true
+      video.playsInline = true
+      if (isVisible || isHovered || variant === 'detail') {
+        const p = video.play()
+        if (p !== undefined) {
+          p.catch(() => {
+            // Autoplay rejection or interrupted
+          })
+        }
+      }
     }
-  }, [videoUrl])
+  }, [videoUrl, hasEnteredViewport, isVisible, isHovered, variant])
 
-  // Clean up media on unmount
+  // Manage inline playback: start when visible in viewport (cards/detail) or hovered
+  const shouldPlay = (variant === 'detail') || (variant === 'card' && isVisible) || isHovered
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !hasEnteredViewport || videoError) return
+
+    if (shouldPlay) {
+      video.muted = true
+      video.defaultMuted = true
+      video.playsInline = true
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          setIsPlaying(true)
+        }).catch(() => {
+          // Handled gracefully: keep poster visible if browser autoplay blocks
+          setIsPlaying(false)
+        })
+      }
+    } else {
+      video.pause()
+      setIsPlaying(false)
+    }
+  }, [shouldPlay, hasEnteredViewport, videoError])
+
+  // Resource cleanup on unmount
   useEffect(() => {
     return () => {
       const video = videoRef.current
@@ -100,25 +166,6 @@ export function ExerciseMedia({ exercise, variant = 'card', className, preferred
       }
     }
   }, [])
-
-  // Manage playback: detail plays when visible; card/thumbnail plays on hover to avoid network saturation
-  const shouldPlay = variant === 'detail' ? isVisible : isHovered
-
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video || videoError) return
-
-    if (shouldPlay) {
-      const playPromise = video.play()
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // autoplay blocked or interrupted
-        })
-      }
-    } else {
-      video.pause()
-    }
-  }, [shouldPlay, videoError])
 
   const containerClasses = variant === 'thumbnail'
     ? cn('relative w-full h-full overflow-hidden bg-surface-100 rounded-lg flex-shrink-0', className)
@@ -133,41 +180,58 @@ export function ExerciseMedia({ exercise, variant = 'card', className, preferred
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Poster image: visible until video loads data or when video is not active */}
-      {posterUrl && (!videoLoaded || !shouldPlay || videoError) && (
+      {/* Fallback & Loading Poster Image: always rendered behind video to prevent black flash */}
+      {posterUrl ? (
         <img
           src={posterUrl}
           alt={`${exercise.name} demonstration poster`}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={cn(
+            'absolute inset-0 w-full h-full object-cover transition-opacity duration-300 pointer-events-none',
+            videoLoaded && isPlaying && !videoError ? 'opacity-0' : 'opacity-100'
+          )}
           loading="lazy"
           draggable={false}
         />
-      )}
-
-      {videoUrl && !videoError ? (
-        <video
-          ref={videoRef}
-          poster={posterUrl || undefined}
-          muted
-          loop
-          playsInline
-          preload={variant === 'detail' ? 'metadata' : 'none'}
-          onLoadedData={() => setVideoLoaded(true)}
-          onCanPlay={() => setVideoLoaded(true)}
-          onError={() => setVideoError(true)}
-          className={cn(
-            'absolute inset-0 w-full h-full object-cover transition-all duration-300',
-            videoLoaded && shouldPlay ? 'opacity-100' : 'opacity-0',
-            shouldPlay && 'group-hover:scale-105'
-          )}
-          aria-label={`${exercise.name} exercise demonstration`}
-        />
-      ) : !posterUrl ? (
+      ) : (
         <ExerciseIllustration
           muscleGroup={exercise.muscle_group}
           className="absolute inset-0 w-full h-full rounded-none"
         />
-      ) : null}
+      )}
+
+      {/* Inline Demonstration Video */}
+      {videoUrl && !videoError && (
+        <video
+          ref={videoRef}
+          muted
+          loop
+          playsInline
+          preload={hasEnteredViewport ? 'metadata' : 'none'}
+          onLoadedData={() => {
+            setVideoLoaded(true)
+            if (shouldPlay) setIsPlaying(true)
+          }}
+          onCanPlay={() => {
+            setVideoLoaded(true)
+            if (shouldPlay) setIsPlaying(true)
+          }}
+          onPlaying={() => {
+            setIsPlaying(true)
+            setVideoLoaded(true)
+          }}
+          onError={() => {
+            setVideoError(true)
+            setIsPlaying(false)
+          }}
+          onPause={() => setIsPlaying(false)}
+          className={cn(
+            'absolute inset-0 w-full h-full object-cover transition-opacity duration-300',
+            videoLoaded && isPlaying ? 'opacity-100' : 'opacity-0',
+            'group-hover:scale-105'
+          )}
+          aria-label={`${exercise.name} exercise demonstration`}
+        />
+      )}
     </div>
   )
 }
