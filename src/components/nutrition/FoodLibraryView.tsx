@@ -39,16 +39,31 @@ const CATEGORIES = [
   { id: 'custom', label: '⭐ Custom Foods' },
 ]
 
-const CUISINES = [
-  { id: 'all', label: 'All Cuisines' },
-  { id: 'indian', label: '🇮🇳 Indian' },
-  { id: 'east_asian', label: '🥢 East Asian' },
-  { id: 'southeast_asian', label: '🍜 Southeast Asian' },
-  { id: 'european', label: '🍝 European' },
-  { id: 'american', label: '🍔 American / Latin' },
-  { id: 'middle_eastern', label: '🧆 Middle Eastern' },
-  { id: 'global', label: '🌍 Global / Everyday' },
-]
+// Curated high-quality, authentic food photography representing global cuisines & categories
+const CUISINE_PHOTOS: Record<string, string> = {
+  indian: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80',
+  east_asian: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=400&q=80',
+  southeast_asian: 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=400&q=80',
+  european: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=400&q=80',
+  mediterranean: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80',
+  american: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80',
+  middle_eastern: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80',
+  global: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=400&q=80',
+}
+
+const CATEGORY_FALLBACK_PHOTOS: Record<string, string> = {
+  fruits: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=400&q=80',
+  beverages: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80',
+}
+
+function getFoodThumbnail(food: { cuisine?: string; category?: string; imageUrl?: string }): string {
+  if (food.imageUrl) return food.imageUrl
+  const c = food.cuisine?.toLowerCase()
+  if (c && CUISINE_PHOTOS[c]) return CUISINE_PHOTOS[c]
+  const cat = food.category?.toLowerCase()
+  if (cat && CATEGORY_FALLBACK_PHOTOS[cat]) return CATEGORY_FALLBACK_PHOTOS[cat]
+  return CUISINE_PHOTOS.global
+}
 
 export function FoodLibraryView({
   userId,
@@ -57,7 +72,6 @@ export function FoodLibraryView({
   onOpenCreateCustomFood,
 }: FoodLibraryViewProps) {
   const [activeCategory, setActiveCategory] = useState<string>('all')
-  const [activeCuisine, setActiveCuisine] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [foods, setFoods] = useState<FoodSearchResult[]>([])
   const [loading, setLoading] = useState(true)
@@ -72,12 +86,12 @@ export function FoodLibraryView({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [successToast, setSuccessToast] = useState<string | null>(null)
 
-  // Fetch foods for category, cuisine and search
+  // Fetch foods for category and search
   useEffect(() => {
     let isMounted = true
     setLoading(true)
 
-    getFoodCatalog(activeCategory, searchQuery, userId, activeCuisine)
+    getFoodCatalog(activeCategory, searchQuery, userId)
       .then(items => {
         if (isMounted) setFoods(items)
       })
@@ -89,7 +103,7 @@ export function FoodLibraryView({
     return () => {
       isMounted = false
     }
-  }, [activeCategory, activeCuisine, searchQuery, userId])
+  }, [activeCategory, searchQuery, userId])
 
   // Get available serving units for the selected food
   const servingUnits: ServingUnitOption[] = useMemo(() => {
@@ -258,41 +272,21 @@ export function FoodLibraryView({
       </div>
 
       {/* Horizontal Category Filters */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              id={`filter-category-${cat.id}`}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none ${
-                activeCategory === cat.id
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white border border-surface-200 text-surface-600 hover:bg-surface-50 hover:text-surface-900'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Horizontal Cuisine Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {CUISINES.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setActiveCuisine(c.id)}
-              id={`filter-cuisine-${c.id}`}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all select-none ${
-                activeCuisine === c.id
-                  ? 'bg-teal-700 text-white shadow-2xs'
-                  : 'bg-surface-100 border border-surface-200/80 text-surface-600 hover:bg-surface-200 hover:text-surface-900'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            id={`filter-category-${cat.id}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none ${
+              activeCategory === cat.id
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-white border border-surface-200 text-surface-600 hover:bg-surface-50 hover:text-surface-900'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
 
       {/* Results Count & Success Toast */}
@@ -329,32 +323,47 @@ export function FoodLibraryView({
             <div
               key={food.id}
               onClick={() => handleOpenFoodModal(food)}
-              className="group p-4 rounded-2xl bg-white border border-surface-200 hover:border-emerald-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between gap-3 text-left"
+              className="group p-3.5 sm:p-4 rounded-2xl bg-white border border-surface-200 hover:border-emerald-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between gap-3 text-left"
             >
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-sm text-surface-900 group-hover:text-emerald-700 transition-colors leading-snug">
-                    {food.name}
-                  </h3>
-                  <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 whitespace-nowrap">
-                    {food.calories} kcal
-                  </span>
+              <div className="flex items-start gap-3">
+                {/* Authentic Cuisine Food Image */}
+                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-surface-100 shrink-0 border border-surface-200/70">
+                  <img
+                    src={getFoodThumbnail(food)}
+                    alt={food.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={e => {
+                      (e.currentTarget as HTMLImageElement).src = CUISINE_PHOTOS.global
+                    }}
+                  />
                 </div>
 
-                <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                  <span className="text-[10px] font-bold text-surface-500 bg-surface-100 px-1.5 py-0.5 rounded">
-                    {food.serving_size} {food.serving_unit}
-                  </span>
-                  {food.cuisine && food.cuisine !== 'global' && (
-                    <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60 capitalize">
-                      {food.cuisine.replace('_', ' ')}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold text-sm text-surface-900 group-hover:text-emerald-700 transition-colors leading-snug line-clamp-1">
+                      {food.name}
+                    </h3>
+                    <span className="text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 whitespace-nowrap shrink-0">
+                      {food.calories} kcal
                     </span>
-                  )}
-                  {food.dietary && food.dietary !== 'all' && (
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 capitalize">
-                      {food.dietary.replace('_', ' ')}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                    <span className="text-[10px] font-bold text-surface-500 bg-surface-100 px-1.5 py-0.5 rounded">
+                      {food.serving_size} {food.serving_unit}
                     </span>
-                  )}
+                    {food.cuisine && food.cuisine !== 'global' && (
+                      <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60 capitalize">
+                        {food.cuisine.replace('_', ' ')}
+                      </span>
+                    )}
+                    {food.dietary && food.dietary !== 'all' && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 capitalize">
+                        {food.dietary.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -388,16 +397,36 @@ export function FoodLibraryView({
               aria-describedby="serving-modal-desc"
             >
               <div className="flex items-center justify-between pb-3 border-b border-surface-200">
-                <div>
-                  <RadixDialog.Title className="text-base font-black text-surface-900 tracking-tight">
-                    {selectedFood.name}
-                  </RadixDialog.Title>
-                  <p id="serving-modal-desc" className="text-xs text-surface-500 font-medium">
-                    Adjust quantity and unit below. Values update live.
-                  </p>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-surface-100 shrink-0 border border-surface-200/70">
+                    <img
+                      src={getFoodThumbnail(selectedFood)}
+                      alt={selectedFood.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                      onError={e => {
+                        (e.currentTarget as HTMLImageElement).src = CUISINE_PHOTOS.global
+                      }}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <RadixDialog.Title className="text-base font-black text-surface-900 tracking-tight truncate">
+                        {selectedFood.name}
+                      </RadixDialog.Title>
+                      {selectedFood.cuisine && selectedFood.cuisine !== 'global' && (
+                        <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60 capitalize shrink-0">
+                          {selectedFood.cuisine.replace('_', ' ')}
+                        </span>
+                      )}
+                    </div>
+                    <p id="serving-modal-desc" className="text-xs text-surface-500 font-medium">
+                      Adjust quantity and unit below. Values update live.
+                    </p>
+                  </div>
                 </div>
                 <RadixDialog.Close asChild>
-                  <button className="p-1 text-surface-400 hover:text-surface-700 rounded-lg">
+                  <button className="p-1 text-surface-400 hover:text-surface-700 rounded-lg shrink-0 ml-2">
                     <X size={18} />
                   </button>
                 </RadixDialog.Close>
