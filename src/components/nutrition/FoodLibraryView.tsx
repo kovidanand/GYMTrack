@@ -27,16 +27,27 @@ interface FoodLibraryViewProps {
 }
 
 const CATEGORIES = [
-  { id: 'all', label: 'All' },
-  { id: 'fruits', label: 'Fruits' },
-  { id: 'vegetables', label: 'Vegetables' },
-  { id: 'proteins', label: 'Proteins' },
-  { id: 'grains', label: 'Grains' },
-  { id: 'indian_meals', label: 'Indian Meals' },
-  { id: 'snacks', label: 'Snacks' },
-  { id: 'beverages', label: 'Beverages' },
-  { id: 'desserts', label: 'Desserts' },
-  { id: 'custom', label: 'Custom Foods' },
+  { id: 'all', label: 'All Foods' },
+  { id: 'indian_meals', label: '🍛 Indian Meals' },
+  { id: 'proteins', label: '🍗 Proteins' },
+  { id: 'grains', label: '🍚 Grains & Breads' },
+  { id: 'fruits', label: '🍎 Fruits' },
+  { id: 'vegetables', label: '🥦 Vegetables' },
+  { id: 'snacks', label: '🥜 Snacks' },
+  { id: 'beverages', label: '🥛 Beverages' },
+  { id: 'desserts', label: '🍨 Desserts' },
+  { id: 'custom', label: '⭐ Custom Foods' },
+]
+
+const CUISINES = [
+  { id: 'all', label: 'All Cuisines' },
+  { id: 'indian', label: '🇮🇳 Indian' },
+  { id: 'east_asian', label: '🥢 East Asian' },
+  { id: 'southeast_asian', label: '🍜 Southeast Asian' },
+  { id: 'european', label: '🍝 European' },
+  { id: 'american', label: '🍔 American / Latin' },
+  { id: 'middle_eastern', label: '🧆 Middle Eastern' },
+  { id: 'global', label: '🌍 Global / Everyday' },
 ]
 
 export function FoodLibraryView({
@@ -46,6 +57,7 @@ export function FoodLibraryView({
   onOpenCreateCustomFood,
 }: FoodLibraryViewProps) {
   const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [activeCuisine, setActiveCuisine] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [foods, setFoods] = useState<FoodSearchResult[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,12 +72,12 @@ export function FoodLibraryView({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [successToast, setSuccessToast] = useState<string | null>(null)
 
-  // Fetch foods for category and search
+  // Fetch foods for category, cuisine and search
   useEffect(() => {
     let isMounted = true
     setLoading(true)
 
-    getFoodCatalog(activeCategory, searchQuery, userId)
+    getFoodCatalog(activeCategory, searchQuery, userId, activeCuisine)
       .then(items => {
         if (isMounted) setFoods(items)
       })
@@ -77,7 +89,7 @@ export function FoodLibraryView({
     return () => {
       isMounted = false
     }
-  }, [activeCategory, searchQuery, userId])
+  }, [activeCategory, activeCuisine, searchQuery, userId])
 
   // Get available serving units for the selected food
   const servingUnits: ServingUnitOption[] = useMemo(() => {
@@ -246,21 +258,41 @@ export function FoodLibraryView({
       </div>
 
       {/* Horizontal Category Filters */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => setActiveCategory(cat.id)}
-            id={`filter-category-${cat.id}`}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none ${
-              activeCategory === cat.id
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white border border-surface-200 text-surface-600 hover:bg-surface-50 hover:text-surface-900'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              id={`filter-category-${cat.id}`}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all select-none ${
+                activeCategory === cat.id
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-white border border-surface-200 text-surface-600 hover:bg-surface-50 hover:text-surface-900'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Horizontal Cuisine Filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {CUISINES.map(c => (
+            <button
+              key={c.id}
+              onClick={() => setActiveCuisine(c.id)}
+              id={`filter-cuisine-${c.id}`}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all select-none ${
+                activeCuisine === c.id
+                  ? 'bg-teal-700 text-white shadow-2xs'
+                  : 'bg-surface-100 border border-surface-200/80 text-surface-600 hover:bg-surface-200 hover:text-surface-900'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Results Count & Success Toast */}
@@ -287,7 +319,7 @@ export function FoodLibraryView({
           <UtensilsCrossed size={36} className="mx-auto mb-2 text-surface-300" />
           <p className="text-sm font-bold text-surface-700">No matching foods found</p>
           <p className="text-xs text-surface-400 mt-0.5">
-            Try adjusting your search query or create a custom food entry.
+            Try adjusting your search query, clearing filters, or create a custom food entry.
           </p>
         </div>
       ) : (
@@ -309,9 +341,21 @@ export function FoodLibraryView({
                   </span>
                 </div>
 
-                <p className="text-[11px] text-surface-400 mt-0.5">
-                  Standard: {food.serving_size} {food.serving_unit}
-                </p>
+                <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                  <span className="text-[10px] font-bold text-surface-500 bg-surface-100 px-1.5 py-0.5 rounded">
+                    {food.serving_size} {food.serving_unit}
+                  </span>
+                  {food.cuisine && food.cuisine !== 'global' && (
+                    <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60 capitalize">
+                      {food.cuisine.replace('_', ' ')}
+                    </span>
+                  )}
+                  {food.dietary && food.dietary !== 'all' && (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 capitalize">
+                      {food.dietary.replace('_', ' ')}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Macro Indicators */}
@@ -518,7 +562,9 @@ export function FoodLibraryView({
                   ) : (
                     <Plus size={16} />
                   )}
-                  <span>Log Food to {targetMeal.toUpperCase()} ({calculatedNutrition.calories} kcal)</span>
+                  <span>
+                    + Log {calculatedNutrition.portionSummary ? `${calculatedNutrition.portionSummary} to ${targetMeal.toUpperCase()}` : `Food to ${targetMeal.toUpperCase()}`} | {calculatedNutrition.calories} kcal
+                  </span>
                 </button>
               </div>
             </RadixDialog.Content>

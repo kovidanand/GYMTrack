@@ -225,6 +225,17 @@ Execute the SQL migrations located in `supabase/migrations/` inside your Supabas
 3. `003_workouts.sql` — Workout routines, splits, and exercise orders
 4. `004_progress.sql` — Workout sessions, sets, volume, and 1RM calculation helpers
 5. `005_ai_coach.sql` — Chat history and conversation thread isolation
+6. `012_food_library_expansion.sql` — Expanded food library schema, food favorites, cuisine & macro attributes
+
+---
+
+### 🥗 NutriTrack Smart Food Quantity & Global Food Library
+GYMTrack includes an intelligent global nutrition system:
+- **Natural Quantity Selection**: Each food has an intuitive default unit based on everyday consumption (e.g. Idlis in pieces, Rotis in pieces, Rice in cooked cups, Dal in bowls, Steak/Chicken in grams, Milk in ml).
+- **Instant Scaling & Equivalent Weights**: Displays approximate equivalent weight (e.g., *3 pieces ≈ 150 g*) and updates calories and macros live without confusing multiplier dropdowns.
+- **Controlled Text Input**: Supports backspacing, replacing numbers, temporary empty states, and decimal quantities without forcing values back to 1.
+- **126 Curated Global Foods**: Encompasses Indian regional specialties (Dosas, Biryanis, Kulchas, Vadas), East/SE Asian (Sushi, Ramen, Kimchi, Bibimbap), European & Mediterranean (Margherita Pizza, Lasagna, Falafel, Tzatziki), American & Latin (Cheeseburger, Tacos, Burritos), and high-protein fitness staples.
+- **Food Favorites & Search**: Search by primary names, multilingual/Hindi aliases, and filter by cuisine and category with favorite bookmarking.
 
 ### 5. Start Local Development
 ```bash

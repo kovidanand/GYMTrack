@@ -45,6 +45,10 @@ export interface BaseNutrientSource {
   sugar?: number | null
   sodium_mg?: number | null
   rawSource?: string
+  serving_units?: ServingUnitOption[]
+  default_unit?: string
+  serving_weight_g?: number
+  is_per_100g?: boolean
 }
 
 /**
@@ -54,98 +58,230 @@ export interface BaseNutrientSource {
  * Every non-gram unit has a defined gram/ml equivalent.
  */
 export function getFoodServingUnits(food: BaseNutrientSource): ServingUnitOption[] {
+  // If the food item already defines curated serving units (e.g. from FOOD_CATALOG or custom food)
+  if (food.serving_units && Array.isArray(food.serving_units) && food.serving_units.length > 0) {
+    return food.serving_units
+  }
+
   const nameLower = food.name.toLowerCase()
   const unitLower = (food.serving_unit || '').toLowerCase()
   const baseSize = food.serving_size || 1
 
-  // 1. Egg items (1 egg = 50g)
-  if (nameLower.includes('egg') && !nameLower.includes('eggplant')) {
-    if (nameLower.includes('white')) {
-      return [
-        { unit: 'egg_white', label: '1 Egg White (≈ 33g)', shortLabel: 'egg white', multiplier: 0.5, gramsEquivalent: 33, householdName: 'egg white', isDefault: true, isApproximate: true },
-        { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / 66, gramsEquivalent: 1, householdName: 'egg white' },
-        { unit: '2_egg_whites', label: '2 Egg Whites (≈ 66g)', shortLabel: 'egg whites', multiplier: 1.0, gramsEquivalent: 66, householdName: 'egg whites', isApproximate: true },
-      ]
-    }
+  // 1. Idli (1 piece ≈ 50g) - CRITICAL: must match before generic 'rice' rule!
+  if (nameLower.includes('idli')) {
+    const pieceGrams = food.serving_weight_g || 50
+    const refGrams = baseSize > 1 ? baseSize : pieceGrams
     return [
-      { unit: 'egg', label: 'Whole Egg (≈ 50g)', shortLabel: 'egg', multiplier: 1.0, gramsEquivalent: 50, householdName: 'large egg', isDefault: true, isApproximate: true },
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / 50, gramsEquivalent: 1, householdName: 'large egg' },
-      { unit: 'egg_white', label: 'Egg White (≈ 33g)', shortLabel: 'egg white', multiplier: 33 / 50, gramsEquivalent: 33, householdName: 'egg white', isApproximate: true },
+      { unit: 'piece', label: `1 Piece (≈ ${pieceGrams}g)`, shortLabel: 'piece', multiplier: 1.0, gramsEquivalent: pieceGrams, householdName: 'idli', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'idli' },
     ]
   }
 
-  // 2. Banana (1 medium = 118g, small = 80g, large = 140g)
-  if (nameLower.includes('banana')) {
-    // If base reference is 1 medium banana (118g)
-    const refGrams = baseSize > 1 ? baseSize : 118
+  // 2. Dosa (1 piece ≈ 80g) - CRITICAL: must match before generic 'rice' rule!
+  if (nameLower.includes('dosa')) {
+    const pieceGrams = food.serving_weight_g || 80
+    const refGrams = baseSize > 1 ? baseSize : pieceGrams
     return [
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'medium banana', isDefault: true },
-      { unit: 'medium_banana', label: '1 Medium Banana (≈ 118g)', shortLabel: 'medium banana', multiplier: 118 / refGrams, gramsEquivalent: 118, householdName: 'medium banana', isApproximate: true },
-      { unit: 'small_banana', label: '1 Small Banana (≈ 80g)', shortLabel: 'small banana', multiplier: 80 / refGrams, gramsEquivalent: 80, householdName: 'small banana', isApproximate: true },
-      { unit: 'large_banana', label: '1 Large Banana (≈ 140g)', shortLabel: 'large banana', multiplier: 140 / refGrams, gramsEquivalent: 140, householdName: 'large banana', isApproximate: true },
+      { unit: 'piece', label: `1 Piece (≈ ${pieceGrams}g)`, shortLabel: 'piece', multiplier: 1.0, gramsEquivalent: pieceGrams, householdName: 'dosa', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'dosa' },
     ]
   }
 
-  // 3. Apple (1 medium = 180g, small = 150g, large = 220g)
-  if (nameLower.includes('apple') && !nameLower.includes('custard')) {
-    const refGrams = baseSize > 1 ? baseSize : 180
+  // 3. Uttapam (1 piece ≈ 100g)
+  if (nameLower.includes('uttapam') || nameLower.includes('uthappam')) {
+    const pieceGrams = food.serving_weight_g || 100
     return [
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'medium apple', isDefault: true },
-      { unit: 'medium_apple', label: '1 Medium Apple (≈ 180g)', shortLabel: 'medium apple', multiplier: 180 / refGrams, gramsEquivalent: 180, householdName: 'medium apple', isApproximate: true },
-      { unit: 'small_apple', label: '1 Small Apple (≈ 150g)', shortLabel: 'small apple', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'small apple', isApproximate: true },
-      { unit: 'large_apple', label: '1 Large Apple (≈ 220g)', shortLabel: 'large apple', multiplier: 220 / refGrams, gramsEquivalent: 220, householdName: 'large apple', isApproximate: true },
+      { unit: 'piece', label: `1 Piece (≈ ${pieceGrams}g)`, shortLabel: 'piece', multiplier: 1.0, gramsEquivalent: pieceGrams, householdName: 'uttapam', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / pieceGrams, gramsEquivalent: 1, householdName: 'uttapam' },
     ]
   }
 
-  // 4. Roti / Chapati / Phulka / Flatbread (1 roti ≈ 40g)
-  if (nameLower.includes('roti') || nameLower.includes('chapati') || nameLower.includes('phulka')) {
-    const refGrams = baseSize > 1 ? baseSize : 40
+  // 4. Chapati / Roti / Phulka / Flatbread / Naan / Paratha / Kulcha (1 piece ≈ 40g to 80g)
+  if (nameLower.includes('roti') || nameLower.includes('chapati') || nameLower.includes('phulka') || nameLower.includes('paratha') || nameLower.includes('naan') || nameLower.includes('kulcha')) {
+    const refGrams = food.serving_weight_g || (baseSize > 1 ? baseSize : 40)
     return [
-      { unit: 'roti', label: '1 Roti / Chapati (≈ 40g)', shortLabel: 'roti', multiplier: 40 / refGrams, gramsEquivalent: 40, householdName: 'roti', isDefault: true, isApproximate: true },
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'roti' },
+      { unit: 'roti', label: `1 Piece (≈ ${refGrams}g)`, shortLabel: 'piece', multiplier: 1.0, gramsEquivalent: refGrams, householdName: 'roti', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'roti' },
     ]
   }
 
   // 5. Bread (1 slice ≈ 40g)
   if (nameLower.includes('bread') || unitLower.includes('slice')) {
-    const refGrams = baseSize > 1 ? baseSize : 40
+    const refGrams = food.serving_weight_g || (baseSize > 1 ? baseSize : 40)
     return [
-      { unit: 'slice', label: '1 Slice (≈ 40g)', shortLabel: 'slice', multiplier: 40 / refGrams, gramsEquivalent: 40, householdName: 'slice', isDefault: true, isApproximate: true },
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'slice' },
+      { unit: 'slice', label: `1 Slice (≈ ${refGrams}g)`, shortLabel: 'slice', multiplier: 1.0, gramsEquivalent: refGrams, householdName: 'slice', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'slice' },
     ]
   }
 
-  // 6. Protein Powders / Whey Isolate (1 scoop ≈ 30g)
-  if (nameLower.includes('whey') || nameLower.includes('protein powder') || unitLower.includes('scoop')) {
-    const refGrams = baseSize > 1 ? baseSize : 30
+  // 6. Egg items (1 whole egg ≈ 50g, 1 egg white ≈ 33g)
+  if (nameLower.includes('egg') && !nameLower.includes('eggplant')) {
+    if (nameLower.includes('white')) {
+      return [
+        { unit: 'egg_white', label: '1 Egg White (≈ 33g)', shortLabel: 'egg white', multiplier: 1.0, gramsEquivalent: 33, householdName: 'egg white', isDefault: true, isApproximate: true },
+        { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / 33, gramsEquivalent: 1, householdName: 'egg white' },
+      ]
+    }
     return [
-      { unit: 'scoop', label: '1 Scoop (≈ 30g)', shortLabel: 'scoop', multiplier: 30 / refGrams, gramsEquivalent: 30, householdName: 'scoop', isDefault: true, isApproximate: true },
-      { unit: 'half_scoop', label: '1/2 Scoop (≈ 15g)', shortLabel: '1/2 scoop', multiplier: 15 / refGrams, gramsEquivalent: 15, householdName: 'scoop', isApproximate: true },
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'scoop' },
+      { unit: 'egg', label: '1 Whole Egg (≈ 50g)', shortLabel: 'egg', multiplier: 1.0, gramsEquivalent: 50, householdName: 'large egg', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / 50, gramsEquivalent: 1, householdName: 'large egg' },
+      { unit: 'egg_white', label: 'Egg White (≈ 33g)', shortLabel: 'egg white', multiplier: 33 / 50, gramsEquivalent: 33, householdName: 'egg white', isApproximate: true },
     ]
   }
 
-  // 7. Rice, Oats, Grains (Cooked or Dry)
+  // 7. Banana (1 medium = 118g)
+  if (nameLower.includes('banana')) {
+    const refGrams = food.serving_weight_g || 118
+    return [
+      { unit: 'piece', label: `1 Banana (≈ ${refGrams}g)`, shortLabel: 'banana', multiplier: 1.0, gramsEquivalent: refGrams, householdName: 'medium banana', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'medium banana' },
+      { unit: 'small_banana', label: '1 Small Banana (≈ 80g)', shortLabel: 'small banana', multiplier: 80 / refGrams, gramsEquivalent: 80, householdName: 'small banana', isApproximate: true },
+      { unit: 'large_banana', label: '1 Large Banana (≈ 140g)', shortLabel: 'large banana', multiplier: 140 / refGrams, gramsEquivalent: 140, householdName: 'large banana', isApproximate: true },
+    ]
+  }
+
+  // 8. Apple (1 medium = 180g)
+  if (nameLower.includes('apple') && !nameLower.includes('custard')) {
+    const refGrams = food.serving_weight_g || 180
+    return [
+      { unit: 'piece', label: `1 Apple (≈ ${refGrams}g)`, shortLabel: 'apple', multiplier: 1.0, gramsEquivalent: refGrams, householdName: 'medium apple', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'medium apple' },
+      { unit: 'small_apple', label: '1 Small Apple (≈ 150g)', shortLabel: 'small apple', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'small apple', isApproximate: true },
+      { unit: 'large_apple', label: '1 Large Apple (≈ 220g)', shortLabel: 'large apple', multiplier: 220 / refGrams, gramsEquivalent: 220, householdName: 'large apple', isApproximate: true },
+    ]
+  }
+
+  // 9. Orange (1 piece ≈ 130g)
+  if (nameLower.includes('orange') && !nameLower.includes('juice')) {
+    const refGrams = food.serving_weight_g || 130
+    return [
+      { unit: 'piece', label: `1 Orange (≈ ${refGrams}g)`, shortLabel: 'orange', multiplier: 1.0, gramsEquivalent: refGrams, householdName: 'orange', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'orange' },
+    ]
+  }
+
+  // 10. Pizza (1 slice ≈ 107g)
+  if (nameLower.includes('pizza')) {
+    const sliceGrams = food.serving_weight_g || 107
+    return [
+      { unit: 'slice', label: `1 Slice (≈ ${sliceGrams}g)`, shortLabel: 'slice', multiplier: 1.0, gramsEquivalent: sliceGrams, householdName: 'slice', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / sliceGrams, gramsEquivalent: 1, householdName: 'slice' },
+    ]
+  }
+
+  // 11. Sushi (1 piece ≈ 35g)
+  if (nameLower.includes('sushi') || nameLower.includes('nigiri') || nameLower.includes('maki')) {
+    const pieceGrams = food.serving_weight_g || 35
+    return [
+      { unit: 'piece', label: `1 Piece (≈ ${pieceGrams}g)`, shortLabel: 'piece', multiplier: 1.0, gramsEquivalent: pieceGrams, householdName: 'piece', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / pieceGrams, gramsEquivalent: 1, householdName: 'piece' },
+    ]
+  }
+
+  // 12. Burger (1 burger ≈ 150-200g)
+  if (nameLower.includes('burger')) {
+    const burgerGrams = food.serving_weight_g || 150
+    return [
+      { unit: 'piece', label: `1 Burger (≈ ${burgerGrams}g)`, shortLabel: 'burger', multiplier: 1.0, gramsEquivalent: burgerGrams, householdName: 'burger', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / burgerGrams, gramsEquivalent: 1, householdName: 'burger' },
+    ]
+  }
+
+  // 13. Almonds & Nuts (1 piece ≈ 1.2g)
+  if (nameLower.includes('almond') || nameLower.includes('cashew') || nameLower.includes('walnut')) {
+    const refGrams = food.serving_weight_g || (baseSize > 1 ? baseSize : 28)
+    return [
+      { unit: 'piece', label: '1 Almond (≈ 1.2g)', shortLabel: 'almond', multiplier: 1.2 / refGrams, gramsEquivalent: 1.2, householdName: 'almond', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'grams' },
+      { unit: 'serving', label: '1 Handful / Ounce (≈ 28g)', shortLabel: 'handful', multiplier: 28 / refGrams, gramsEquivalent: 28, householdName: 'handful', isApproximate: true },
+    ]
+  }
+
+  // 14. Peanut Butter (1 tbsp ≈ 16g, 2 tbsp ≈ 32g)
+  if (nameLower.includes('peanut butter') || nameLower.includes('nut butter')) {
+    const refGrams = food.serving_weight_g || 32
+    return [
+      { unit: 'tbsp', label: '1 Tablespoon (≈ 16g)', shortLabel: 'tbsp', multiplier: 16 / refGrams, gramsEquivalent: 16, householdName: 'tbsp', isDefault: true, isApproximate: true },
+      { unit: 'serving', label: '2 Tablespoons (≈ 32g)', shortLabel: '2 tbsp', multiplier: 32 / refGrams, gramsEquivalent: 32, householdName: '2 tbsp', isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'g' },
+    ]
+  }
+
+  // 15. Yogurt / Curd (Grams default 100g, or bowl 150g)
+  if (nameLower.includes('yogurt') || nameLower.includes('curd') || nameLower.includes('dahi')) {
+    const refGrams = food.serving_weight_g || (baseSize > 1 ? baseSize : 100)
+    return [
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'yogurt', isDefault: true },
+      { unit: 'bowl', label: '1 Bowl / Katori (≈ 150g)', shortLabel: 'bowl', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'bowl', isApproximate: true },
+      { unit: 'cup', label: '1 Cup (≈ 200g)', shortLabel: 'cup', multiplier: 200 / refGrams, gramsEquivalent: 200, householdName: 'cup', isApproximate: true },
+    ]
+  }
+
+  // 16. Beef steak, Chicken breast, Fish, Paneer, Meat, Tofu (Grams default)
+  if (
+    nameLower.includes('chicken') ||
+    nameLower.includes('steak') ||
+    nameLower.includes('beef') ||
+    nameLower.includes('paneer') ||
+    nameLower.includes('fish') ||
+    nameLower.includes('salmon') ||
+    nameLower.includes('tuna') ||
+    nameLower.includes('mutton') ||
+    nameLower.includes('turkey') ||
+    nameLower.includes('pork') ||
+    nameLower.includes('tofu')
+  ) {
+    const refGrams = food.serving_weight_g || (baseSize > 1 ? baseSize : 100)
+    return [
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'serving (100g)', isDefault: true },
+      { unit: 'serving', label: '1 Standard Serving (≈ 100g)', shortLabel: 'serving', multiplier: 100 / refGrams, gramsEquivalent: 100, householdName: 'serving', isApproximate: true },
+      { unit: 'cooked_portion', label: '1 Cooked Portion (≈ 150g)', shortLabel: 'portion', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'portion', isApproximate: true },
+    ]
+  }
+
+  // 17. Rice, Oats, Grains (Cooked Cup default for cooked rice)
   if (nameLower.includes('rice') || nameLower.includes('oats') || nameLower.includes('quinoa')) {
     const isDry = nameLower.includes('dry') || nameLower.includes('uncooked')
-    const refGrams = baseSize > 1 ? baseSize : 100
-
+    const refGrams = food.serving_weight_g || (baseSize > 1 ? baseSize : (isDry ? 50 : 150))
     if (isDry) {
       return [
-        { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'cup dry', isDefault: true },
+        { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'g', isDefault: true },
         { unit: 'serving_dry', label: '1 Serving Dry (≈ 50g)', shortLabel: 'serving dry', multiplier: 50 / refGrams, gramsEquivalent: 50, householdName: 'serving dry', isApproximate: true },
         { unit: 'cup_dry', label: '1 Cup Dry (≈ 90g)', shortLabel: 'cup dry', multiplier: 90 / refGrams, gramsEquivalent: 90, householdName: 'cup dry', isApproximate: true },
       ]
     }
     return [
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'cooked cup', isDefault: true },
-      { unit: 'cooked_cup', label: '1 Cooked Cup (≈ 150g)', shortLabel: 'cooked cup', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'cooked cup', isApproximate: true },
+      { unit: 'cooked_cup', label: '1 Cooked Cup (≈ 150g)', shortLabel: 'cup', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'cooked cup', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'cooked cup' },
       { unit: 'small_katori', label: '1 Small Katori (≈ 100g)', shortLabel: 'small katori', multiplier: 100 / refGrams, gramsEquivalent: 100, householdName: 'small katori', isApproximate: true },
       { unit: 'large_bowl', label: '1 Large Bowl (≈ 250g)', shortLabel: 'large bowl', multiplier: 250 / refGrams, gramsEquivalent: 250, householdName: 'large bowl', isApproximate: true },
     ]
   }
 
-  // 8. Liquid Beverages (Milk, Lassi, Buttermilk, Juices, Tea, Coffee, Water)
+  // 18. Dal, Sambar, Rasam, Curries, Sabzi, Chole, Rajma (Bowl / Katori default)
+  if (
+    nameLower.includes('dal') ||
+    nameLower.includes('curry') ||
+    nameLower.includes('chole') ||
+    nameLower.includes('rajma') ||
+    nameLower.includes('sambar') ||
+    nameLower.includes('rasam') ||
+    nameLower.includes('sabzi') ||
+    nameLower.includes('bhindi') ||
+    nameLower.includes('gobi') ||
+    unitLower.includes('katori') ||
+    unitLower.includes('bowl')
+  ) {
+    const refGrams = food.serving_weight_g || (baseSize > 1 ? baseSize : 150)
+    return [
+      { unit: 'bowl', label: '1 Bowl / Katori (≈ 150g)', shortLabel: 'bowl', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'bowl', isDefault: true, isApproximate: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'g' },
+      { unit: 'half_katori', label: '1/2 Katori (≈ 75g)', shortLabel: '1/2 katori', multiplier: 75 / refGrams, gramsEquivalent: 75, householdName: '1/2 katori', isApproximate: true },
+      { unit: 'cup', label: '1 Cup (≈ 200g)', shortLabel: 'cup', multiplier: 200 / refGrams, gramsEquivalent: 200, householdName: 'cup', isApproximate: true },
+    ]
+  }
+
+  // 19. Liquid Beverages (Milk, Lassi, Buttermilk, Juices, Tea, Coffee, Water)
   if (
     unitLower.includes('ml') ||
     nameLower.includes('milk') ||
@@ -154,81 +290,32 @@ export function getFoodServingUnits(food: BaseNutrientSource): ServingUnitOption
     nameLower.includes('chaas') ||
     nameLower.includes('tea') ||
     nameLower.includes('coffee') ||
-    nameLower.includes('juice')
+    nameLower.includes('juice') ||
+    nameLower.includes('water')
   ) {
-    const refMl = baseSize >= 10 ? baseSize : 100
+    const refMl = baseSize >= 10 ? baseSize : 250
     return [
-      { unit: 'ml', label: 'Millilitres (ml)', shortLabel: 'ml', multiplier: 1 / refMl, mlEquivalent: 1, householdName: 'cup', isDefault: true },
-      { unit: 'glass', label: '1 Cup / Glass (≈ 250ml)', shortLabel: 'cup', multiplier: 250 / refMl, mlEquivalent: 250, householdName: 'cup', isApproximate: true },
+      { unit: 'ml', label: 'Millilitres (ml)', shortLabel: 'ml', multiplier: 1 / refMl, mlEquivalent: 1, householdName: 'ml', isDefault: true },
+      { unit: 'glass', label: '1 Cup / Glass (≈ 250ml)', shortLabel: 'glass', multiplier: 250 / refMl, mlEquivalent: 250, householdName: 'glass', isApproximate: true },
       { unit: 'small_cup', label: '1 Small Cup (≈ 150ml)', shortLabel: 'small cup', multiplier: 150 / refMl, mlEquivalent: 150, householdName: 'small cup', isApproximate: true },
-      { unit: 'serving', label: `1 Standard Serving (≈ ${refMl}ml)`, shortLabel: 'serving', multiplier: 1.0, mlEquivalent: refMl, householdName: 'serving', isApproximate: false },
       { unit: 'liter', label: '1 Liter (1000ml)', shortLabel: 'liter', multiplier: 1000 / refMl, mlEquivalent: 1000, householdName: 'liter' },
     ]
   }
 
-  // 9. Indian Curries, Dals, Sambar, Sabzi, Paneer
-  if (
-    nameLower.includes('dal') ||
-    nameLower.includes('curry') ||
-    nameLower.includes('paneer') ||
-    nameLower.includes('chole') ||
-    nameLower.includes('rajma') ||
-    nameLower.includes('sambar') ||
-    nameLower.includes('khichdi') ||
-    nameLower.includes('upma') ||
-    nameLower.includes('poha') ||
-    unitLower.includes('katori') ||
-    unitLower.includes('bowl')
-  ) {
-    const refGrams = baseSize > 1 ? baseSize : 100
-    if (nameLower.includes('paneer')) {
-      return [
-        { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'serving (100g)', isDefault: true },
-        { unit: 'serving', label: '1 Serving (≈ 100g)', shortLabel: 'serving', multiplier: 100 / refGrams, gramsEquivalent: 100, householdName: 'serving', isApproximate: true },
-        { unit: 'half_serving', label: 'Small Portion (≈ 50g)', shortLabel: 'small portion', multiplier: 50 / refGrams, gramsEquivalent: 50, householdName: 'small portion', isApproximate: true },
-      ]
-    }
-
-    return [
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'katori (150g)', isDefault: true },
-      { unit: 'katori', label: '1 Katori / Bowl (≈ 150g)', shortLabel: 'katori', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'katori', isApproximate: true },
-      { unit: 'half_katori', label: '1/2 Katori (≈ 75g)', shortLabel: '1/2 katori', multiplier: 75 / refGrams, gramsEquivalent: 75, householdName: 'katori', isApproximate: true },
-      { unit: 'cup', label: '1 Cup (≈ 200g)', shortLabel: 'cup', multiplier: 200 / refGrams, gramsEquivalent: 200, householdName: 'cup', isApproximate: true },
-    ]
-  }
-
-  // 10. Meat, Poultry, Fish (Cooked or Raw)
-  if (
-    nameLower.includes('chicken') ||
-    nameLower.includes('fish') ||
-    nameLower.includes('salmon') ||
-    nameLower.includes('tuna') ||
-    nameLower.includes('beef') ||
-    nameLower.includes('mutton') ||
-    nameLower.includes('turkey')
-  ) {
-    const refGrams = baseSize > 1 ? baseSize : 100
-    return [
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'serving (100g)', isDefault: true },
-      { unit: 'serving', label: '1 Standard Serving (≈ 100g)', shortLabel: 'serving', multiplier: 100 / refGrams, gramsEquivalent: 100, householdName: 'serving', isApproximate: true },
-      { unit: 'cooked_portion', label: '1 Cooked Portion (≈ 150g)', shortLabel: 'cooked portion', multiplier: 150 / refGrams, gramsEquivalent: 150, householdName: 'cooked portion', isApproximate: true },
-    ]
-  }
-
-  // 11. Generic items recorded in grams
+  // 20. Generic items recorded in grams
   if (baseSize >= 10 || unitLower === 'g' || unitLower === 'grams') {
     const refGrams = baseSize || 100
     return [
-      { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'serving', isDefault: true },
+      { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / refGrams, gramsEquivalent: 1, householdName: 'serving', isDefault: true },
       { unit: 'serving', label: `1 Serving (≈ ${refGrams}g)`, shortLabel: 'serving', multiplier: 1.0, gramsEquivalent: refGrams, householdName: 'serving', isApproximate: false },
     ]
   }
 
-  // 12. Generic piece / packaged item fallback
+  // 21. Generic piece / packaged item fallback
   const unitName = food.serving_unit || 'piece'
   return [
     { unit: 'serving', label: `1 ${unitName}`, shortLabel: unitName, multiplier: 1.0, householdName: unitName, isDefault: true },
-    { unit: 'g', label: 'Grams (g)', shortLabel: 'grams', multiplier: 1 / baseSize, gramsEquivalent: 1, householdName: unitName },
+    { unit: 'g', label: 'Grams (g)', shortLabel: 'g', multiplier: 1 / baseSize, gramsEquivalent: 1, householdName: unitName },
   ]
 }
 

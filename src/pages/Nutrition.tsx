@@ -57,6 +57,7 @@ export default function Nutrition() {
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [addModalTab, setAddModalTab] = useState<'search' | 'quick' | 'custom' | 'scanner'>('search')
   const [activeMealType, setActiveMealType] = useState<MealType>('breakfast')
   const [editingEntry, setEditingEntry] = useState<FoodEntry | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -163,6 +164,7 @@ export default function Nutrition() {
   // Handlers
   const handleOpenAdd = (mealType: MealType = 'breakfast') => {
     setActiveMealType(mealType)
+    setAddModalTab('search')
     setIsAddModalOpen(true)
   }
 
@@ -435,6 +437,7 @@ export default function Nutrition() {
               onLogFood={handleAddFoodEntry}
               onOpenCreateCustomFood={() => {
                 setActiveMealType('breakfast')
+                setAddModalTab('custom')
                 setIsAddModalOpen(true)
               }}
             />
@@ -456,6 +459,7 @@ export default function Nutrition() {
           userId={userId}
           dateStr={selectedDate}
           initialMealType={activeMealType}
+          initialTab={addModalTab}
           onAddEntry={handleAddFoodEntry}
         />
 

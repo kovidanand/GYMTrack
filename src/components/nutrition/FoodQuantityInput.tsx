@@ -67,8 +67,17 @@ export function FoodQuantityInput({
     if (lower === 'ml' || lower === 'millilitres') {
       return [100, 200, 250, 500]
     }
-    // Countable items (roti, banana, egg, scoop, slice, serving)
-    return [0.5, 1, 2, 4]
+    if (lower.includes('tbsp') || lower.includes('tablespoon')) {
+      return [1, 2, 3, 4]
+    }
+    if (lower.includes('cup') || lower.includes('bowl') || lower.includes('katori')) {
+      return [0.5, 1, 1.5, 2]
+    }
+    if (lower.includes('almond') || lower.includes('nut')) {
+      return [5, 10, 15, 20, 25]
+    }
+    // Standard countable items (piece, roti, slice, egg, banana, apple, burger, etc.)
+    return [1, 2, 3, 4, 5]
   }, [presets, unitType])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -33,6 +33,7 @@ interface AddFoodModalProps {
   userId: string
   dateStr: string
   initialMealType: MealType
+  initialTab?: 'search' | 'quick' | 'custom' | 'scanner'
   onAddEntry: (entry: Omit<FoodEntry, 'id' | 'created_at' | 'updated_at'>) => Promise<void>
 }
 
@@ -44,16 +45,17 @@ export function AddFoodModal({
   userId,
   dateStr,
   initialMealType,
+  initialTab = 'search',
   onAddEntry,
 }: AddFoodModalProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('search')
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const [selectedMeal, setSelectedMeal] = useState<MealType>(initialMealType)
 
   // Sync initial meal type and reset scanner state when modal opens
   useEffect(() => {
     if (open) {
       setSelectedMeal(initialMealType)
-      setActiveTab('search')
+      setActiveTab(initialTab || 'search')
       setSelectedFood(null)
       setSearchQuery('')
       setImageFile(null)
@@ -62,7 +64,7 @@ export function AddFoodModal({
       setScanItems([])
       setScanError(null)
     }
-  }, [open, initialMealType])
+  }, [open, initialMealType, initialTab])
 
   // ─── Tab 1: Search State ───────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('')

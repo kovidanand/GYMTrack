@@ -2,6 +2,25 @@
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 
+export type CuisineType =
+  | 'all'
+  | 'indian'
+  | 'east_asian'
+  | 'southeast_asian'
+  | 'european'
+  | 'american'
+  | 'middle_eastern'
+  | 'middle_eastern_african'
+  | 'mediterranean'
+  | 'global'
+
+export type DietaryClassification =
+  | 'all'
+  | 'vegetarian'
+  | 'vegan'
+  | 'eggetarian'
+  | 'non_vegetarian'
+
 export interface NutritionGoals {
   id?: string
   user_id?: string
@@ -19,9 +38,14 @@ export interface CustomFood {
   id: string
   user_id: string
   name: string
+  aliases?: string[] | null
+  cuisine?: string | null
+  category?: string | null
+  dietary_classification?: string | null
   brand?: string | null
   serving_size: number
   serving_unit: string
+  serving_weight_g?: number | null
   calories: number
   protein: number
   carbs: number
@@ -30,9 +54,19 @@ export interface CustomFood {
   saturated_fat?: number | null
   sugar?: number | null
   sodium_mg?: number | null
+  is_per_100g?: boolean | null
   barcode?: string | null
   created_at?: string
   updated_at?: string
+}
+
+export interface FoodFavorite {
+  id: string
+  user_id: string
+  food_id: string
+  food_name: string
+  food_data?: Partial<FoodSearchResult> | null
+  created_at?: string
 }
 
 export interface FoodEntry {
@@ -67,12 +101,29 @@ export interface WaterEntry {
   created_at?: string
 }
 
+export interface ServingUnitOption {
+  unit: string
+  label: string
+  shortLabel: string
+  multiplier: number
+  gramsEquivalent?: number
+  mlEquivalent?: number
+  isDefault?: boolean
+  isApproximate?: boolean
+  householdName?: string
+}
+
 export interface FoodSearchResult {
   id: string
   name: string
   brand?: string
+  cuisine?: string
+  category?: string
+  dietary?: string
+  aliases?: string[]
   serving_size: number
   serving_unit: string
+  serving_weight_g?: number
   calories: number
   protein: number
   carbs: number
@@ -82,8 +133,25 @@ export interface FoodSearchResult {
   sugar?: number | null
   sodium_mg?: number | null
   isCustom?: boolean
+  isFavorite?: boolean
   imageUrl?: string
   rawSource?: 'openfoodfacts' | 'custom' | 'quick'
+  provenance?: string
+  subCategory?: string
+  serving_units?: ServingUnitOption[]
+  default_unit?: string
+}
+
+export interface FoodFilterOptions {
+  category?: string
+  cuisine?: string
+  dietary?: string
+  highProtein?: boolean
+  lowerCalorie?: boolean
+  higherFiber?: boolean
+  favoritesOnly?: boolean
+  customOnly?: boolean
+  sortBy?: 'name' | 'calories_asc' | 'calories_desc' | 'protein_desc' | 'relevance'
 }
 
 export interface AIFoodScanResult {

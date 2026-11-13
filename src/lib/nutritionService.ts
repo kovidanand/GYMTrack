@@ -909,19 +909,29 @@ export async function searchFoods(
     const matchesName = item.name.toLowerCase().includes(trimmed)
     const matchesAlias = item.aliases.some(a => a.toLowerCase().includes(trimmed))
     const matchesCategory = item.category.toLowerCase().includes(trimmed)
+    const matchesCuisine = item.cuisine ? item.cuisine.toLowerCase().includes(trimmed) : false
 
-    if ((matchesName || matchesAlias || matchesCategory) && !seenNames.has(item.name.toLowerCase())) {
+    if ((matchesName || matchesAlias || matchesCategory || matchesCuisine) && !seenNames.has(item.name.toLowerCase())) {
       results.push({
         id: `catalog_${item.id}`,
         name: item.name,
         brand: undefined,
+        cuisine: item.cuisine,
+        category: item.category,
+        dietary: item.dietary,
+        aliases: item.aliases,
         serving_size: item.serving_size,
         serving_unit: item.serving_unit,
+        serving_weight_g: item.serving_weight_g,
         calories: item.calories,
         protein: item.protein,
         carbs: item.carbs,
         fat: item.fat,
         fiber: item.fiber,
+        saturated_fat: item.saturated_fat,
+        sugar: item.sugar,
+        sodium_mg: item.sodium_mg,
+        serving_units: item.serving_units,
         rawSource: 'quick',
       })
       seenNames.add(item.name.toLowerCase())
@@ -1199,7 +1209,8 @@ export function calculateEstimatedGoalsFromProfile(
 export async function getFoodCatalog(
   categoryFilter: string,
   searchQuery: string,
-  userId: string
+  userId: string,
+  cuisineFilter: string = 'all'
 ): Promise<FoodSearchResult[]> {
   const query = searchQuery.trim().toLowerCase()
   const results: FoodSearchResult[] = []
@@ -1212,20 +1223,33 @@ export async function getFoodCatalog(
         const matchesQuery =
           !query ||
           cf.name.toLowerCase().includes(query) ||
-          (cf.brand && cf.brand.toLowerCase().includes(query))
+          (cf.brand && cf.brand.toLowerCase().includes(query)) ||
+          (cf.aliases && cf.aliases.some(a => a.toLowerCase().includes(query)))
 
-        if (matchesQuery) {
+        const matchesCuisine =
+          cuisineFilter === 'all' ||
+          (cf.cuisine && cf.cuisine.toLowerCase() === cuisineFilter.toLowerCase())
+
+        if (matchesQuery && matchesCuisine) {
           results.push({
             id: `custom_${cf.id}`,
             name: cf.name,
             brand: cf.brand || 'Custom Food',
+            cuisine: cf.cuisine || undefined,
+            category: cf.category || undefined,
+            dietary: cf.dietary_classification || undefined,
+            aliases: cf.aliases || undefined,
             serving_size: cf.serving_size,
             serving_unit: cf.serving_unit,
+            serving_weight_g: cf.serving_weight_g || undefined,
             calories: cf.calories,
             protein: cf.protein,
             carbs: cf.carbs,
             fat: cf.fat,
             fiber: cf.fiber,
+            saturated_fat: cf.saturated_fat,
+            sugar: cf.sugar,
+            sodium_mg: cf.sodium_mg,
             isCustom: true,
             rawSource: 'custom',
           })
@@ -1241,24 +1265,36 @@ export async function getFoodCatalog(
     for (const item of FOOD_CATALOG) {
       const matchesCategory =
         categoryFilter === 'all' || item.category === categoryFilter
+      const matchesCuisine =
+        cuisineFilter === 'all' || item.cuisine === cuisineFilter
       const matchesQuery =
         !query ||
         item.name.toLowerCase().includes(query) ||
         item.aliases.some(a => a.toLowerCase().includes(query)) ||
-        item.category.toLowerCase().includes(query)
+        item.category.toLowerCase().includes(query) ||
+        (item.cuisine && item.cuisine.toLowerCase().includes(query))
 
-      if (matchesCategory && matchesQuery) {
+      if (matchesCategory && matchesCuisine && matchesQuery) {
         results.push({
           id: `catalog_${item.id}`,
           name: item.name,
           brand: item.category.replace('_', ' ').toUpperCase(),
+          cuisine: item.cuisine,
+          category: item.category,
+          dietary: item.dietary,
+          aliases: item.aliases,
           serving_size: item.serving_size,
           serving_unit: item.serving_unit,
+          serving_weight_g: item.serving_weight_g,
           calories: item.calories,
           protein: item.protein,
           carbs: item.carbs,
           fat: item.fat,
           fiber: item.fiber,
+          saturated_fat: item.saturated_fat,
+          sugar: item.sugar,
+          sodium_mg: item.sodium_mg,
+          serving_units: item.serving_units,
           rawSource: 'quick',
         })
       }
@@ -1266,6 +1302,71 @@ export async function getFoodCatalog(
   }
 
   return results
+}
+
+// ─── Food Favorites API ───────────────────────────────────────────────────────
+const FAVORITES_KEY_PREFIX = 'gymtrack_food_favorites_'
+
+export async function getFavoriteFoodIds(userId: string): Promise<string[]> {
+  const localKey = `${FAVORITES_KEY_PREFIX}${userId}`
+  const cached = localStorage.getItem(localKey)
+  let favs: string[] = cached ? JSON.parse(cached) : []
+
+  try {
+    const { data, error } = await supabase
+      .from('food_favorites')
+      .select('food_id')
+      .eq('user_id', userId)
+
+    if (!error && data) {
+      favs = data.map(d => String(d.food_id))
+      localStorage.setItem(localKey, JSON.stringify(favs))
+    }
+  } catch (err) {
+    console.warn('[NutritionService] Fallback to cached favorites:', err)
+  }
+
+  return favs
+}
+
+export async function toggleFavoriteFood(
+  userId: string,
+  foodId: string,
+  foodName: string,
+  foodData?: Partial<FoodSearchResult>
+): Promise<boolean> {
+  const localKey = `${FAVORITES_KEY_PREFIX}${userId}`
+  const current = await getFavoriteFoodIds(userId)
+  const isCurrentlyFav = current.includes(foodId)
+
+  const updated = isCurrentlyFav
+    ? current.filter(id => id !== foodId)
+    : [...current, foodId]
+
+  localStorage.setItem(localKey, JSON.stringify(updated))
+
+  try {
+    if (isCurrentlyFav) {
+      await supabase
+        .from('food_favorites')
+        .delete()
+        .eq('user_id', userId)
+        .eq('food_id', foodId)
+    } else {
+      await supabase
+        .from('food_favorites')
+        .insert({
+          user_id: userId,
+          food_id: foodId,
+          food_name: foodName,
+          food_data: foodData || null,
+        })
+    }
+  } catch (err) {
+    console.warn('[NutritionService] Toggle favorite remote error:', err)
+  }
+
+  return !isCurrentlyFav
 }
 
 // ─── Nutrition Streak Calculation ─────────────────────────────────────────────
