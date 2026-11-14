@@ -56,6 +56,8 @@ export interface CustomFood {
   sodium_mg?: number | null
   is_per_100g?: boolean | null
   barcode?: string | null
+  image_url?: string | null
+  imageUrl?: string | null
   created_at?: string
   updated_at?: string
 }

@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { FOOD_CATALOG } from '@/data/foodCatalog'
+import { getFoodImageUrl, DEFAULT_FOOD_PLACEHOLDER, getFoodImageAlt } from '@/data/foodImageMap'
+export { getFoodImageUrl, DEFAULT_FOOD_PLACEHOLDER, getFoodImageAlt } from '@/data/foodImageMap'
 export type { FoodCategory } from '@/data/foodCatalog'
 export * from './nutritionCalculator'
 export * from './imageUtils'
@@ -1250,6 +1252,7 @@ export async function getFoodCatalog(
             saturated_fat: cf.saturated_fat,
             sugar: cf.sugar,
             sodium_mg: cf.sodium_mg,
+            imageUrl: cf.imageUrl || cf.image_url || DEFAULT_FOOD_PLACEHOLDER,
             isCustom: true,
             rawSource: 'custom',
           })
@@ -1295,6 +1298,7 @@ export async function getFoodCatalog(
           sugar: item.sugar,
           sodium_mg: item.sodium_mg,
           serving_units: item.serving_units,
+          imageUrl: item.imageUrl || getFoodImageUrl({ id: item.id, name: item.name }),
           rawSource: 'quick',
         })
       }

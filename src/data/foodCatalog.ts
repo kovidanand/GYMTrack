@@ -60,12 +60,14 @@ export interface CatalogFoodItem {
   sodium_mg?: number | null
   aliases: string[]
   serving_units?: ServingUnitOption[]
+  imageUrl?: string
 }
 
 export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_apple",
     "name": "Apple",
+    "imageUrl": "/images/foods/apple.webp",
     "category": "fruits",
     "cuisine": "global",
     "dietary": "vegan",
@@ -128,6 +130,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_banana",
     "name": "Banana",
+    "imageUrl": "/images/foods/banana.webp",
     "category": "fruits",
     "cuisine": "global",
     "dietary": "vegan",
@@ -189,6 +192,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_orange",
     "name": "Orange",
+    "imageUrl": "/images/foods/orange.webp",
     "category": "fruits",
     "cuisine": "global",
     "dietary": "vegan",
@@ -232,6 +236,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_mango",
     "name": "Mango",
+    "imageUrl": "/images/foods/mango.webp",
     "category": "fruits",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -282,6 +287,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_grapes",
     "name": "Grapes",
+    "imageUrl": "/images/foods/grapes.webp",
     "category": "fruits",
     "cuisine": "global",
     "dietary": "vegan",
@@ -322,6 +328,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_papaya",
     "name": "Papaya",
+    "imageUrl": "/images/foods/papaya.webp",
     "category": "fruits",
     "cuisine": "global",
     "dietary": "vegan",
@@ -361,6 +368,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_watermelon",
     "name": "Watermelon",
+    "imageUrl": "/images/foods/watermelon.webp",
     "category": "fruits",
     "cuisine": "global",
     "dietary": "vegan",
@@ -409,6 +417,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_guava",
     "name": "Guava",
+    "imageUrl": "/images/foods/guava.webp",
     "category": "fruits",
     "cuisine": "global",
     "dietary": "vegan",
@@ -449,6 +458,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "fruit_pomegranate",
     "name": "Pomegranate",
+    "imageUrl": "/images/foods/pomegranate.webp",
     "category": "fruits",
     "cuisine": "global",
     "dietary": "vegan",
@@ -498,6 +508,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "veg_potato_boiled",
     "name": "Potato (Boiled)",
+    "imageUrl": "/images/foods/boiled-potato.webp",
     "category": "vegetables",
     "cuisine": "global",
     "dietary": "vegan",
@@ -538,6 +549,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "veg_sweet_potato",
     "name": "Sweet Potato (Baked/Boiled)",
+    "imageUrl": "/images/foods/sweet-potato.webp",
     "category": "vegetables",
     "cuisine": "global",
     "dietary": "vegan",
@@ -578,6 +590,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "veg_tomato_fresh",
     "name": "Tomato (Fresh)",
+    "imageUrl": "/images/foods/fresh-tomato.webp",
     "category": "vegetables",
     "cuisine": "global",
     "dietary": "vegan",
@@ -617,6 +630,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "veg_spinach_cooked",
     "name": "Spinach (Cooked/Palak)",
+    "imageUrl": "/images/foods/cooked-spinach.webp",
     "category": "vegetables",
     "cuisine": "global",
     "dietary": "vegan",
@@ -657,6 +671,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "veg_broccoli_steamed",
     "name": "Broccoli (Steamed)",
+    "imageUrl": "/images/foods/steamed-broccoli.webp",
     "category": "vegetables",
     "cuisine": "global",
     "dietary": "vegan",
@@ -696,6 +711,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "veg_carrot",
     "name": "Carrot (Raw)",
+    "imageUrl": "/images/foods/raw-carrot.webp",
     "category": "vegetables",
     "cuisine": "global",
     "dietary": "vegan",
@@ -735,6 +751,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "veg_cauliflower_cooked",
     "name": "Cauliflower (Cooked)",
+    "imageUrl": "/images/foods/cooked-cauliflower.webp",
     "category": "vegetables",
     "cuisine": "global",
     "dietary": "vegan",
@@ -775,6 +792,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "veg_okra_bhindi",
     "name": "Okra / Bhindi (Cooked)",
+    "imageUrl": "/images/foods/bhindi-okra.webp",
     "category": "vegetables",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -816,6 +834,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_whole_egg",
     "name": "Whole Egg (Boiled)",
+    "imageUrl": "/images/foods/boiled-egg.webp",
     "category": "proteins",
     "cuisine": "global",
     "dietary": "eggetarian",
@@ -860,6 +879,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_egg_whites",
     "name": "Egg Whites",
+    "imageUrl": "/images/foods/egg-whites.webp",
     "category": "proteins",
     "cuisine": "global",
     "dietary": "eggetarian",
@@ -900,6 +920,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_chicken_breast",
     "name": "Chicken Breast (Cooked, Boneless)",
+    "imageUrl": "/images/foods/chicken-breast.webp",
     "category": "proteins",
     "cuisine": "global",
     "dietary": "non_vegetarian",
@@ -944,6 +965,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_paneer_raw",
     "name": "Paneer (Cottage Cheese)",
+    "imageUrl": "/images/foods/paneer-raw.webp",
     "category": "proteins",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -988,6 +1010,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "snack_peanut_butter",
     "name": "Peanut Butter (Natural)",
+    "imageUrl": "/images/foods/peanut-butter.webp",
     "category": "snacks",
     "cuisine": "global",
     "dietary": "vegan",
@@ -1041,6 +1064,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_tofu_firm",
     "name": "Tofu (Firm)",
+    "imageUrl": "/images/foods/firm-tofu.webp",
     "category": "proteins",
     "cuisine": "east_asian",
     "dietary": "vegan",
@@ -1080,6 +1104,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_soy_chunks_dry",
     "name": "Soy Chunks (Nutrela, Dry)",
+    "imageUrl": "/images/foods/soya-chunks.webp",
     "category": "proteins",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -1121,6 +1146,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_curd_dahi",
     "name": "Curd / Dahi (Plain)",
+    "imageUrl": "/images/foods/curd-dahi.webp",
     "category": "dairy",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -1162,6 +1188,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "staple_greek_yogurt",
     "name": "Greek Yogurt (Plain, Non-fat)",
+    "imageUrl": "/images/foods/greek-yogurt.webp",
     "category": "dairy",
     "cuisine": "european",
     "dietary": "vegetarian",
@@ -1201,6 +1228,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_whey_powder",
     "name": "Whey Protein Powder",
+    "imageUrl": "/images/foods/whey-protein-powder.webp",
     "category": "proteins",
     "cuisine": "global",
     "dietary": "vegetarian",
@@ -1253,6 +1281,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_salmon_cooked",
     "name": "Fish (Salmon / Rawas, Cooked)",
+    "imageUrl": "/images/foods/cooked-salmon.webp",
     "category": "proteins",
     "cuisine": "global",
     "dietary": "non_vegetarian",
@@ -1293,6 +1322,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_canned_tuna",
     "name": "Canned Tuna in Water",
+    "imageUrl": "/images/foods/canned-tuna.webp",
     "category": "proteins",
     "cuisine": "global",
     "dietary": "non_vegetarian",
@@ -1332,6 +1362,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_roti",
     "name": "Roti / Chapati (Whole Wheat)",
+    "imageUrl": "/images/foods/roti-chapati.webp",
     "category": "grains",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -1375,6 +1406,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_white_rice",
     "name": "White Rice (Cooked)",
+    "imageUrl": "/images/foods/white-rice.webp",
     "category": "grains",
     "cuisine": "global",
     "dietary": "vegan",
@@ -1425,6 +1457,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_brown_rice",
     "name": "Brown Rice (Cooked)",
+    "imageUrl": "/images/foods/brown-rice.webp",
     "category": "grains",
     "cuisine": "global",
     "dietary": "vegan",
@@ -1473,6 +1506,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_rolled_oats",
     "name": "Rolled Oats (Dry)",
+    "imageUrl": "/images/foods/rolled-oats.webp",
     "category": "grains",
     "cuisine": "global",
     "dietary": "vegan",
@@ -1523,6 +1557,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_bread_whole_wheat",
     "name": "Whole Wheat Bread",
+    "imageUrl": "/images/foods/whole-wheat-bread.webp",
     "category": "grains",
     "cuisine": "global",
     "dietary": "vegan",
@@ -1563,6 +1598,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_poha",
     "name": "Poha (Cooked with Veggies)",
+    "imageUrl": "/images/foods/poha.webp",
     "category": "grains",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -1612,6 +1648,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_upma",
     "name": "Rava Upma",
+    "imageUrl": "/images/foods/rava-upma.webp",
     "category": "grains",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -1652,6 +1689,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_idli",
     "name": "Idli (Steamed Rice & Urad)",
+    "imageUrl": "/images/foods/idli.webp",
     "category": "grains",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -1693,6 +1731,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "grain_plain_dosa",
     "name": "Plain Dosa",
+    "imageUrl": "/images/foods/plain-dosa.webp",
     "category": "grains",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -1733,6 +1772,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_dal_tadka",
     "name": "Yellow Dal Tadka (Cooked)",
+    "imageUrl": "/images/foods/dal-tadka.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -1793,6 +1833,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_dal_makhani",
     "name": "Dal Makhani",
+    "imageUrl": "/images/foods/dal-makhani.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -1833,6 +1874,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_rajma",
     "name": "Rajma Masala (Kidney Beans Curry)",
+    "imageUrl": "/images/foods/rajma-masala.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -1874,6 +1916,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_chole",
     "name": "Chole / Chana Masala (Chickpeas Curry)",
+    "imageUrl": "/images/foods/chole-masala.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -1915,6 +1958,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_palak_paneer",
     "name": "Palak Paneer",
+    "imageUrl": "/images/foods/palak-paneer.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -1954,6 +1998,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_paneer_butter_masala",
     "name": "Paneer Butter Masala",
+    "imageUrl": "/images/foods/paneer-butter-masala.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -1993,6 +2038,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_mixed_veg",
     "name": "Mixed Vegetable Curry (Subzi)",
+    "imageUrl": "/images/foods/mixed-veg-curry.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -2033,6 +2079,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_khichdi",
     "name": "Moong Dal Khichdi",
+    "imageUrl": "/images/foods/moong-dal-khichdi.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -2073,6 +2120,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_sambar",
     "name": "Sambar (South Indian Lentil Stew)",
+    "imageUrl": "/images/foods/sambar.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -2122,6 +2170,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_chicken_curry",
     "name": "Homestyle Chicken Curry",
+    "imageUrl": "/images/foods/homestyle-chicken-curry.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "non_vegetarian",
@@ -2163,6 +2212,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_chicken_biryani",
     "name": "Chicken Biryani",
+    "imageUrl": "/images/foods/chicken-biryani.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "non_vegetarian",
@@ -2212,6 +2262,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "snack_roasted_chana",
     "name": "Roasted Chickpeas (Bhuna Chana)",
+    "imageUrl": "/images/foods/roasted-chana.webp",
     "category": "snacks",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -2252,6 +2303,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "snack_peanuts_roasted",
     "name": "Roasted Peanuts (Unsalted)",
+    "imageUrl": "/images/foods/roasted-peanuts.webp",
     "category": "snacks",
     "cuisine": "global",
     "dietary": "vegan",
@@ -2292,6 +2344,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "snack_almonds",
     "name": "Raw Almonds",
+    "imageUrl": "/images/foods/raw-almonds.webp",
     "category": "snacks",
     "cuisine": "global",
     "dietary": "vegan",
@@ -2350,6 +2403,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "snack_walnuts",
     "name": "Walnuts",
+    "imageUrl": "/images/foods/walnuts.webp",
     "category": "snacks",
     "cuisine": "global",
     "dietary": "vegan",
@@ -2389,6 +2443,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "snack_makhana",
     "name": "Roasted Makhana (Fox Nuts)",
+    "imageUrl": "/images/foods/roasted-makhana.webp",
     "category": "snacks",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -2429,6 +2484,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "snack_sprouts_salad",
     "name": "Moong Sprouts Salad",
+    "imageUrl": "/images/foods/moong-sprouts-salad.webp",
     "category": "snacks",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -2469,6 +2525,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "bev_whole_milk",
     "name": "Whole Milk (Full Cream)",
+    "imageUrl": "/images/foods/whole-milk.webp",
     "category": "beverages",
     "cuisine": "global",
     "dietary": "vegetarian",
@@ -2509,6 +2566,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "bev_toned_milk",
     "name": "Toned Milk (Low Fat)",
+    "imageUrl": "/images/foods/toned-milk.webp",
     "category": "beverages",
     "cuisine": "global",
     "dietary": "vegetarian",
@@ -2549,6 +2607,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "bev_buttermilk",
     "name": "Buttermilk / Chaas (Salted)",
+    "imageUrl": "/images/foods/buttermilk-chaas.webp",
     "category": "beverages",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -2590,6 +2649,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "bev_sweet_lassi",
     "name": "Sweet Lassi",
+    "imageUrl": "/images/foods/sweet-lassi.webp",
     "category": "beverages",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -2629,6 +2689,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "bev_chai",
     "name": "Masala Chai with Milk (1 tsp sugar)",
+    "imageUrl": "/images/foods/masala-chai.webp",
     "category": "beverages",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -2670,6 +2731,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "bev_coffee_black",
     "name": "Black Coffee (No Sugar)",
+    "imageUrl": "/images/foods/black-coffee.webp",
     "category": "beverages",
     "cuisine": "global",
     "dietary": "vegan",
@@ -2710,6 +2772,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "bev_coconut_water",
     "name": "Fresh Coconut Water",
+    "imageUrl": "/images/foods/coconut-water.webp",
     "category": "beverages",
     "cuisine": "global",
     "dietary": "vegan",
@@ -2750,6 +2813,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "dessert_gulab_jamun",
     "name": "Gulab Jamun",
+    "imageUrl": "/images/foods/gulab-jamun.webp",
     "category": "desserts",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -2789,6 +2853,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "dessert_rasgulla",
     "name": "Rasgulla",
+    "imageUrl": "/images/foods/rasgulla.webp",
     "category": "desserts",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -2828,6 +2893,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "dessert_kheer",
     "name": "Rice Kheer (Rice Pudding)",
+    "imageUrl": "/images/foods/rice-kheer.webp",
     "category": "desserts",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -2868,6 +2934,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "dessert_dark_chocolate",
     "name": "Dark Chocolate (70% Cacao)",
+    "imageUrl": "/images/foods/dark-chocolate.webp",
     "category": "desserts",
     "cuisine": "global",
     "dietary": "vegan",
@@ -2907,6 +2974,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_masala_dosa",
     "name": "Masala Dosa",
+    "imageUrl": "/images/foods/masala-dosa.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -2950,6 +3018,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_ghee_roast_dosa",
     "name": "Ghee Roast Dosa",
+    "imageUrl": "/images/foods/ghee-roast-dosa.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -2993,6 +3062,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_uttapam",
     "name": "Uttapam (Onion & Tomato)",
+    "imageUrl": "/images/foods/uttapam.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -3037,6 +3107,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_veg_upma",
     "name": "Vegetable Upma",
+    "imageUrl": "/images/foods/veg-upma.webp",
     "category": "grains",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -3080,6 +3151,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_ven_pongal",
     "name": "Ven Pongal",
+    "imageUrl": "/images/foods/ven-pongal.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -3123,6 +3195,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_rasam",
     "name": "Tomato Rasam",
+    "imageUrl": "/images/foods/tomato-rasam.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -3175,6 +3248,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_medu_vada",
     "name": "Medu Vada (Crispy Lentil Fritter)",
+    "imageUrl": "/images/foods/medu-vada.webp",
     "category": "snacks",
     "cuisine": "indian",
     "dietary": "vegan",
@@ -3218,6 +3292,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_amritsari_kulcha",
     "name": "Amritsari Kulcha",
+    "imageUrl": "/images/foods/amritsari-kulcha.webp",
     "category": "grains",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -3262,6 +3337,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_aloo_paratha",
     "name": "Aloo Paratha (Homestyle)",
+    "imageUrl": "/images/foods/aloo-paratha.webp",
     "category": "grains",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -3305,6 +3381,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_paneer_bhurji",
     "name": "Paneer Bhurji",
+    "imageUrl": "/images/foods/paneer-bhurji.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -3348,6 +3425,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_paneer_tikka",
     "name": "Paneer Tikka (Tandoori Grilled)",
+    "imageUrl": "/images/foods/paneer-tikka.webp",
     "category": "proteins",
     "cuisine": "indian",
     "dietary": "vegetarian",
@@ -3400,6 +3478,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_chicken_tikka",
     "name": "Chicken Tikka (Tandoori Boneless)",
+    "imageUrl": "/images/foods/chicken-tikka.webp",
     "category": "proteins",
     "cuisine": "indian",
     "dietary": "non_vegetarian",
@@ -3452,6 +3531,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_butter_chicken",
     "name": "Butter Chicken (Murgh Makhani)",
+    "imageUrl": "/images/foods/butter-chicken.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "non_vegetarian",
@@ -3495,6 +3575,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_hyderabadi_biryani",
     "name": "Hyderabadi Dum Chicken Biryani",
+    "imageUrl": "/images/foods/hyderabadi-biryani.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "non_vegetarian",
@@ -3547,6 +3628,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "indian_mutton_biryani",
     "name": "Mutton Biryani",
+    "imageUrl": "/images/foods/mutton-biryani.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "non_vegetarian",
@@ -3599,6 +3681,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_beef_steak_grilled",
     "name": "Grilled Beef Steak (Sirloin, Lean)",
+    "imageUrl": "/images/foods/beef-steak.webp",
     "category": "proteins",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -3652,6 +3735,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_ground_beef_cooked",
     "name": "Cooked Ground Beef (85/15 Lean)",
+    "imageUrl": "/images/foods/ground-beef.webp",
     "category": "proteins",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -3696,6 +3780,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_beef_burger_patty",
     "name": "Beef Burger Patty (Grilled)",
+    "imageUrl": "/images/foods/beef-burger-patty.webp",
     "category": "proteins",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -3739,6 +3824,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_beef_meatballs",
     "name": "Beef Meatballs (Cooked)",
+    "imageUrl": "/images/foods/beef-meatballs.webp",
     "category": "proteins",
     "cuisine": "european",
     "dietary": "non_vegetarian",
@@ -3791,6 +3877,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_roast_beef",
     "name": "Roast Beef (Deli Sliced)",
+    "imageUrl": "/images/foods/roast-beef.webp",
     "category": "proteins",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -3842,6 +3929,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_pork_chop_grilled",
     "name": "Grilled Pork Chop (Lean)",
+    "imageUrl": "/images/foods/grilled-pork-chop.webp",
     "category": "proteins",
     "cuisine": "european",
     "dietary": "non_vegetarian",
@@ -3885,6 +3973,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_cooked_bacon",
     "name": "Cooked Bacon (Crispy Strips)",
+    "imageUrl": "/images/foods/cooked-bacon.webp",
     "category": "proteins",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -3937,6 +4026,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_pork_tenderloin",
     "name": "Pork Tenderloin (Roasted, Lean)",
+    "imageUrl": "/images/foods/pork-tenderloin.webp",
     "category": "proteins",
     "cuisine": "european",
     "dietary": "non_vegetarian",
@@ -3979,6 +4069,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_lamb_kebab",
     "name": "Lamb Kebab (Seekh / Skewer)",
+    "imageUrl": "/images/foods/lamb-kebab.webp",
     "category": "proteins",
     "cuisine": "middle_eastern",
     "dietary": "non_vegetarian",
@@ -4022,6 +4113,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_lamb_curry",
     "name": "Lamb Curry (Homestyle)",
+    "imageUrl": "/images/foods/lamb-curry.webp",
     "category": "indian_meals",
     "cuisine": "indian",
     "dietary": "non_vegetarian",
@@ -4065,6 +4157,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_salmon_fillet_pan_seared",
     "name": "Pan-Seared Salmon Fillet",
+    "imageUrl": "/images/foods/pan-seared-salmon-fillet.webp",
     "category": "proteins",
     "cuisine": "european",
     "dietary": "non_vegetarian",
@@ -4108,6 +4201,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_tuna_steak",
     "name": "Tuna Steak (Yellowfin, Grilled)",
+    "imageUrl": "/images/foods/tuna-steak.webp",
     "category": "proteins",
     "cuisine": "global",
     "dietary": "non_vegetarian",
@@ -4151,6 +4245,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_cooked_shrimp",
     "name": "Cooked Shrimp (Steamed/Boiled)",
+    "imageUrl": "/images/foods/cooked-shrimp.webp",
     "category": "proteins",
     "cuisine": "global",
     "dietary": "non_vegetarian",
@@ -4195,6 +4290,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_grilled_cod",
     "name": "Grilled Cod (Atlantic Whitefish)",
+    "imageUrl": "/images/foods/grilled-cod.webp",
     "category": "proteins",
     "cuisine": "european",
     "dietary": "non_vegetarian",
@@ -4238,6 +4334,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "protein_canned_sardines",
     "name": "Sardines (Canned in Olive Oil, Drained)",
+    "imageUrl": "/images/foods/canned-sardines.webp",
     "category": "proteins",
     "cuisine": "mediterranean",
     "dietary": "non_vegetarian",
@@ -4281,6 +4378,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_salmon_sushi",
     "name": "Salmon Sushi (Nigiri)",
+    "imageUrl": "/images/foods/salmon-sushi.webp",
     "category": "fast_food",
     "cuisine": "east_asian",
     "dietary": "non_vegetarian",
@@ -4333,6 +4431,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_chicken_teriyaki",
     "name": "Chicken Teriyaki",
+    "imageUrl": "/images/foods/chicken-teriyaki.webp",
     "category": "proteins",
     "cuisine": "east_asian",
     "dietary": "non_vegetarian",
@@ -4375,6 +4474,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_tofu_stir_fry",
     "name": "Tofu Stir Fry with Vegetables",
+    "imageUrl": "/images/foods/tofu-stir-fry.webp",
     "category": "proteins",
     "cuisine": "east_asian",
     "dietary": "vegan",
@@ -4418,6 +4518,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_miso_soup",
     "name": "Miso Soup with Tofu & Seaweed",
+    "imageUrl": "/images/foods/miso-soup.webp",
     "category": "soups_salads",
     "cuisine": "east_asian",
     "dietary": "vegan",
@@ -4461,6 +4562,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_ramen_noodles",
     "name": "Ramen Noodles with Broth & Egg",
+    "imageUrl": "/images/foods/ramen-noodles.webp",
     "category": "fast_food",
     "cuisine": "east_asian",
     "dietary": "eggetarian",
@@ -4504,6 +4606,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_kimchi",
     "name": "Kimchi (Traditional Napa Cabbage)",
+    "imageUrl": "/images/foods/kimchi.webp",
     "category": "vegetables",
     "cuisine": "east_asian",
     "dietary": "vegan",
@@ -4547,6 +4650,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_edamame_steamed",
     "name": "Edamame (Steamed in Pods)",
+    "imageUrl": "/images/foods/steamed-edamame.webp",
     "category": "proteins",
     "cuisine": "east_asian",
     "dietary": "vegan",
@@ -4590,6 +4694,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_soba_noodles",
     "name": "Soba Noodles (Buckwheat, Cooked)",
+    "imageUrl": "/images/foods/soba-noodles.webp",
     "category": "grains",
     "cuisine": "east_asian",
     "dietary": "vegan",
@@ -4633,6 +4738,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_bibimbap",
     "name": "Bibimbap (Korean Mixed Rice & Veg Bowl)",
+    "imageUrl": "/images/foods/bibimbap.webp",
     "category": "fast_food",
     "cuisine": "east_asian",
     "dietary": "eggetarian",
@@ -4676,6 +4782,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "asian_veg_dumplings",
     "name": "Vegetable Dumplings (Steamed Gyoza)",
+    "imageUrl": "/images/foods/veg-dumplings.webp",
     "category": "snacks",
     "cuisine": "east_asian",
     "dietary": "vegan",
@@ -4730,6 +4837,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_hummus",
     "name": "Hummus (Creamy Chickpea Dip)",
+    "imageUrl": "/images/foods/hummus.webp",
     "category": "snacks",
     "cuisine": "middle_eastern",
     "dietary": "vegan",
@@ -4782,6 +4890,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_falafel",
     "name": "Falafel (Crisp Chickpea Balls)",
+    "imageUrl": "/images/foods/falafel.webp",
     "category": "snacks",
     "cuisine": "middle_eastern",
     "dietary": "vegan",
@@ -4834,6 +4943,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_pita_bread",
     "name": "Pita Bread (Whole Wheat)",
+    "imageUrl": "/images/foods/pita-bread.webp",
     "category": "grains",
     "cuisine": "middle_eastern",
     "dietary": "vegan",
@@ -4877,6 +4987,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_tzatziki",
     "name": "Tzatziki (Greek Yogurt Dip)",
+    "imageUrl": "/images/foods/tzatziki.webp",
     "category": "snacks",
     "cuisine": "european",
     "dietary": "vegetarian",
@@ -4929,6 +5040,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_feta_cheese",
     "name": "Feta Cheese (Crumbled)",
+    "imageUrl": "/images/foods/feta-cheese.webp",
     "category": "dairy",
     "cuisine": "european",
     "dietary": "vegetarian",
@@ -4972,6 +5084,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_quinoa_salad",
     "name": "Mediterranean Quinoa Salad",
+    "imageUrl": "/images/foods/mediterranean-quinoa-salad.webp",
     "category": "soups_salads",
     "cuisine": "european",
     "dietary": "vegan",
@@ -5014,6 +5127,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_cooked_pasta",
     "name": "Cooked Pasta (Penne / Spaghetti)",
+    "imageUrl": "/images/foods/cooked-pasta.webp",
     "category": "grains",
     "cuisine": "european",
     "dietary": "vegan",
@@ -5067,6 +5181,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_veg_lasagna",
     "name": "Vegetable Lasagna",
+    "imageUrl": "/images/foods/vegetable-lasagna.webp",
     "category": "fast_food",
     "cuisine": "european",
     "dietary": "vegetarian",
@@ -5110,6 +5225,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_chicken_caesar_salad",
     "name": "Chicken Caesar Salad (with dressing)",
+    "imageUrl": "/images/foods/chicken-caesar-salad.webp",
     "category": "soups_salads",
     "cuisine": "european",
     "dietary": "non_vegetarian",
@@ -5152,6 +5268,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "euro_margherita_pizza",
     "name": "Margherita Pizza (Thin Crust)",
+    "imageUrl": "/images/foods/margherita-pizza.webp",
     "category": "fast_food",
     "cuisine": "european",
     "dietary": "vegetarian",
@@ -5196,6 +5313,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_beef_tacos",
     "name": "Beef Tacos (2 Tacos)",
+    "imageUrl": "/images/foods/beef-tacos.webp",
     "category": "fast_food",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -5240,6 +5358,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_chicken_burrito",
     "name": "Chicken Burrito (Rice, Beans, Chicken)",
+    "imageUrl": "/images/foods/chicken-burrito.webp",
     "category": "fast_food",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -5283,6 +5402,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_pulled_pork",
     "name": "Pulled Pork (Slow Cooked BBQ)",
+    "imageUrl": "/images/foods/pulled-pork.webp",
     "category": "proteins",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -5326,6 +5446,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_grilled_cheese",
     "name": "Grilled Cheese Sandwich",
+    "imageUrl": "/images/foods/grilled-cheese-sandwich.webp",
     "category": "grains",
     "cuisine": "american",
     "dietary": "vegetarian",
@@ -5368,6 +5489,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_pancakes",
     "name": "Pancakes (Homestyle Fluffy)",
+    "imageUrl": "/images/foods/pancakes.webp",
     "category": "desserts",
     "cuisine": "american",
     "dietary": "vegetarian",
@@ -5420,6 +5542,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_classic_cheeseburger",
     "name": "Classic Cheeseburger",
+    "imageUrl": "/images/foods/classic-cheeseburger.webp",
     "category": "fast_food",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -5464,6 +5587,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_mac_and_cheese",
     "name": "Macaroni and Cheese",
+    "imageUrl": "/images/foods/macaroni-and-cheese.webp",
     "category": "fast_food",
     "cuisine": "american",
     "dietary": "vegetarian",
@@ -5516,6 +5640,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_chili_con_carne",
     "name": "Chili con Carne (Beef & Beans)",
+    "imageUrl": "/images/foods/chili-con-carne.webp",
     "category": "indian_meals",
     "cuisine": "american",
     "dietary": "non_vegetarian",
@@ -5568,6 +5693,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_sweet_corn_boiled",
     "name": "Boiled Sweet Corn (Kernels)",
+    "imageUrl": "/images/foods/boiled-sweet-corn.webp",
     "category": "vegetables",
     "cuisine": "american",
     "dietary": "vegan",
@@ -5621,6 +5747,7 @@ export const FOOD_CATALOG: CatalogFoodItem[] = [
   {
     "id": "american_sweet_potato_fries",
     "name": "Sweet Potato Fries (Baked)",
+    "imageUrl": "/images/foods/sweet-potato-fries.webp",
     "category": "snacks",
     "cuisine": "american",
     "dietary": "vegan",

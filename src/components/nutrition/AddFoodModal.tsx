@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Info,
   AlertTriangle,
+  Upload,
 } from 'lucide-react'
 import type { FoodEntry, MealType, FoodSearchResult } from '@/types/nutrition'
 import {
@@ -262,7 +263,21 @@ export function AddFoodModal({
   const [customCarbs, setCustomCarbs] = useState('')
   const [customFat, setCustomFat] = useState('')
   const [customFiber, setCustomFiber] = useState('')
+  const [customImageUrl, setCustomImageUrl] = useState<string>('')
+  const [customImagePreview, setCustomImagePreview] = useState<string | null>(null)
   const [saveAndLog, setSaveAndLog] = useState(true)
+
+  const handleCustomImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const result = reader.result as string
+      setCustomImagePreview(result)
+      setCustomImageUrl(result)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const handleCustomFoodSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -280,6 +295,8 @@ export function AddFoodModal({
         carbs: Math.max(0, parseFloat(customCarbs) || 0),
         fat: Math.max(0, parseFloat(customFat) || 0),
         fiber: Math.max(0, parseFloat(customFiber) || 0),
+        image_url: customImageUrl.trim() || null,
+        imageUrl: customImageUrl.trim() || null,
       })
 
       if (saveAndLog) {
@@ -308,6 +325,8 @@ export function AddFoodModal({
       setCustomCarbs('')
       setCustomFat('')
       setCustomFiber('')
+      setCustomImageUrl('')
+      setCustomImagePreview(null)
       onOpenChange(false)
     } finally {
       setIsAdding(false)
@@ -1006,6 +1025,59 @@ export function AddFoodModal({
                       placeholder="e.g. Homemade, Optimum Nutrition"
                       className="input-base text-sm"
                     />
+                  </div>
+                </div>
+
+                {/* Optional Custom Food Photo */}
+                <div className="p-3 rounded-2xl bg-surface-50 border border-surface-200/80">
+                  <label className="block text-xs font-bold text-surface-700 mb-1.5">
+                    Food Photograph (optional)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-white border border-surface-200 shrink-0 flex items-center justify-center shadow-2xs">
+                      {customImagePreview ? (
+                        <img
+                          src={customImagePreview}
+                          alt="Custom food preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <img
+                          src="/images/foods/food-placeholder.svg"
+                          alt="Neutral food placeholder"
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-colors cursor-pointer shadow-2xs">
+                          <Upload size={13} />
+                          <span>Choose Photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleCustomImageChange}
+                          />
+                        </label>
+                        {customImagePreview && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomImagePreview(null)
+                              setCustomImageUrl('')
+                            }}
+                            className="text-xs text-rose-600 hover:text-rose-700 font-bold px-2 py-1"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-surface-400 mt-1">
+                        Upload an authentic photo or leave blank for a clean neutral placeholder.
+                      </p>
+                    </div>
                   </div>
                 </div>
 

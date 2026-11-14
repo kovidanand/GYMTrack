@@ -17,6 +17,11 @@ import {
   convertUnitQuantity,
   type ServingUnitOption,
 } from '@/lib/nutritionService'
+import {
+  getFoodImageUrl,
+  getFoodImageAlt,
+  DEFAULT_FOOD_PLACEHOLDER,
+} from '@/data/foodImageMap'
 import { FoodQuantityInput } from './FoodQuantityInput'
 
 interface FoodLibraryViewProps {
@@ -39,30 +44,12 @@ const CATEGORIES = [
   { id: 'custom', label: '⭐ Custom Foods' },
 ]
 
-// Curated high-quality, authentic food photography representing global cuisines & categories
-const CUISINE_PHOTOS: Record<string, string> = {
-  indian: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=400&q=80',
-  east_asian: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=400&q=80',
-  southeast_asian: 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=400&q=80',
-  european: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=400&q=80',
-  mediterranean: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80',
-  american: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80',
-  middle_eastern: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80',
-  global: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=400&q=80',
-}
-
-const CATEGORY_FALLBACK_PHOTOS: Record<string, string> = {
-  fruits: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=400&q=80',
-  beverages: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80',
-}
-
-function getFoodThumbnail(food: { cuisine?: string; category?: string; imageUrl?: string }): string {
-  if (food.imageUrl) return food.imageUrl
-  const c = food.cuisine?.toLowerCase()
-  if (c && CUISINE_PHOTOS[c]) return CUISINE_PHOTOS[c]
-  const cat = food.category?.toLowerCase()
-  if (cat && CATEGORY_FALLBACK_PHOTOS[cat]) return CATEGORY_FALLBACK_PHOTOS[cat]
-  return CUISINE_PHOTOS.global
+/**
+ * Returns exact photographic asset for each food item.
+ * Never assigns generic cuisine or category fallback photos.
+ */
+function getFoodThumbnail(food: { id?: string; name?: string; imageUrl?: string; isCustom?: boolean }): string {
+  return getFoodImageUrl(food)
 }
 
 export function FoodLibraryView({
@@ -326,15 +313,15 @@ export function FoodLibraryView({
               className="group p-3.5 sm:p-4 rounded-2xl bg-white border border-surface-200 hover:border-emerald-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between gap-3 text-left"
             >
               <div className="flex items-start gap-3">
-                {/* Authentic Cuisine Food Image */}
-                <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-surface-100 shrink-0 border border-surface-200/70">
+                {/* Exact Verified Food Photography */}
+                <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-surface-100 shrink-0 border border-surface-200/80 shadow-2xs">
                   <img
                     src={getFoodThumbnail(food)}
-                    alt={food.name}
+                    alt={getFoodImageAlt(food)}
                     loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={e => {
-                      (e.currentTarget as HTMLImageElement).src = CUISINE_PHOTOS.global
+                      (e.currentTarget as HTMLImageElement).src = DEFAULT_FOOD_PLACEHOLDER
                     }}
                   />
                 </div>
@@ -398,14 +385,14 @@ export function FoodLibraryView({
             >
               <div className="flex items-center justify-between pb-3 border-b border-surface-200">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-surface-100 shrink-0 border border-surface-200/70">
+                  <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-surface-100 shrink-0 border border-surface-200/80 shadow-2xs">
                     <img
                       src={getFoodThumbnail(selectedFood)}
-                      alt={selectedFood.name}
+                      alt={getFoodImageAlt(selectedFood)}
                       loading="lazy"
                       className="w-full h-full object-cover"
                       onError={e => {
-                        (e.currentTarget as HTMLImageElement).src = CUISINE_PHOTOS.global
+                        (e.currentTarget as HTMLImageElement).src = DEFAULT_FOOD_PLACEHOLDER
                       }}
                     />
                   </div>
