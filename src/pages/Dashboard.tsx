@@ -433,7 +433,7 @@ export default function Dashboard() {
       {/* ── 2. TODAY'S TRAINING EXPERIENCE (CENTRAL COMPONENT) ── */}
       <section aria-label="Today's training experience" className="space-y-3">
         {activePlan ? (
-          <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-5">
+          <div className="card p-3.5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4 sm:space-y-5 w-full min-w-0 box-border overflow-hidden">
             {/* Header with Workout info */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-100 pb-4">
               <div>
@@ -484,42 +484,42 @@ export default function Dashboard() {
                   Watch demonstration videos and log completed sets below:
                 </p>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 w-full min-w-0">
                   {planExercisesWithStatus.map(({ workoutExercise, exercise, isCompleted }) => (
                     <div
                       key={workoutExercise.id}
                       className={cn(
-                        "p-3 rounded-xl border transition-all flex items-center justify-between gap-3 group",
+                        "p-2.5 sm:p-3.5 rounded-xl border transition-all grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-3 group w-full max-w-full min-w-0 box-border overflow-hidden",
                         isCompleted
                           ? "bg-emerald-50/40 border-emerald-200"
                           : "bg-surface-50/70 border-surface-200 hover:border-brand-300 hover:bg-white shadow-2xs"
                       )}
                     >
                       {/* Video Thumbnail */}
-                      <div className="w-20 sm:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 flex-shrink-0 relative border border-surface-200">
+                      <div className="w-16 sm:w-20 md:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 shrink-0 relative border border-surface-200">
                         <ExerciseMedia exercise={exercise} variant="thumbnail" />
                       </div>
 
                       {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-xs sm:text-sm text-surface-900 truncate">
+                      <div className="min-w-0 py-0.5">
+                        <h4 className="font-bold text-xs sm:text-sm text-surface-900 line-clamp-2 break-words leading-snug">
                           {exercise.name}
                         </h4>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           {exercise.muscle_group && (
                             <MuscleGroupBadge group={exercise.muscle_group} />
                           )}
-                          <span className="text-[11px] font-semibold text-surface-500">
+                          <span className="text-[10px] sm:text-[11px] font-semibold text-surface-500 whitespace-nowrap">
                             {workoutExercise.sets || 3} × {workoutExercise.reps || '8-12'}
                           </span>
                         </div>
                       </div>
 
                       {/* Completion State or Log Button */}
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0 self-center pl-1">
                         {isCompleted ? (
-                          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold">
-                            <CheckCircle2 size={14} className="text-emerald-600" />
+                          <div className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] sm:text-xs font-bold whitespace-nowrap shrink-0">
+                            <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
                             <span>Done</span>
                           </div>
                         ) : (
@@ -534,7 +534,7 @@ export default function Dashboard() {
                               targetReps: workoutExercise.reps || '8-12',
                               restSeconds: workoutExercise.rest_seconds || 90
                             })}
-                            className="btn-primary py-1.5 px-3 text-xs font-bold flex items-center gap-1"
+                            className="btn-primary py-1.5 px-2.5 sm:px-3 text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap shrink-0 shadow-2xs"
                             title={`Log ${exercise.name}`}
                           >
                             <Plus size={13} className="stroke-[3]" />

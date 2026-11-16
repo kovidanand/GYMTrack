@@ -575,7 +575,7 @@ export default function Progress() {
           <h2 className="text-lg font-bold text-surface-900 tracking-tight">Personal Bests</h2>
           <p className="text-xs text-surface-500 mt-0.5">Highest recorded working weight per exercise.</p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {personalRecords && personalRecords.length > 0 ? (
             personalRecords.map(pr => (
               <div

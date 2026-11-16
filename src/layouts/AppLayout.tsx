@@ -34,7 +34,7 @@ export function AppLayout() {
       <MobileTopBar onOpenTimer={() => setIsTimerOpen(true)} />
 
       {/* Main Content Area: Centered, spacious professional dashboard */}
-      <main className="flex-1 w-full pt-16 lg:pt-20 pb-28 lg:pb-12 max-w-[100vw] overflow-x-hidden">
+      <main className="flex-1 w-full pt-16 lg:pt-20 pb-36 sm:pb-32 lg:pb-12 max-w-[100vw] overflow-x-hidden">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
           <Outlet />
         </div>

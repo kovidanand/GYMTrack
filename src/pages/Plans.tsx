@@ -307,7 +307,7 @@ export default function Plans() {
   }
 
   return (
-    <div className="animate-fade-in space-y-8 pb-4 max-w-5xl mx-auto px-4 sm:px-6 w-full">
+    <div className="animate-fade-in space-y-6 sm:space-y-8 pb-4 w-full min-w-0">
       {/* ── PAGE HEADER ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div>
@@ -335,7 +335,7 @@ export default function Plans() {
       {/* ── SECTION A: ACTIVE PLAN OVERVIEW ── */}
       {activePlan ? (
         <section aria-label="Active Training Plan" className="space-y-6">
-          <div className="card p-5 sm:p-6 bg-gradient-to-br from-brand-900 via-surface-900 to-surface-950 text-white rounded-2xl shadow-lg border border-surface-800 space-y-5">
+          <div className="card p-4 sm:p-6 bg-gradient-to-br from-brand-900 via-surface-900 to-surface-950 text-white rounded-2xl shadow-lg border border-surface-800 space-y-5 w-full min-w-0 box-border overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
@@ -411,7 +411,7 @@ export default function Plans() {
           </div>
 
           {/* ── SECTION B: TODAY'S WORKOUT IN ACTIVE PLAN ── */}
-          <div className="card p-5 sm:p-6 bg-white rounded-2xl shadow-xs border border-surface-200 space-y-5">
+          <div className="card p-3.5 sm:p-6 bg-white rounded-2xl shadow-xs border border-surface-200 space-y-4 sm:space-y-5 w-full min-w-0 box-border overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-100 pb-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -444,7 +444,7 @@ export default function Plans() {
                   Tap any exercise to view demonstration video, cues, and log your completed sets.
                 </p>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 w-full min-w-0">
                   {todayWorkout.workout_exercises.map((we, idx) => {
                     const ex = we.exercise || DEFAULT_EXERCISES.find(e => e.id === we.exercise_id) || DEFAULT_EXERCISES[0]
                     const isCompleted = isPlanExerciseCompleted(
@@ -468,22 +468,22 @@ export default function Plans() {
                           targetReps: we.reps || '8-12',
                           restSeconds: we.rest_seconds || 90
                         })}
-                        className={`p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5 sm:gap-3 group ${
+                        className={`p-2.5 sm:p-3.5 rounded-xl border transition-all cursor-pointer grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-3 group w-full max-w-full min-w-0 box-border overflow-hidden ${
                           isCompleted
                             ? 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300'
                             : 'bg-surface-50/60 border-surface-200 hover:border-brand-300 hover:bg-surface-50 shadow-2xs'
                         }`}
                       >
-                        {/* Video Thumbnail Box - Clean 16:9 ratio, seamless neutral surface, no black background */}
-                        <div className="w-16 sm:w-20 md:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 flex-shrink-0 relative border border-surface-200/80 shadow-2xs">
+                        {/* Video Thumbnail Box - Clean 16:9 ratio, seamless neutral surface */}
+                        <div className="w-16 sm:w-20 md:w-24 aspect-video rounded-lg overflow-hidden bg-surface-100 shrink-0 relative border border-surface-200/80 shadow-2xs">
                           <ExerciseMedia exercise={ex} variant="thumbnail" />
                         </div>
 
                         {/* Title & Sets */}
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 py-0.5">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-xs font-extrabold text-surface-400 shrink-0">#{idx + 1}</span>
-                            <h4 className="text-xs sm:text-sm font-bold text-surface-900 group-hover:text-brand-600 transition-colors truncate">
+                            <span className="text-[11px] sm:text-xs font-extrabold text-surface-400 shrink-0">#{idx + 1}</span>
+                            <h4 className="text-xs sm:text-sm font-bold text-surface-900 group-hover:text-brand-600 transition-colors line-clamp-2 break-words leading-snug">
                               {ex.name}
                             </h4>
                           </div>
@@ -498,16 +498,16 @@ export default function Plans() {
                           </div>
                         </div>
 
-                        {/* Completion Status */}
-                        <div className="flex-shrink-0">
+                        {/* Completion Status / Log Button */}
+                        <div className="shrink-0 self-center pl-1">
                           {isCompleted ? (
-                            <span className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-emerald-700 bg-emerald-100 px-2 sm:px-2.5 py-1 rounded-full whitespace-nowrap">
-                              <CheckCircle2 size={13} className="text-emerald-600" /> Done
+                            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-emerald-700 bg-emerald-100 px-2 sm:px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">
+                              <CheckCircle2 size={13} className="text-emerald-600 shrink-0" /> Done
                             </span>
                           ) : (
                             <button
                               type="button"
-                              className="text-xs font-bold text-brand-600 group-hover:bg-brand-50 px-2.5 py-1 rounded-lg transition-colors border border-brand-200"
+                              className="btn-primary py-1.5 px-2.5 sm:px-3 text-xs font-bold inline-flex items-center justify-center gap-1 whitespace-nowrap shrink-0 shadow-2xs"
                             >
                               Log
                             </button>
@@ -540,12 +540,12 @@ export default function Plans() {
           </div>
 
           {/* ── SECTION C: WEEKLY SCHEDULE STRIP ── */}
-          <div className="card p-5 bg-white rounded-2xl shadow-xs border border-surface-200 space-y-4">
+          <div className="card p-3.5 sm:p-5 bg-white rounded-2xl shadow-xs border border-surface-200 space-y-4 w-full min-w-0 box-border overflow-hidden">
             <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">
               Weekly Routine Schedule
             </h3>
 
-            <div className="grid grid-cols-2 sm:grid-cols-7 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-7 gap-2 w-full min-w-0">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dayName, idx) => {
                 const dayNum = idx + 1
                 const isToday = dayNum === todayDayNumber

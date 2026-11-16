@@ -242,7 +242,7 @@ export default function Exercises() {
             value={equipment}
             onChange={v => setEquipment(v as typeof equipment)}
           />
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             <FilterChips
               id="filter-difficulty"
               label="Difficulty"

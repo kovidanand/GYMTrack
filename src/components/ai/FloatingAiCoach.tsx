@@ -74,12 +74,12 @@ export function FloatingAiCoach() {
   if (!user) return null
 
   return (
-    <div className={`fixed ${isProfile ? 'bottom-32' : 'bottom-20'} sm:bottom-6 right-3 sm:right-6 z-40 select-none`}>
+    <div className={`fixed ${isProfile ? 'bottom-[calc(7.5rem+env(safe-area-inset-bottom,0px))]' : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'} sm:bottom-6 right-3 sm:right-6 z-40 select-none pointer-events-none`}>
       {/* ── Collapsed Floating Button (Compact Circular FAB) ── */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-tr from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-600 text-white rounded-full shadow-lg hover:shadow-glow transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+          className="group relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-tr from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-600 text-white rounded-full shadow-lg hover:shadow-glow transition-all duration-300 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 pointer-events-auto"
           aria-label="Open AI Coach"
           title="Open AI Coach"
           id="floating-ai-coach-button"
@@ -102,7 +102,7 @@ export function FloatingAiCoach() {
       {/* ── Expanded Chat Panel ── */}
       {isOpen && (
         <div 
-          className="w-[94vw] sm:w-[410px] h-[580px] max-h-[82vh] bg-white rounded-2xl shadow-2xl border border-surface-200 flex flex-col overflow-hidden animate-scale-in"
+          className="w-[94vw] sm:w-[410px] h-[580px] max-h-[82vh] bg-white rounded-2xl shadow-2xl border border-surface-200 flex flex-col overflow-hidden animate-scale-in pointer-events-auto"
           role="dialog"
           aria-label="GYMTrack AI Fitness and Nutrition Coach"
         >
