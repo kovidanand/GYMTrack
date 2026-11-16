@@ -556,7 +556,7 @@ export default function Dashboard() {
             ) : null}
           </div>
         ) : (
-          <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="card p-3.5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0 box-border overflow-hidden">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0 border border-brand-100">
                 <CalendarDays size={22} />
@@ -621,7 +621,7 @@ export default function Dashboard() {
 
       {/* ── 4. TODAY'S DAILY PROGRESS ── */}
       <section aria-label="Today's progress summary">
-        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
+        <div className="card p-3.5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4 w-full min-w-0 box-border overflow-hidden">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-surface-400">
@@ -711,7 +711,7 @@ export default function Dashboard() {
       {/* ── 5. CURRENT PLAN OVERVIEW ON HOME ── */}
       {activePlan && (
         <section aria-label="Current training program">
-          <div className="card p-5 sm:p-6 bg-gradient-to-br from-surface-900 via-surface-900 to-surface-800 text-white rounded-2xl shadow-xs space-y-4">
+          <div className="card p-3.5 sm:p-6 bg-gradient-to-br from-surface-900 via-surface-900 to-surface-800 text-white rounded-2xl shadow-xs space-y-4 w-full min-w-0 box-border overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -772,7 +772,7 @@ export default function Dashboard() {
 
       {/* ── 6. 7-DAY WEEKLY ACTIVITY (MON - SUN TAP TO INSPECT) ── */}
       <section aria-label="Weekly training activity">
-        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
+        <div className="card p-3.5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4 w-full min-w-0 box-border overflow-hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar size={16} className="text-brand-600" />

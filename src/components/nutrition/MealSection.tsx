@@ -106,75 +106,160 @@ export function MealSection({
           </button>
         </div>
       ) : (
-        <div className="divide-y divide-surface-100">
+        <div className="space-y-3 sm:space-y-0 sm:divide-y sm:divide-surface-100">
           {entries.map(entry => (
-            <div
-              key={entry.id}
-              className="py-2.5 flex items-center justify-between gap-3 group hover:bg-surface-50/50 px-1 rounded-lg transition-colors"
-            >
-              {/* Food Info */}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-surface-900 truncate">
-                    {entry.food_name}
-                  </h4>
-                  {entry.brand && (
-                    <span className="text-[10px] text-surface-400 font-semibold px-1.5 py-0.5 rounded bg-surface-100 truncate">
-                      {entry.brand}
+            <div key={entry.id} className="w-full">
+              {/* ── DESKTOP VIEW (sm:flex) ── */}
+              <div className="hidden sm:flex py-2.5 px-1 items-center justify-between gap-3 group hover:bg-surface-50/50 rounded-lg transition-colors">
+                {/* Food Info */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-surface-900 truncate">
+                      {entry.food_name}
+                    </h4>
+                    {entry.brand && (
+                      <span className="text-[10px] text-surface-400 font-semibold px-1.5 py-0.5 rounded bg-surface-100 truncate">
+                        {entry.brand}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-surface-500 mt-0.5">
+                    <span className="font-semibold text-surface-700">
+                      {formatFoodEntryPortion(entry)}
                     </span>
-                  )}
+                    <span>·</span>
+                    <span className="font-bold text-surface-800">
+                      {Math.round(entry.calories)} kcal
+                    </span>
+                    <span className="text-[11px] text-blue-700 font-semibold">
+                      {Math.round(entry.protein)}g P
+                    </span>
+                    <span className="text-[11px] text-amber-800 font-semibold">
+                      {Math.round(entry.carbs)}g C
+                    </span>
+                    <span className="text-[11px] text-rose-700 font-semibold">
+                      {Math.round(entry.fat)}g F
+                    </span>
+                    {entry.fiber > 0 && (
+                      <span className="text-[11px] text-emerald-700 font-semibold">
+                        {Math.round(entry.fiber)}g Fib
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-surface-500 mt-0.5">
-                  <span className="font-medium text-surface-600">
-                    {formatFoodEntryPortion(entry)}
-                  </span>
-                  <span>·</span>
-                  <span className="font-bold text-surface-800">
-                    {Math.round(entry.calories)} kcal
-                  </span>
-                  <span className="text-[11px] text-blue-600 font-medium">
-                    {entry.protein.toFixed(0)}g P
-                  </span>
-                  <span className="text-[11px] text-amber-700 font-medium">
-                    {entry.carbs.toFixed(0)}g C
-                  </span>
-                  <span className="text-[11px] text-rose-600 font-medium">
-                    {entry.fat.toFixed(0)}g F
-                  </span>
-                  {entry.fiber > 0 && (
-                    <span className="text-[11px] text-emerald-700 font-medium">
-                      {entry.fiber.toFixed(0)}g Fib
-                    </span>
-                  )}
+                {/* Entry Actions */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => onOpenEditModal(entry)}
+                    id={`edit-food-${entry.id}`}
+                    className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg transition-colors"
+                    title="Edit portion"
+                    aria-label="Edit food portion"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Delete "${entry.food_name}" from diary?`)) {
+                        onDeleteEntry(entry.id)
+                      }
+                    }}
+                    id={`delete-food-${entry.id}`}
+                    className="p-1.5 text-surface-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete entry"
+                    aria-label="Delete food entry"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
 
-              {/* Entry Actions */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => onOpenEditModal(entry)}
-                  id={`edit-food-${entry.id}`}
-                  className="p-1.5 text-surface-400 hover:text-surface-700 hover:bg-surface-100 rounded-lg transition-colors"
-                  title="Edit portion"
-                  aria-label="Edit food portion"
-                >
-                  <Edit2 size={14} />
-                </button>
+              {/* ── MOBILE VIEW (< sm) ── */}
+              <div className="flex sm:hidden flex-col gap-2.5 p-3 rounded-xl bg-surface-50/70 border border-surface-200/80 shadow-2xs">
+                {/* ROW 1: Food name + Category */}
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="text-sm font-bold text-surface-900 leading-snug line-clamp-2 break-words flex-1 min-w-0">
+                    {entry.food_name}
+                  </h4>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border capitalize shrink-0 ${config.bg} ${config.color}`}>
+                    {config.title}
+                  </span>
+                </div>
 
-                <button
-                  onClick={() => {
-                    if (window.confirm(`Delete "${entry.food_name}" from diary?`)) {
-                      onDeleteEntry(entry.id)
-                    }
-                  }}
-                  id={`delete-food-${entry.id}`}
-                  className="p-1.5 text-surface-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Delete entry"
-                  aria-label="Delete food entry"
-                >
-                  <Trash2 size={14} />
-                </button>
+                {/* ROW 2: Quantity and Serving Unit */}
+                <div className="flex items-center gap-2 text-xs flex-wrap">
+                  <span className="font-bold text-surface-700 bg-white px-2 py-0.5 rounded-md border border-surface-200/80 shadow-2xs">
+                    {formatFoodEntryPortion(entry)}
+                  </span>
+                  {entry.brand && (
+                    <span className="text-[11px] text-surface-500 font-medium truncate">
+                      ({entry.brand})
+                    </span>
+                  )}
+                </div>
+
+                {/* ROW 3: Calories Prominently + Balanced Macro Badges */}
+                <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap">
+                  <div className="inline-flex items-baseline gap-1 bg-white px-2.5 py-1 rounded-lg border border-surface-200/80 shadow-2xs shrink-0">
+                    <span className="text-base font-black text-surface-900 leading-none">
+                      {Math.round(entry.calories)}
+                    </span>
+                    <span className="text-[10px] text-surface-500 font-bold uppercase tracking-wider">
+                      kcal
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/70">
+                      {Math.round(entry.protein)}g P
+                    </span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/70">
+                      {Math.round(entry.carbs)}g C
+                    </span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200/70">
+                      {Math.round(entry.fat)}g F
+                    </span>
+                    {entry.fiber > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                        {Math.round(entry.fiber)}g Fib
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* ROW 4: Edit and Delete Actions (minimum 44px touch targets) */}
+                <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-surface-200/60">
+                  <button
+                    type="button"
+                    onClick={() => onOpenEditModal(entry)}
+                    id={`mobile-edit-food-${entry.id}`}
+                    className="btn-secondary py-2 px-3 text-xs font-bold inline-flex items-center justify-center gap-1.5 min-h-[44px] touch-manipulation shadow-2xs hover:border-surface-300"
+                    aria-label={`Edit ${entry.food_name} portion`}
+                  >
+                    <Edit2 size={14} className="text-surface-500" />
+                    <span>Edit</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Delete "${entry.food_name}" from diary?`)) {
+                        onDeleteEntry(entry.id)
+                      }
+                    }}
+                    id={`mobile-delete-food-${entry.id}`}
+                    className="py-2 px-3 text-xs font-bold inline-flex items-center justify-center gap-1.5 text-rose-600 bg-rose-50/80 hover:bg-rose-100 rounded-xl border border-rose-200/80 min-h-[44px] touch-manipulation transition-colors shadow-2xs"
+                    aria-label={`Delete ${entry.food_name}`}
+                  >
+                    <Trash2 size={14} className="text-rose-500" />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}

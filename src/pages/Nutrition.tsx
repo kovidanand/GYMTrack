@@ -357,7 +357,7 @@ export default function Nutrition() {
                 {/* Daily Insight & Configured Targets in Balanced 2-Column Section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   {/* Data-Backed Daily Insight */}
-                  <div className="p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-2">
+                  <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-2 w-full min-w-0 box-border">
                     <div className="flex items-center gap-2 text-emerald-800">
                       <Lightbulb size={16} className="text-emerald-600" />
                       <h4 className="text-xs font-black uppercase tracking-wider text-surface-900">
@@ -371,7 +371,7 @@ export default function Nutrition() {
                   </div>
 
                   {/* Daily Goals Summary Card */}
-                  <div className="p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-3">
+                  <div className="p-3.5 sm:p-5 rounded-2xl bg-white border border-surface-200/90 shadow-2xs space-y-3 w-full min-w-0 box-border">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Target size={16} className="text-emerald-600" />

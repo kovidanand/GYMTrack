@@ -80,24 +80,26 @@ export default function Exercises() {
       )}
 
       {/* ── Search + Filter + Demo Variant Toggle ── */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full">
+        {/* Row 1 on mobile: Full-width search input */}
         <SearchInput
           id="exercise-search"
           value={search}
           onChange={setSearch}
           placeholder="Search exercises by name..."
-          className="flex-1"
+          className="flex-1 w-full"
         />
         
+        {/* Row 2 on mobile: Gender Switch, Recommended Dropdown, Filters Button */}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Demonstration Gender Variant Switch */}
-          <div className="flex items-center bg-surface-100 p-0.5 rounded-xl border border-surface-200 shadow-2xs" role="group" aria-label="Exercise demonstration variant">
+          <div className="flex items-center bg-surface-100 p-0.5 rounded-xl border border-surface-200 shadow-2xs shrink-0" role="group" aria-label="Exercise demonstration variant">
             <button
               type="button"
               onClick={() => setDemoGender('male')}
               id="library-demo-male-btn"
               className={cn(
-                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[38px] flex items-center justify-center",
                 demoGender === 'male'
                   ? "bg-white text-surface-900 shadow-xs border border-surface-200/80 font-black"
                   : "text-surface-600 hover:text-surface-900"
@@ -111,7 +113,7 @@ export default function Exercises() {
               onClick={() => setDemoGender('female')}
               id="library-demo-female-btn"
               className={cn(
-                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+                "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all min-h-[38px] flex items-center justify-center",
                 demoGender === 'female'
                   ? "bg-white text-surface-900 shadow-xs border border-surface-200/80 font-black"
                   : "text-surface-600 hover:text-surface-900"
@@ -122,29 +124,31 @@ export default function Exercises() {
             </button>
           </div>
 
-          {/* Sort Dropdown */}
+          {/* Sort Dropdown - generous width so 'Recommended' is never cut off */}
           <select 
-            className="input-base py-2 pl-3 pr-8 flex-1 sm:w-36 text-sm bg-white"
+            className="input-base py-2 pl-2.5 pr-7 flex-1 min-w-[140px] sm:w-40 text-xs sm:text-sm bg-white font-medium min-h-[40px] cursor-pointer shadow-2xs"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
             aria-label="Sort exercises"
+            id="exercise-sort-select"
           >
             {sortOptions.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
 
+          {/* Filters Toggle Button */}
           <button
-            className={`btn-secondary gap-2 flex-1 sm:flex-none ${activeFilterCount > 0 ? 'border-brand-400 text-brand-600 bg-brand-50 hover:bg-brand-100' : ''}`}
+            className={`btn-secondary gap-1.5 px-3 py-2 text-xs sm:text-sm font-bold shrink-0 min-h-[40px] shadow-2xs ${activeFilterCount > 0 ? 'border-brand-400 text-brand-600 bg-brand-50 hover:bg-brand-100' : ''}`}
             onClick={() => setShowFilters(!showFilters)}
             aria-expanded={showFilters}
             aria-label={`Filter exercises${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
             id="exercise-filter-toggle"
           >
-            <SlidersHorizontal size={16} aria-hidden="true" />
-            Filters
+            <SlidersHorizontal size={15} aria-hidden="true" />
+            <span>Filters</span>
             {activeFilterCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-brand-500 text-white text-xs flex items-center justify-center">
+              <span className="w-4 h-4 rounded-full bg-brand-500 text-white text-[10px] flex items-center justify-center font-bold">
                 {activeFilterCount}
               </span>
             )}

@@ -299,7 +299,7 @@ export default function Progress() {
 
       {/* ── 4. VOLUME TREND CHART ── */}
       <section aria-label="Volume trend" className="space-y-3">
-        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs">
+        <div className="card p-3.5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs overflow-hidden w-full min-w-0 box-border">
           <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 mb-4">
             <div>
               <h3 className="text-sm font-bold text-surface-900">Volume Trend</h3>
@@ -472,7 +472,7 @@ export default function Progress() {
 
       {/* ── 5. TRAINING CONSISTENCY ── */}
       <section aria-label="Training consistency" className="space-y-3">
-        <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
+        <div className="card p-3.5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4 overflow-hidden w-full min-w-0 box-border">
           <div>
             <h3 className="text-sm font-bold text-surface-900">Training Consistency</h3>
             <p className="text-xs text-surface-500 mt-0.5">Session frequency over the selected period.</p>
@@ -535,7 +535,7 @@ export default function Progress() {
         </div>
 
         {exerciseProgressList.length > 0 && (
-          <div className="card p-5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4">
+          <div className="card p-3.5 sm:p-6 bg-white border border-surface-200 rounded-2xl shadow-xs space-y-4 overflow-hidden w-full min-w-0 box-border">
             <h3 className="text-xs font-bold uppercase tracking-wider text-surface-400">Key Movement Benchmarks</h3>
             <div className="space-y-4">
               {exerciseProgressList.map(ex => (
@@ -580,7 +580,7 @@ export default function Progress() {
             personalRecords.map(pr => (
               <div
                 key={pr.id}
-                className="card p-5 relative overflow-hidden group hover:border-amber-300 hover:shadow-md transition-all cursor-pointer bg-white border border-surface-200 rounded-2xl shadow-xs"
+                className="card p-3.5 sm:p-5 relative overflow-hidden group hover:border-amber-300 hover:shadow-md transition-all cursor-pointer bg-white border border-surface-200 rounded-2xl shadow-xs"
                 onClick={() => setSelectedExercise({ id: pr.exerciseId, name: pr.exerciseName })}
                 role="button"
                 tabIndex={0}

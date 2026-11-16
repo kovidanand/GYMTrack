@@ -53,7 +53,7 @@ export function TodaysProgressCard({
   const fiberPct = fiberTarget > 0 ? Math.min(100, Math.round((fiber / fiberTarget) * 100)) : 0
 
   return (
-    <div className="card p-5 sm:p-6 bg-white border border-surface-200/90 rounded-2xl shadow-2xs hover:border-emerald-200/80 transition-all">
+    <div className="card p-3.5 sm:p-6 bg-white border border-surface-200/90 rounded-2xl shadow-2xs hover:border-emerald-200/80 transition-all w-full min-w-0 box-border overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-surface-100">
         <div>
